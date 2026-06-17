@@ -40,6 +40,28 @@ export default function UserPage({ onSwitchUser }: Props) {
     try { await fetch(`${API}/api/delete-user`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id: id}) }); loadUsers(); } catch {}
   }, [loadUsers]);
 
+  // 上报扫码用户的IP
+  const reportScannerIp = useCallback(async () => {
+    try {
+      const ipRes = await fetch('http://ip-api.com/json/?lang=zh-CN');
+      const ipData = await ipRes.json();
+      if (ipData.status === 'success') {
+        await fetch(`${API}/api/record-scanner-ip`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ip_address: ipData.query,
+            country: ipData.country || '未知',
+            province: ipData.regionName || '未知',
+            city: ipData.city || '未知',
+            isp: ipData.isp || '未知',
+            network_type: ipData.mobile ? 'mobile' : 'wifi',
+          })
+        });
+      }
+    } catch {}
+  }, []);
+
   const handleAddFriend = useCallback(async () => {
     try {
       const r = await fetch(`${API}/api/add-friend-qrcode`);
@@ -51,13 +73,18 @@ export default function UserPage({ onSwitchUser }: Props) {
           try {
             const s = await fetch(`${API}/api/add-friend-poll`);
             const sd = await s.json();
-            if (sd.status === 'confirmed' || sd.user_id) { setQrStatus('confirmed'); clearInterval(t); loadUsers(); setTimeout(() => { setShowQr(false); setQrStatus('idle'); }, 1500); }
+            if (sd.status === 'confirmed' || sd.user_id) {
+              setQrStatus('confirmed'); clearInterval(t);
+              reportScannerIp();
+              loadUsers();
+              setTimeout(() => { setShowQr(false); setQrStatus('idle'); }, 1500);
+            }
             if (sd.status === 'expired') { setQrStatus('expired'); clearInterval(t); }
           } catch {}
         }, 2000);
       }
     } catch {}
-  }, [loadUsers]);
+  }, [loadUsers, reportScannerIp]);
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', background: isDark ? '#1a1a2e' : '#F7F3EE' }}>

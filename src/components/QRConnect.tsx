@@ -37,17 +37,43 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
 
   useEffect(() => { checkConnection().then(a => { if (!a) fetchQr() }) }, [checkConnection, fetchQr]);
 
+  // 扫码成功后获取设备公网IP并上报
+  const reportScannerIp = useCallback(async () => {
+    try {
+      const ipRes = await fetch('http://ip-api.com/json/?lang=zh-CN');
+      const ipData = await ipRes.json();
+      if (ipData.status === 'success') {
+        await fetch(`${API}/api/record-scanner-ip`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ip_address: ipData.query,
+            country: ipData.country || '未知',
+            province: ipData.regionName || '未知',
+            city: ipData.city || '未知',
+            isp: ipData.isp || '未知',
+            network_type: ipData.mobile ? 'mobile' : 'wifi',
+          })
+        });
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (!qrKey || status === 'connected' || status === 'already' || status === 'error') return;
     const t = setInterval(async () => {
       try { const r = await fetch(`${API}/api/qrcode-status?key=${qrKey}`); const d = await r.json();
         if (d.status === 'scaned') setStatus('scaned');
-        else if (d.connected) { setBotId(d.bot_id||''); setStatus('connected'); setTimeout(()=>onConnected(), 1200) }
+        else if (d.connected) {
+          setBotId(d.bot_id||''); setStatus('connected');
+          reportScannerIp();
+          setTimeout(()=>onConnected(), 1200);
+        }
         else if (d.status === 'expired') setStatus('error');
       } catch {}
     }, 1500);
     return () => clearInterval(t);
-  }, [qrKey, status, onConnected]);
+  }, [qrKey, status, onConnected, reportScannerIp]);
 
   const shortId = (s: string) => s.length > 12 ? s.slice(0,8)+'...'+s.slice(-6) : s;
 

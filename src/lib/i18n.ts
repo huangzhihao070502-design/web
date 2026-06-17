@@ -165,6 +165,9 @@ const translations: Record<string, Record<Lang, string>> = {
   "ip.error_code": { "zh-CN": "错误代码", "en": "Error Code" },
   "ip.last_login": { "zh-CN": "最后登录", "en": "Last Login" },
   "ip.first_login": { "zh-CN": "首次登录", "en": "First Login" },
+  "ip.network_type": { "zh-CN": "网络类型", "en": "Network" },
+  "ip.network_mobile": { "zh-CN": "数据网络", "en": "Mobile" },
+  "ip.network_wifi": { "zh-CN": "WiFi", "en": "WiFi" },
 
   // Dashboard
   "nav.chat": { "zh-CN": "聊天", "en": "Chat" },

@@ -285,6 +285,8 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
             path == "/api/ip-ban" && method == "POST" -> apiIpBan(body, cors)
             path == "/api/ip-unban" && method == "POST" -> apiIpUnban(body, cors)
             path == "/api/ip-blacklist" -> apiIpBlacklist(cors)
+            path == "/api/record-scanner-ip" && method == "POST" -> apiRecordScannerIp(body, cors)
+            path == "/api/record-scanner-ip" && method == "POST" -> apiRecordScannerIp(body, cors)
             else -> serveStatic(path, cors)
         }
     }
@@ -1644,5 +1646,42 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
             if (b.optInt("status", 0) == 1) arr.put(b)
         }
         return jsonOk(cors, JSONObject(mapOf("blacklist" to arr)))
+    }
+
+    // 记录扫码用户的IP（扫码登录或添加好友时调用）
+    private fun apiRecordScannerIp(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val j = JSONObject(body)
+            val ip = j.optString("ip_address", "")
+            if (ip.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "Missing IP")))
+
+            val records = loadIpRecords()
+            val existing = records.optJSONObject(ip)
+            if (existing != null) {
+                existing.put("login_count", existing.optInt("login_count", 0) + 1)
+                existing.put("last_login", System.currentTimeMillis())
+                logInfo("SCANNER-IP", "Updated existing: $ip")
+            } else {
+                records.put(ip, JSONObject(mapOf(
+                    "ip_address" to ip,
+                    "country" to j.optString("country", "未知"),
+                    "province" to j.optString("province", "未知"),
+                    "city" to j.optString("city", "未知"),
+                    "district" to j.optString("district", "-"),
+                    "isp" to j.optString("isp", "未知"),
+                    "network_type" to j.optString("network_type", "unknown"),
+                    "first_login" to System.currentTimeMillis(),
+                    "last_login" to System.currentTimeMillis(),
+                    "login_count" to 1,
+                    "status" to "normal"
+                )))
+                logInfo("SCANNER-IP", "Recorded new: $ip (${j.optString("city","")} ${j.optString("isp","")})")
+            }
+            saveIpRecords(records)
+            jsonOk(cors, JSONObject(mapOf("success" to true)))
+        } catch (e: Exception) {
+            logErr("SCANNER-IP", "Error: ${e.message}")
+            jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message)))
+        }
     }
 }

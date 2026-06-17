@@ -369,6 +369,11 @@ export default function SettingsPage({ onLogout }: Props) {
                         <span>{r.country} {r.province} {r.city}{r.district && r.district !== '-' ? ' ' + r.district : ''}</span>
                         <span>{r.isp}</span>
                         <span>{t("ip.login_count", lang)}: {r.login_count}</span>
+                        {r.network_type && (
+                          <span className={r.network_type === 'mobile' ? 'text-orange-500' : 'text-blue-500'}>
+                            {r.network_type === 'mobile' ? '📱 ' + t("ip.network_mobile", lang) : '📶 ' + t("ip.network_wifi", lang)}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 text-[10px] text-[var(--color-text-secondary)]/60">
                         {t("ip.last_login", lang)}: {fmtTime(r.last_login)}
