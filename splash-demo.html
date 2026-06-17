@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Aperture — Splash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --splash-bg:      #0B0B0C;
+  --splash-surface:  #1A1A1D;
+  --splash-text:     #F4F4F4;
+  --splash-muted:    #9EA3AF;
+  --splash-accent:   #C89F7E;
+  --splash-brand:    #2d2b55;
+  --splash-brand-l:  #4a488a;
+  --splash-brand-h:  #625f9a;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--splash-bg);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   Splash Container
+   ============================================================ */
+#splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--splash-bg);
+  z-index: 9999;
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+}
+
+/* ============================================================
+   Noise Overlay (SVG-based, same pattern as main app)
+   ============================================================ */
+#splash::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  opacity: 0.015;
+  pointer-events: none;
+  z-index: 10;
+  animation: noiseShift 10s steps(8) infinite;
+}
+
+@keyframes noiseShift {
+  0%   { transform: translate(0, 0); }
+  12%  { transform: translate(-2%, -3%); }
+  25%  { transform: translate(-4%, 1%); }
+  37%  { transform: translate(3%, 2%); }
+  50%  { transform: translate(-1%, 4%); }
+  62%  { transform: translate(4%, -2%); }
+  75%  { transform: translate(-3%, 1%); }
+  87%  { transform: translate(2%, -3%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ============================================================
+   Ambient Glow (center radial)
+   ============================================================ */
+.ambient-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(45, 43, 85, 0.08) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* ============================================================
+   Core Light Point
+   ============================================================ */
+.core-light {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(200, 159, 126, 0.4) 40%,
+    transparent 70%
+  );
+  box-shadow:
+    0 0 20px rgba(255, 255, 255, 0.15),
+    0 0 60px rgba(200, 159, 126, 0.08);
+  z-index: 5;
+  opacity: 0;
+  transform: scale(0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ============================================================
+   Orbital Rings
+   ============================================================ */
+.orbital-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.orbital-ring--1 {
+  width: 120px; height: 120px;
+  border-color: rgba(200, 159, 126, 0.08);
+}
+
+.orbital-ring--2 {
+  width: 200px; height: 200px;
+  border-color: rgba(45, 43, 85, 0.1);
+}
+
+.orbital-ring--3 {
+  width: 300px; height: 300px;
+  border-color: rgba(158, 163, 175, 0.06);
+}
+
+/* ============================================================
+   Logo Container
+   ============================================================ */
+.logo-container {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 6;
+  opacity: 0;
+  transform: translateY(20px) scale(0.85) rotate(-3deg);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ============================================================
+   Logo Mark (abstract geometric — layered planes)
+   ============================================================ */
+.logo-mark {
+  width: 56px;
+  height: 56px;
+  position: relative;
+}
+
+.logo-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================
+   Brand Text
+   ============================================================ */
+.brand-text {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--splash-text);
+  opacity: 0;
+  will-change: opacity;
+  text-transform: uppercase;
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--splash-muted);
+  opacity: 0;
+  will-change: opacity;
+  margin-top: -8px;
+}
+
+/* ============================================================
+   Particles
+   ============================================================ */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ============================================================
+   Main App (revealed after splash)
+   ============================================================ */
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--splash-bg);
+  z-index: 0;
+  opacity: 0;
+  transform: translateY(24px);
+  will-change: transform, opacity;
+}
+
+#app .app-content {
+  text-align: center;
+  color: var(--splash-text);
+}
+
+#app .app-content h1 {
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+#app .app-content p {
+  font-size: 13px;
+  color: var(--splash-muted);
+  letter-spacing: 0.03em;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     Splash Screen
+     ============================================================ -->
+<div id="splash">
+  <div class="ambient-glow"></div>
+  <div class="core-light"></div>
+
+  <!-- Orbital Rings -->
+  <div class="orbital-ring orbital-ring--1"></div>
+  <div class="orbital-ring orbital-ring--2"></div>
+  <div class="orbital-ring orbital-ring--3"></div>
+
+  <!-- Logo -->
+  <div class="logo-container">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M2 17l10 5 10-5" stroke="white" stroke-width="1.5" stroke-linejoin="round" opacity="0.6"/>
+        <path d="M2 12l10 5 10-5" stroke="white" stroke-width="1.5" stroke-linejoin="round" opacity="0.8"/>
+      </svg>
+    </div>
+    <span class="brand-text">Aperture</span>
+    <span class="brand-subtitle">Secure Messaging</span>
+  </div>
+
+  <!-- Particles (generated by JS) -->
+  <div class="particles-container" style="position:absolute;inset:0;pointer-events:none;z-index:4;"></div>
+</div>
+
+<!-- ============================================================
+     App (placeholder for demo)
+     ============================================================ -->
+<div id="app">
+  <div class="app-content">
+    <h1>Welcome to Aperture</h1>
+    <p>The splash has completed. This is the main application.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     anime.js (v4 ESM from local node_modules)
+     ============================================================ -->
+<script type="module">
+import { animate, createTimeline, stagger, createSpring } from './node_modules/animejs/dist/modules/index.js';
+
+/* ==========================================================
+   Config
+   ========================================================== */
+const CONFIG = {
+  totalDuration: 5500,
+  particleCount: 14,
+  colors: {
+    bg:      '#0B0B0C',
+    brand:   '#2d2b55',
+    brandL:  '#4a488a',
+    brandH:  '#625f9a',
+    accent:  '#C89F7E',
+    text:    '#F4F4F4',
+    muted:   '#9EA3AF',
+  },
+};
+
+/* ==========================================================
+   DOM Refs
+   ========================================================== */
+const $splash       = document.getElementById('splash');
+const $ambientGlow  = $splash.querySelector('.ambient-glow');
+const $coreLight    = $splash.querySelector('.core-light');
+const $ring1        = $splash.querySelector('.orbital-ring--1');
+const $ring2        = $splash.querySelector('.orbital-ring--2');
+const $ring3        = $splash.querySelector('.orbital-ring--3');
+const $logo         = $splash.querySelector('.logo-container');
+const $brandText    = $splash.querySelector('.brand-text');
+const $brandSub     = $splash.querySelector('.brand-subtitle');
+const $particlesBox = $splash.querySelector('.particles-container');
+const $app          = document.getElementById('app');
+
+/* ==========================================================
+   Generate Particles
+   ========================================================== */
+const particles = [];
+for (let i = 0; i < CONFIG.particleCount; i++) {
+  const el = document.createElement('div');
+  el.className = 'particle';
+  const size = Math.random() * 2.5 + 1;
+  el.style.width  = `${size}px`;
+  el.style.height = `${size}px`;
+  // Distribute in a loose ring around center
+  const angle  = (i / CONFIG.particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+  const radius = 60 + Math.random() * 80;
+  const cx = 50 + Math.cos(angle) * (radius / window.innerWidth * 100);
+  const cy = 50 + Math.sin(angle) * (radius / window.innerHeight * 100);
+  el.style.left = `${cx}%`;
+  el.style.top  = `${cy}%`;
+  $particlesBox.appendChild(el);
+  particles.push(el);
+}
+
+/* ==========================================================
+   Phase 1 — Awakening (0–800ms)
+   ========================================================== */
+const tl = createTimeline({ autoplay: true });
+
+// Ambient glow fades in
+tl.add($ambientGlow, {
+  opacity: [0, 1],
+  duration: 1200,
+  easing: 'easeOutExpo',
+}, 0);
+
+// Core light awakens
+tl.add($coreLight, {
+  opacity: [0, 1],
+  scale:   [0, 1],
+  duration: 800,
+  easing: 'easeOutExpo',
+}, 200);
+
+/* ==========================================================
+   Phase 2 — Expansion (800–2000ms)
+   ========================================================== */
+
+// Ring 1 emerges
+tl.add($ring1, {
+  opacity:  [0, 0.12],
+  scale:    [0.6, 1],
+  rotate:   [0, 15],
+  duration: 1200,
+  easing:   'easeInOutSine',
+}, 800);
+
+// Ring 2 emerges (slight delay)
+tl.add($ring2, {
+  opacity:  [0, 0.08],
+  scale:    [0.7, 1],
+  rotate:   [0, -10],
+  duration: 1400,
+  easing:   'easeInOutSine',
+}, 1000);
+
+// Ring 3 emerges
+tl.add($ring3, {
+  opacity:  [0, 0.06],
+  scale:    [0.8, 1],
+  rotate:   [0, 8],
+  duration: 1600,
+  easing:   'easeInOutSine',
+}, 1200);
+
+// Slow continuous rotation (applied as a separate infinite animation)
+animate($ring1, { rotate: '+=360',  duration: 30000, loop: true, easing: 'linear', autoplay: true });
+animate($ring2, { rotate: '-=360',  duration: 40000, loop: true, easing: 'linear', autoplay: true });
+animate($ring3, { rotate: '+=360',  duration: 50000, loop: true, easing: 'linear', autoplay: true });
+
+/* ==========================================================
+   Phase 3 — Logo Formation (2000–3500ms)
+   ========================================================== */
+
+// Logo container grows into view
+tl.add($logo, {
+  opacity:   [0, 1],
+  translateY:[20, 0],
+  scale:     [0.85, 1],
+  rotate:    [-3, 0],
+  duration:  1200,
+  easing:    'easeOutExpo',
+}, 2000);
+
+// Brand text fades in slightly after
+tl.add($brandText, {
+  opacity:  [0, 1],
+  translateY: [8, 0],
+  duration: 800,
+  easing:   'easeOutQuart',
+}, 2600);
+
+// Subtitle fades in
+tl.add($brandSub, {
+  opacity:  [0, 1],
+  translateY: [6, 0],
+  duration: 800,
+  easing:   'easeOutQuart',
+}, 2900);
+
+/* ==========================================================
+   Phase 4 — Stabilization (3500–5000ms)
+   ========================================================== */
+
+// Logo breathing (infinite loop, starts after formation completes)
+animate($logo, {
+  scale:   [1, 1.02, 1],
+  opacity: [1, 0.95, 1],
+  duration: 3000,
+  loop: true,
+  easing: 'easeInOutSine',
+  autoplay: true,
+  delay: 3500,
+});
+
+// Particles fade in with stagger
+particles.forEach((p, i) => {
+  tl.add(p, {
+    opacity: [0, 0.15 + Math.random() * 0.15],
+    duration: 600,
+    easing: 'easeOutQuart',
+  }, 3200 + i * 60);
+});
+
+// Particles gentle drift (infinite)
+particles.forEach((p) => {
+  const dx = (Math.random() - 0.5) * 12;
+  const dy = (Math.random() - 0.5) * 12;
+  animate(p, {
+    translateX: [0, dx, 0],
+    translateY: [0, dy, 0],
+    duration: 4000 + Math.random() * 3000,
+    loop: true,
+    easing: 'easeInOutSine',
+    autoplay: true,
+    delay: 3500,
+  });
+});
+
+/* ==========================================================
+   Phase 5 — Exit to App (5000–5800ms)
+   ========================================================== */
+
+// Splash fades out
+tl.add($splash, {
+  opacity:   [1, 0],
+  scale:     [1, 1.03],
+  duration:  800,
+  easing:    'easeOutQuart',
+}, 5000);
+
+// App slides in
+tl.add($app, {
+  opacity:   [0, 1],
+  translateY:[24, 0],
+  duration:  800,
+  easing:    'easeOutQuart',
+}, 5000);
+
+// Clean up splash DOM after transition
+tl.then(() => {
+  $splash.style.display = 'none';
+});
+
+</script>
+</body>
+</html>

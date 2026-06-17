@@ -4,6 +4,7 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import QRConnect from './components/QRConnect';
 import Dashboard from './components/Dashboard';
+import SplashScreen from './components/SplashScreen';
 import { SettingsProvider } from './contexts/SettingsContext';
 
 type Page = 'login' | 'register' | 'qrcode' | 'dashboard';
@@ -32,6 +33,7 @@ class ErrorBoundary extends Component<{children: ReactNode}, {error: string|null
 export default function App() {
   const [page, setPage] = useState<Page>('login');
   const [initialized, setInitialized] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
 
   /* Check saved session on mount */
   useEffect(() => {
@@ -59,6 +61,10 @@ export default function App() {
   }, []);
 
   if (!initialized) return null;
+
+  if (!splashDone) {
+    return <SplashScreen onComplete={() => setSplashDone(true)} />;
+  }
 
   return (
     <ErrorBoundary>
