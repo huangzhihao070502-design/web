@@ -139,7 +139,7 @@ const processedMsgIds = new Set();
 
 // ====== 对话记忆系统 ======
 const MEMORY_FILE = '/root/login-app/conversation_memory.json';
-const MEMORY_MAX_MESSAGES = 30; // 每用户最多保存30条历史
+const MEMORY_MAX_MESSAGES = 100; // 每用户最多保存100条历史
 
 function loadMemory() {
   try { return JSON.parse(fs.readFileSync(MEMORY_FILE, 'utf-8')); } catch { return {}; }

@@ -205,7 +205,7 @@ export default function SettingsPage({ onLogout }: Props) {
               <Toggle enabled={!!aiCfg.memory_enabled} onToggle={() => setAiCfg(p => ({ ...p, memory_enabled: !p.memory_enabled }))} />
               <span className="text-sm font-medium text-[var(--color-text)] sm:text-[15px]">对话记忆</span>
             </div>
-            <p className="mt-1.5 pl-[58px] text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">开启后 AI 会记住每条对话历史，回复时参考上下文，让对话更连贯。每用户最多保存 30 条记录。</p>
+            <p className="mt-1.5 pl-[58px] text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">开启后 AI 会记住每条对话历史，回复时参考上下文，让对话更连贯。每用户最多保存 100 条记录。</p>
           </Card>
           <div className="flex gap-3">
             <button onClick={handleSaveAi} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C89F7E] to-[#B08968] px-4 py-3 text-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95">{aiSaved ? <><Check size={16} strokeWidth={2} /> {t("ai.saved", lang)}</> : t("ai.save", lang)}</button>
