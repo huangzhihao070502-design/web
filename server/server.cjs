@@ -137,6 +137,80 @@ let msgId = 0;
 // Track processed API message IDs to prevent duplicates
 const processedMsgIds = new Set();
 
+// ====== 对话记忆系统 ======
+const MEMORY_FILE = '/root/login-app/conversation_memory.json';
+const MEMORY_MAX_MESSAGES = 30; // 每用户最多保存30条历史
+
+function loadMemory() {
+  try { return JSON.parse(fs.readFileSync(MEMORY_FILE, 'utf-8')); } catch { return {}; }
+}
+function saveMemory(memory) {
+  try { fs.writeFileSync(MEMORY_FILE, JSON.stringify(memory)); } catch {}
+}
+
+// 给用户添加一条记忆
+function addMemory(userId, role, text) {
+  if (!userId || !text) return;
+  const memory = loadMemory();
+  if (!memory[userId]) memory[userId] = [];
+  memory[userId].push({ role, text, time: Date.now() });
+  // 超过上限则裁剪旧消息
+  if (memory[userId].length > MEMORY_MAX_MESSAGES) {
+    memory[userId] = memory[userId].slice(-MEMORY_MAX_MESSAGES);
+  }
+  saveMemory(memory);
+}
+
+// 获取用户的对话历史（格式化为 AI 消息数组）
+function getMemoryMessages(userId, maxTurns) {
+  const memory = loadMemory();
+  const history = memory[userId] || [];
+  // 取最近 maxTurns 轮对话（1轮 = 1条用户 + 1条AI）
+  const limit = (maxTurns || 10) * 2;
+  const recent = history.slice(-limit);
+  return recent.map(m => ({ role: m.role, content: m.text }));
+}
+
+// 清除某用户的记忆
+function clearMemory(userId) {
+  const memory = loadMemory();
+  delete memory[userId];
+  saveMemory(memory);
+}
+
+// ====== AI 并发控制 ======
+const aiQueue = [];           // 等待队列
+let aiRunning = 0;            // 当前正在执行的 AI 调用数
+const AI_MAX_CONCURRENT = 3;  // 最大并发数
+
+function enqueueAiCall(fn) {
+  return new Promise((resolve, reject) => {
+    aiQueue.push({ fn, resolve, reject });
+    processAiQueue();
+  });
+}
+
+function processAiQueue() {
+  while (aiRunning < AI_MAX_CONCURRENT && aiQueue.length > 0) {
+    const { fn, resolve, reject } = aiQueue.shift();
+    aiRunning++;
+    fn().then(resolve).catch(reject).finally(() => {
+      aiRunning--;
+      processAiQueue();
+    });
+  }
+}
+
+// 带超时的 Promise 包装器
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`timeout: ${label}`)), ms)
+    )
+  ]);
+}
+
 // ---- Add-friend state (must be at module level to persist across requests) ----
 let addFriendKey = null, addFriendStatus = 'idle', addFriendTimer = null;
 let currentUserId = null;
@@ -372,6 +446,11 @@ async function pollMessages() {
         // Auto-reply
         if (msgText && fromUser && !msgMedia) {
           console.log(`[DEBUG] Calling autoReply for ${(fromUser||'').slice(0,16)}: ${msgText.slice(0,20)}`);
+          // 保存用户消息到记忆
+          const cfgMem = loadAiConfig();
+          if (cfgMem.memory_enabled) {
+            addMemory(fromUser, 'user', msgText);
+          }
           autoReply(fromUser, msgText);
         }
       }
@@ -381,7 +460,7 @@ async function pollMessages() {
 
 // ---- AI Config ----
 function loadAiConfig() {
-  try { return JSON.parse(fs.readFileSync(AI_CONFIG_FILE, 'utf-8')); } catch { return { enabled: false, api_url: '', api_key: '', model: '', prompt: '', scheduled_reply: false, active_interval: 60, max_replies: 2, reply_min_chars: 0, reply_max_chars: 0, token_limit: 0 }; }
+  try { return JSON.parse(fs.readFileSync(AI_CONFIG_FILE, 'utf-8')); } catch { return { enabled: false, api_url: '', api_key: '', model: '', prompt: '', scheduled_reply: false, active_interval: 60, max_replies: 2, reply_min_chars: 0, reply_max_chars: 0, token_limit: 0, memory_enabled: false }; }
 }
 function saveAiConfig(cfg) {
   try { fs.writeFileSync(AI_CONFIG_FILE, JSON.stringify(cfg)); } catch {}
@@ -524,6 +603,16 @@ function cleanupOldMessages() {
 setInterval(cleanupOldMessages, 10 * 60 * 1000);
 // Persist messages every 30 seconds
 setInterval(() => { if (messages.length > 0) saveState(); }, 30 * 1000);
+// 清理 processedMsgIds 防止内存泄漏（每10分钟清理一次，保留最近1000条）
+setInterval(() => {
+  if (processedMsgIds.size > 1000) {
+    const arr = Array.from(processedMsgIds);
+    arr.splice(0, arr.length - 500);
+    processedMsgIds.clear();
+    arr.forEach(id => processedMsgIds.add(id));
+    console.log(`[CLEANUP] Trimmed processedMsgIds to ${processedMsgIds.size}`);
+  }
+}, 10 * 60 * 1000);
 
 // ====== Feature Skill Engine ======
 // Each feature: { id, name, triggers[], fetcher(msg) → string|null }
@@ -747,10 +836,10 @@ async function matchAndFetchFeatures(userMsg) {
     if (triggered) matched.push(feat);
   }
   if (matched.length === 0) return '';
-  // Fetch all matched features in parallel
+  // Fetch all matched features in parallel（每个 feature 最多 5 秒超时）
   const results = await Promise.all(matched.map(async (f) => {
     try {
-      const data = await f.fetcher(userMsg);
+      const data = await withTimeout(f.fetcher(userMsg), 5000, `feature:${f.id}`);
       return data ? `\n${data}` : '';
     } catch { return ''; }
   }));
@@ -775,18 +864,22 @@ function startScheduledReplies() {
   if (schedTimer) { clearInterval(schedTimer); schedTimer = null; }
   const cfg = loadAiConfig();
   if (!cfg.enabled || !cfg.scheduled_reply || !cfg.api_url || !cfg.api_key) return;
-  const intervalMs = (cfg.active_interval || 60) * 1000;
-  console.log(`[SCHED] Started (every ${cfg.active_interval} min, ${Object.keys(contextTokens).length} users)`);
+  // active_interval 统一为秒
+  const intervalSec = cfg.active_interval || 60;
+  const intervalMs = intervalSec * 1000;
+  console.log(`[SCHED] Started (every ${intervalSec}s, ${Object.keys(contextTokens).length} users)`);
   schedTimer = setInterval(async () => {
+    // 检查连接状态
+    if (!botToken) { console.log('[SCHED] Bot not connected, skipping'); return; }
     const c = loadAiConfig();
     if (!c.enabled || !c.scheduled_reply) return;
     const now = Date.now();
     for (const uid of Object.keys(contextTokens)) {
       const ctx = contextTokens[uid];
       if (!ctx) continue;
-      // 找到该用户最近一条消息的时间
+      // 找到该用户最近一条消息的时间（active_interval 统一用秒）
       const lastMsg = messages.filter(m => (m.from === uid || m.to === uid)).pop();
-      if (lastMsg && (now - lastMsg.time) < c.active_interval * 60 * 1000) {
+      if (lastMsg && (now - lastMsg.time) < intervalSec * 1000) {
         continue; // 用户最近有过对话，跳过本次定时问候
       }
       try {
@@ -826,7 +919,14 @@ function startScheduledReplies() {
           reply = reply.slice(0, c.reply_max_chars);
         }
         const sendR = await ilinkPost('sendmessage', { msg: { from_user_id: '', to_user_id: uid, client_id: 'sched-' + Date.now().toString(36), message_type: 2, message_state: 2, context_token: ctx, item_list: [{ type: 1, text_item: { text: reply } }] } }, botToken);
-        if (!sendR.errcode && sendR.ret !== -1) { messages.push({ id: ++msgId, to: uid, text: reply, time: Date.now(), dir: 'out', is_ai: true }); console.log(`[SCHED] ${uid.slice(0,16)}: ${reply.slice(0,40)}`); }
+        if (!sendR.errcode && sendR.ret !== -1) {
+          messages.push({ id: ++msgId, to: uid, text: reply, time: Date.now(), dir: 'out', is_ai: true });
+          console.log(`[SCHED] ${uid.slice(0,16)}: ${reply.slice(0,40)}`);
+          // 保存定时问候到记忆
+          if (c.memory_enabled) {
+            addMemory(uid, 'assistant', reply);
+          }
+        }
       } catch (e) { console.log('[SCHED] Error:', e.message); }
     }
   }, intervalMs);
@@ -838,8 +938,13 @@ const origConfirm = startQrPolling;
 // ---- AI Auto-reply ----
 const autoReplyCounts = {};
 async function autoReply(toUser, userMsg) {
+  // 用并发队列包装
+  return enqueueAiCall(() => _autoReplyInner(toUser, userMsg));
+}
+
+async function _autoReplyInner(toUser, userMsg) {
   try {
-    console.log(`[AI] autoReply called: user=${(toUser||'').slice(0,16)} msg=${(userMsg||'').slice(0,20)}`);
+    console.log(`[AI] autoReply called: user=${(toUser||'').slice(0,16)} msg=${(userMsg||'').slice(0,20)} queue=${aiQueue.length} running=${aiRunning}`);
     const cfg = loadAiConfig();
     if (!cfg.enabled || !cfg.api_url || !cfg.api_key || !cfg.model) { console.log('[AI] Config invalid:', JSON.stringify(cfg)); return; }
     const ctx = contextTokens[toUser];
@@ -890,6 +995,16 @@ async function autoReply(toUser, userMsg) {
     if (featureContext) systemPrompt += featureContext;
 
     const msgs = [{ role: 'system', content: systemPrompt }];
+
+    // 对话记忆：如果开启，注入历史消息
+    if (cfg.memory_enabled) {
+      const historyMsgs = getMemoryMessages(toUser, 10);
+      if (historyMsgs.length > 0) {
+        msgs.push(...historyMsgs);
+        console.log(`[AI] Memory: injected ${historyMsgs.length} history messages for ${(toUser||'').slice(0,16)}`);
+      }
+    }
+
     // 字数限制：附加到用户消息尾部让 AI 遵循
     let userContent = userMsg;
     if (cfg.reply_max_chars > 0) {
@@ -939,6 +1054,10 @@ async function autoReply(toUser, userMsg) {
     if (!sendResult.errcode && sendResult.ret !== -1) {
       messages.push({ id: ++msgId, to: toUser, text: reply, time: Date.now(), dir: 'out', is_ai: true });
       console.log(`[AI] Replied to ${(toUser||'').slice(0,16)}: ${reply.slice(0,50)}...`);
+      // 保存 AI 回复到记忆（用户消息已在 pollMessages 中保存）
+      if (cfg.memory_enabled) {
+        addMemory(toUser, 'assistant', reply);
+      }
     }
   } catch (e) { console.log('[AI] Error:', e.message); }
 }
@@ -1235,6 +1354,31 @@ http.createServer((req, res) => {
     } else { res.writeHead(200, cors); res.end(JSON.stringify(loadAiConfig())); }
     return;
   }
+  // 对话记忆管理
+  if (p === '/api/memory') {
+    if (req.method === 'GET') {
+      const uid = url.searchParams.get('user') || '';
+      if (uid) {
+        const memory = loadMemory();
+        res.writeHead(200, cors); res.end(JSON.stringify({ history: memory[uid] || [], count: (memory[uid] || []).length }));
+      } else {
+        const memory = loadMemory();
+        const summary = Object.fromEntries(Object.entries(memory).map(([k, v]) => [k, v.length]));
+        res.writeHead(200, cors); res.end(JSON.stringify({ users: summary }));
+      }
+    } else if (req.method === 'DELETE') {
+      let body = ''; req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const { user_id } = JSON.parse(body);
+          if (user_id) clearMemory(user_id);
+          res.writeHead(200, cors); res.end(JSON.stringify({ success: true }));
+        } catch (e) { res.writeHead(400, cors); res.end(JSON.stringify({ error: e.message })); }
+      });
+    }
+    return;
+  }
+
   if (p === '/api/ai-test') {
     let body = ''; req.on('data', c => body += c);
     req.on('end', async () => {
