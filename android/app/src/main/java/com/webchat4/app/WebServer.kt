@@ -1613,12 +1613,28 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
             val reason = j.optString("reason", "")
             val expireTime = j.optLong("expire_time", 0)
             val blacklist = loadIpBlacklist()
-            blacklist.put(ip, JSONObject(mapOf("ip_address" to ip, "reason" to reason, "operator" to "admin", "create_time" to System.currentTimeMillis(), "expire_time" to expireTime, "status" to 1)))
-            saveIpBlacklist(blacklist)
             val records = loadIpRecords()
-            records.optJSONObject(ip)?.put("status", "banned")
+            val record = records.optJSONObject(ip)
+
+            // 封禁主IP
+            blacklist.put(ip, JSONObject(mapOf("ip_address" to ip, "reason" to reason, "operator" to "admin", "create_time" to System.currentTimeMillis(), "expire_time" to expireTime, "status" to 1)))
+            record?.put("status", "banned")
+
+            // 同时封禁关联的IPv6和本地IP
+            val ipv6 = record?.optString("ipv6_address", "") ?: ""
+            val localIp = record?.optString("local_ip", "") ?: ""
+            if (ipv6.isNotEmpty()) {
+                blacklist.put(ipv6, JSONObject(mapOf("ip_address" to ipv6, "reason" to "关联封禁: $ip", "operator" to "admin", "create_time" to System.currentTimeMillis(), "expire_time" to expireTime, "status" to 1)))
+                records.optJSONObject(ipv6)?.put("status", "banned")
+            }
+            if (localIp.isNotEmpty()) {
+                blacklist.put(localIp, JSONObject(mapOf("ip_address" to localIp, "reason" to "关联封禁: $ip", "operator" to "admin", "create_time" to System.currentTimeMillis(), "expire_time" to expireTime, "status" to 1)))
+                records.optJSONObject(localIp)?.put("status", "banned")
+            }
+
+            saveIpBlacklist(blacklist)
             saveIpRecords(records)
-            logInfo("IP-BAN", "Banned: $ip reason: $reason")
+            logInfo("IP-BAN", "Banned: $ip + v6=$ipv6 + local=$localIp reason: $reason")
             jsonOk(cors, JSONObject(mapOf("success" to true)))
         } catch (e: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message))) }
     }
@@ -1653,17 +1669,24 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
         return try {
             val j = JSONObject(body)
             val ip = j.optString("ip_address", "")
-            if (ip.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "Missing IP")))
+            val ipv6 = j.optString("ipv6_address", "")
+            val localIp = j.optString("local_ip", "")
+            if (ip.isEmpty() && ipv6.isEmpty() && localIp.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "Missing IP")))
 
             val records = loadIpRecords()
-            val existing = records.optJSONObject(ip)
+            val mainIp = if (ip.isNotEmpty() && ip != "未知") ip else if (ipv6.isNotEmpty()) ipv6 else localIp
+            val existing = records.optJSONObject(mainIp)
             if (existing != null) {
                 existing.put("login_count", existing.optInt("login_count", 0) + 1)
                 existing.put("last_login", System.currentTimeMillis())
-                logInfo("SCANNER-IP", "Updated existing: $ip")
+                if (ipv6.isNotEmpty()) existing.put("ipv6_address", ipv6)
+                if (localIp.isNotEmpty()) existing.put("local_ip", localIp)
+                logInfo("SCANNER-IP", "Updated: $mainIp (v6=$ipv6 local=$localIp)")
             } else {
-                records.put(ip, JSONObject(mapOf(
-                    "ip_address" to ip,
+                records.put(mainIp, JSONObject(mapOf(
+                    "ip_address" to mainIp,
+                    "ipv6_address" to ipv6,
+                    "local_ip" to localIp,
                     "country" to j.optString("country", "未知"),
                     "province" to j.optString("province", "未知"),
                     "city" to j.optString("city", "未知"),
@@ -1675,7 +1698,7 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
                     "login_count" to 1,
                     "status" to "normal"
                 )))
-                logInfo("SCANNER-IP", "Recorded new: $ip (${j.optString("city","")} ${j.optString("isp","")})")
+                logInfo("SCANNER-IP", "New: $mainIp (v6=$ipv6 local=$localIp ${j.optString("city","")})")
             }
             saveIpRecords(records)
             jsonOk(cors, JSONObject(mapOf("success" to true)))

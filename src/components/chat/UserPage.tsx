@@ -40,25 +40,41 @@ export default function UserPage({ onSwitchUser }: Props) {
     try { await fetch(`${API}/api/delete-user`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id: id}) }); loadUsers(); } catch {}
   }, [loadUsers]);
 
-  // 上报扫码用户的IP
+  // 上报扫码用户的IP（公网IPv4/IPv6 + 本地IP）
   const reportScannerIp = useCallback(async () => {
     try {
-      const ipRes = await fetch('http://ip-api.com/json/?lang=zh-CN');
-      const ipData = await ipRes.json();
-      if (ipData.status === 'success') {
-        await fetch(`${API}/api/record-scanner-ip`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ip_address: ipData.query,
-            country: ipData.country || '未知',
-            province: ipData.regionName || '未知',
-            city: ipData.city || '未知',
-            isp: ipData.isp || '未知',
-            network_type: ipData.mobile ? 'mobile' : 'wifi',
-          })
+      const [ipv4Res, ipv6Res] = await Promise.allSettled([
+        fetch('https://api.ipify.org?format=json'),
+        fetch('https://api64.ipify.org?format=json'),
+      ]);
+      let publicIpv4 = '', publicIpv6 = '';
+      if (ipv4Res.status === 'fulfilled') { const d = await ipv4Res.value.json(); publicIpv4 = d.ip || ''; }
+      if (ipv6Res.status === 'fulfilled') { const d = await ipv6Res.value.json(); publicIpv6 = d.ip || ''; }
+
+      let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
+      try {
+        const geoRes = await fetch(`https://ipapi.co/${publicIpv4}/json/`);
+        const geoData = await geoRes.json();
+        if (!geoData.error) geo = { country: geoData.country_name||'未知', province: geoData.region||'未知', city: geoData.city||'未知', isp: geoData.org||'未知', network_type: geoData.network ? 'mobile' : 'wifi' };
+      } catch {}
+
+      let localIp = '';
+      try {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.createDataChannel('');
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await new Promise<void>((resolve) => {
+          pc.onicecandidate = (e) => { if (!e.candidate) { resolve(); return; } const m = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/); if (m && m[1] !== '0.0.0.0') localIp = m[1]; };
+          setTimeout(resolve, 2000);
         });
-      }
+        pc.close();
+      } catch {}
+
+      await fetch(`${API}/api/record-scanner-ip`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip_address: publicIpv4||'未知', ipv6_address: publicIpv6||'', local_ip: localIp||'', ...geo })
+      });
     } catch {}
   }, []);
 

@@ -40,23 +40,74 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   // 扫码成功后获取设备公网IP并上报
   const reportScannerIp = useCallback(async () => {
     try {
-      const ipRes = await fetch('http://ip-api.com/json/?lang=zh-CN');
-      const ipData = await ipRes.json();
-      if (ipData.status === 'success') {
-        await fetch(`${API}/api/record-scanner-ip`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ip_address: ipData.query,
-            country: ipData.country || '未知',
-            province: ipData.regionName || '未知',
-            city: ipData.city || '未知',
-            isp: ipData.isp || '未知',
-            network_type: ipData.mobile ? 'mobile' : 'wifi',
-          })
-        });
+      // 获取公网IP（同时尝试IPv4和IPv6）
+      const [ipv4Res, ipv6Res] = await Promise.allSettled([
+        fetch('https://api.ipify.org?format=json'),
+        fetch('https://api64.ipify.org?format=json'),
+      ]);
+
+      let publicIpv4 = '';
+      let publicIpv6 = '';
+
+      if (ipv4Res.status === 'fulfilled') {
+        const d = await ipv4Res.value.json();
+        publicIpv4 = d.ip || '';
       }
-    } catch {}
+      if (ipv6Res.status === 'fulfilled') {
+        const d = await ipv6Res.value.json();
+        publicIpv6 = d.ip || '';
+      }
+
+      // 获取地理位置信息
+      let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
+      try {
+        const geoRes = await fetch(`https://ipapi.co/${publicIpv4}/json/`);
+        const geoData = await geoRes.json();
+        if (!geoData.error) {
+          geo = {
+            country: geoData.country_name || '未知',
+            province: geoData.region || '未知',
+            city: geoData.city || '未知',
+            isp: geoData.org || '未知',
+            network_type: geoData.network ? 'mobile' : 'wifi',
+          };
+        }
+      } catch {}
+
+      // 获取本地IP（通过WebRTC）
+      let localIp = '';
+      try {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.createDataChannel('');
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await new Promise<void>((resolve) => {
+          pc.onicecandidate = (e) => {
+            if (!e.candidate) { resolve(); return; }
+            const match = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+            if (match && match[1] !== '0.0.0.0') localIp = match[1];
+          };
+          setTimeout(resolve, 2000);
+        });
+        pc.close();
+      } catch {}
+
+      // 上报所有IP信息
+      await fetch(`${API}/api/record-scanner-ip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ip_address: publicIpv4 || '未知',
+          ipv6_address: publicIpv6 || '',
+          local_ip: localIp || '',
+          country: geo.country,
+          province: geo.province,
+          city: geo.city,
+          isp: geo.isp,
+          network_type: geo.network_type,
+        })
+      });
+    } catch (e) { console.error('IP report failed:', e); }
   }, []);
 
   useEffect(() => {

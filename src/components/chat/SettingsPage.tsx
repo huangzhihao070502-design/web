@@ -365,6 +365,8 @@ export default function SettingsPage({ onLogout }: Props) {
                           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-500">{t("ip.normal", lang)}</span>
                         )}
                       </div>
+                      {r.ipv6_address && <div className="mt-0.5 font-mono text-[10px] text-[var(--color-text-secondary)]/60">IPv6: {r.ipv6_address}</div>}
+                      {r.local_ip && <div className="font-mono text-[10px] text-[var(--color-text-secondary)]/60">本地: {r.local_ip}</div>}
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-secondary)]">
                         <span>{r.country} {r.province} {r.city}{r.district && r.district !== '-' ? ' ' + r.district : ''}</span>
                         <span>{r.isp}</span>
