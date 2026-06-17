@@ -1,6 +1,6 @@
 /**
  * Live2D 看板娘注入器
- * 直接使用 fghrsh/live2d_demo 原版文件
+ * 使用 fghrsh/live2d_demo 原版文件 + jQuery
  */
 
 if (window.__PET_INJECTED__) {
@@ -8,13 +8,23 @@ if (window.__PET_INJECTED__) {
 } else {
   window.__PET_INJECTED__ = true;
 
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = url;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
   function injectLive2D() {
     if (document.readyState === 'loading') {
-      document.addEventListener('load', () => setTimeout(injectLive2D, 300));
+      document.addEventListener('load', () => setTimeout(injectLive2D, 500));
       return;
     }
 
-    console.log('[Live2D] Injecting...');
+    console.log('[Live2D] Starting injection...');
 
     // 加载CSS
     const link = document.createElement('link');
@@ -22,7 +32,7 @@ if (window.__PET_INJECTED__) {
     link.href = '/live2d/waifu.css';
     document.head.appendChild(link);
 
-    // 创建HTML结构（原版结构）
+    // 创建HTML结构
     const waifu = document.createElement('div');
     waifu.className = 'waifu';
     waifu.innerHTML = `
@@ -40,20 +50,22 @@ if (window.__PET_INJECTED__) {
     `;
     document.body.appendChild(waifu);
 
-    // 加载waifu-tips.js
-    const tipsScript = document.createElement('script');
-    tipsScript.src = '/live2d/waifu-tips.js';
-    tipsScript.onload = () => {
-      console.log('[Live2D] waifu-tips.js loaded');
-
-      // 加载live2d.js
-      const live2dScript = document.createElement('script');
-      live2dScript.src = '/live2d/live2d.js';
-      live2dScript.onload = () => {
+    // 加载jQuery（waifu-tips.js依赖）
+    loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js')
+      .then(() => {
+        console.log('[Live2D] jQuery loaded');
+        return loadScript('/live2d/waifu-tips.js');
+      })
+      .then(() => {
+        console.log('[Live2D] waifu-tips.js loaded');
+        return loadScript('/live2d/live2d.js');
+      })
+      .then(() => {
         console.log('[Live2D] live2d.js loaded');
 
         // 配置参数
         if (window.live2d_settings) {
+          live2d_settings['modelAPI'] = 'https://live2d.fghrsh.net/api/';
           live2d_settings['modelId'] = 5;
           live2d_settings['modelTexturesId'] = 1;
           live2d_settings['modelStorage'] = false;
@@ -81,14 +93,12 @@ if (window.__PET_INJECTED__) {
             canvas.style.display = document.hidden ? 'none' : 'block';
           }
         });
-      };
-      live2dScript.onerror = () => console.error('[Live2D] Failed to load live2d.js');
-      document.head.appendChild(live2dScript);
-    };
-    tipsScript.onerror = () => console.error('[Live2D] Failed to load waifu-tips.js');
-    document.head.appendChild(tipsScript);
 
-    console.log('[Live2D] Injection started');
+        console.log('[Live2D] Injection complete!');
+      })
+      .catch(err => {
+        console.error('[Live2D] Load error:', err);
+      });
   }
 
   injectLive2D();
