@@ -41,6 +41,7 @@ export default {
       animation: {
         'noise': 'noise 8s steps(10) infinite',
         'shine': 'shine 1.5s ease-in-out infinite',
+        'spin-slow': 'spin 2s linear infinite',
       },
     },
   },
