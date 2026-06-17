@@ -1,6 +1,6 @@
 /**
  * Live2D 看板娘注入器
- * 使用 fghrsh/live2d_demo 原版文件 + jQuery
+ * 使用 live2d-widget（更活跃的开源项目）
  */
 
 if (window.__PET_INJECTED__) {
@@ -26,79 +26,47 @@ if (window.__PET_INJECTED__) {
 
     console.log('[Live2D] Starting injection...');
 
-    // 加载CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = '/live2d/waifu.css';
-    document.head.appendChild(link);
-
-    // 创建HTML结构
-    const waifu = document.createElement('div');
-    waifu.className = 'waifu';
-    waifu.innerHTML = `
-      <div class="waifu-tips"></div>
-      <canvas id="live2d" class="live2d"></canvas>
-      <div class="waifu-tool">
-        <span class="fui-home" title="首页"></span>
-        <span class="fui-chat" title="对话"></span>
-        <span class="fui-eye" title="切换模型"></span>
-        <span class="fui-user" title="切换材质"></span>
-        <span class="fui-photo" title="截图"></span>
-        <span class="fui-info-circle" title="关于"></span>
-        <span class="fui-cross" title="关闭"></span>
-      </div>
-    `;
-    document.body.appendChild(waifu);
-
-    // 加载jQuery（waifu-tips.js依赖）
-    loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js')
+    // 使用 live2d-widget（更可靠的方案）
+    // https://github.com/stevenjoezhang/live2d-widget
+    loadScript('https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/autoload.js')
       .then(() => {
-        console.log('[Live2D] jQuery loaded');
-        return loadScript('/live2d/waifu-tips.js');
-      })
-      .then(() => {
-        console.log('[Live2D] waifu-tips.js loaded');
-        return loadScript('/live2d/live2d.js');
-      })
-      .then(() => {
-        console.log('[Live2D] live2d.js loaded');
-
-        // 配置参数
-        if (window.live2d_settings) {
-          live2d_settings['modelAPI'] = 'https://live2d.fghrsh.net/api/';
-          live2d_settings['modelId'] = 5;
-          live2d_settings['modelTexturesId'] = 1;
-          live2d_settings['modelStorage'] = false;
-          live2d_settings['canCloseLive2d'] = true;
-          live2d_settings['canTurnToHomePage'] = false;
-          live2d_settings['waifuSize'] = '280x250';
-          live2d_settings['waifuTipsSize'] = '250x120';
-          live2d_settings['waifuFontSize'] = '14px';
-          live2d_settings['waifuToolFont'] = '18px';
-          live2d_settings['waifuToolLine'] = '30px';
-          live2d_settings['waifuToolTop'] = '-40px';
-          live2d_settings['waifuDraggable'] = 'axis-x';
-
-          // 初始化模型
-          if (window.initModel) {
-            initModel('/live2d/waifu-tips.json');
-            console.log('[Live2D] Model initialized');
-          }
-        }
-
-        // 后台暂停
-        document.addEventListener('visibilitychange', () => {
-          const canvas = document.getElementById('live2d');
-          if (canvas) {
-            canvas.style.display = document.hidden ? 'none' : 'block';
-          }
-        });
-
-        console.log('[Live2D] Injection complete!');
+        console.log('[Live2D] live2d-widget loaded');
       })
       .catch(err => {
         console.error('[Live2D] Load error:', err);
+        // 降级：显示emoji猫
+        injectFallback();
       });
+
+    // 后台暂停
+    document.addEventListener('visibilitychange', () => {
+      const widgets = document.querySelectorAll('#live2d-widget, .live2d-widget-container');
+      widgets.forEach(w => {
+        w.style.display = document.hidden ? 'none' : 'block';
+      });
+    });
+  }
+
+  // 降级方案
+  function injectFallback() {
+    console.log('[Live2D] Using fallback');
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;right:10px;bottom:80px;z-index:9999;pointer-events:auto;cursor:pointer;text-align:center;';
+    div.innerHTML = '<div style="font-size:80px;animation:petBounce 2s ease-in-out infinite;">🐱</div><div style="font-size:12px;color:#FF69B4;">喵~</div>';
+    document.body.appendChild(div);
+
+    const style = document.createElement('style');
+    style.textContent = '@keyframes petBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}';
+    document.head.appendChild(style);
+
+    div.addEventListener('click', () => {
+      const msgs = ['主人~ 你好呀！', '喵~', '要摸摸头吗？', '今天也要加油！'];
+      const bubble = document.createElement('div');
+      bubble.style.cssText = 'position:absolute;top:-40px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#FF69B4,#FF1493);color:white;padding:6px 14px;border-radius:15px;font-size:12px;white-space:nowrap;pointer-events:none;';
+      bubble.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+      div.appendChild(bubble);
+      setTimeout(() => bubble.remove(), 2000);
+    });
   }
 
   injectLive2D();
