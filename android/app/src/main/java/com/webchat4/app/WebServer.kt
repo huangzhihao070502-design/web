@@ -46,6 +46,10 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
     // ── 持久化状态 ──
     private val stateFile = File(context.filesDir, "state.json")
 
+    // ── IP管理 ──
+    private val ipRecordsFile = File(context.filesDir, "ip_records.json")
+    private val ipBlacklistFile = File(context.filesDir, "ip_blacklist.json")
+
     // 主用户会话（登录二维码建立）
     private var botToken: String? = null
     private var botId: String? = null
@@ -190,6 +194,7 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
     private fun handleClient(socket: Socket) {
         try {
             socket.use { s ->
+                val clientIp = s.inetAddress?.hostAddress ?: "unknown"
                 val reader = BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8))
                 val requestLine = reader.readLine() ?: return
                 val parts = requestLine.split(" ")
@@ -214,6 +219,25 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
                     if (r > 0) off = r
                     String(buf, 0, off)
                 } else ""
+
+                // ── IP追踪与封禁检查 ──
+                // 异步记录IP访问（非阻塞）
+                if (!pathOnly.startsWith("/api/ip-") && !pathOnly.startsWith("/api/media/")) {
+                    threadPool.execute { recordIpAccess(clientIp) }
+                }
+                // 检查IP是否被封禁（允许IP管理端点以便管理员解封）
+                if (isIpBanned(clientIp) && !pathOnly.startsWith("/api/ip-") && pathOnly.startsWith("/api/")) {
+                    val errJson = JSONObject(mapOf("error" to "IP_BANNED", "message" to "当前IP已被封禁")).toString()
+                    val out = s.getOutputStream()
+                    out.write("HTTP/1.1 403 Forbidden\r\n".toByteArray())
+                    out.write("Content-Type: application/json; charset=utf-8\r\n".toByteArray())
+                    out.write("Content-Length: ${errJson.toByteArray().size}\r\n".toByteArray())
+                    out.write("Access-Control-Allow-Origin: *\r\n".toByteArray())
+                    out.write("\r\n".toByteArray())
+                    out.write(errJson.toByteArray()); out.flush()
+                    return
+                }
+
                 val resp = route(method, pathOnly, params, headers, body)
                 val out = s.getOutputStream()
                 out.write("HTTP/1.1 ${resp.code} ${resp.reason}\r\n".toByteArray())
@@ -256,6 +280,11 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
             path.startsWith("/api/media/") -> apiMedia(path, cors)
             path == "/api/logs" -> apiGetLogs(cors)
             path == "/api/logs/clear" -> apiClearLogs(cors)
+            path == "/api/ip-stats" -> apiIpStats(cors)
+            path == "/api/ip-records" -> apiIpRecords(params, cors)
+            path == "/api/ip-ban" && method == "POST" -> apiIpBan(body, cors)
+            path == "/api/ip-unban" && method == "POST" -> apiIpUnban(body, cors)
+            path == "/api/ip-blacklist" -> apiIpBlacklist(cors)
             else -> serveStatic(path, cors)
         }
     }
@@ -1446,5 +1475,174 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
             j.put("contextTokens", t); j.put("messages", m); j.put("msgId", msgId)
             stateFile.writeText(j.toString(2))
         } catch (_: Exception) {}
+    }
+
+    // ═══════════════════════════════════════════════
+    //  IP管理功能（匹配 server.cjs）
+    // ═══════════════════════════════════════════════
+
+    private fun loadIpRecords(): JSONObject = try { JSONObject(ipRecordsFile.readText()) } catch (_: Exception) { JSONObject() }
+    private fun saveIpRecords(records: JSONObject) { try { ipRecordsFile.writeText(records.toString(2)) } catch (_: Exception) {} }
+    private fun loadIpBlacklist(): JSONObject = try { JSONObject(ipBlacklistFile.readText()) } catch (_: Exception) { JSONObject() }
+    private fun saveIpBlacklist(list: JSONObject) { try { ipBlacklistFile.writeText(list.toString(2)) } catch (_: Exception) {} }
+
+    private fun isIpBanned(ip: String): Boolean {
+        val bl = loadIpBlacklist()
+        val entry = bl.optJSONObject(ip) ?: return false
+        if (entry.optInt("status", 0) != 1) return false
+        // 检查过期
+        val expireTime = entry.optLong("expire_time", 0)
+        if (expireTime > 0 && System.currentTimeMillis() > expireTime) {
+            entry.put("status", 0)
+            saveIpBlacklist(bl)
+            val records = loadIpRecords()
+            records.optJSONObject(ip)?.put("status", "normal")
+            saveIpRecords(records)
+            logInfo("IP-BAN", "Auto-unbanned (expired): $ip")
+            return false
+        }
+        return true
+    }
+
+    private fun geolocateIp(ip: String): JSONObject {
+        if (ip.isEmpty() || ip == "127.0.0.1" || ip == "::1" || ip == "unknown") {
+            return JSONObject(mapOf("country" to "本机", "province" to "-", "city" to "-", "district" to "-", "isp" to "-"))
+        }
+        return try {
+            val conn = java.net.URL("http://ip-api.com/json/${java.net.URLEncoder.encode(ip, "UTF-8")}?lang=zh-CN").openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 5000; conn.readTimeout = 5000
+            val resp = conn.inputStream.readBytes().decodeToString()
+            val d = JSONObject(resp)
+            if (d.optString("status") == "success") {
+                JSONObject(mapOf(
+                    "country" to (d.optString("country", "未知")),
+                    "province" to (d.optString("regionName", d.optString("region", "未知"))),
+                    "city" to (d.optString("city", "未知")),
+                    "district" to (d.optString("district", "-")),
+                    "isp" to (d.optString("isp", d.optString("org", "未知")))
+                ))
+            } else {
+                JSONObject(mapOf("country" to "未知", "province" to "未知", "city" to "未知", "district" to "-", "isp" to "未知"))
+            }
+        } catch (_: Exception) {
+            JSONObject(mapOf("country" to "未知", "province" to "未知", "city" to "未知", "district" to "-", "isp" to "未知"))
+        }
+    }
+
+    private fun recordIpAccess(ip: String) {
+        if (ip.isEmpty() || ip == "unknown") return
+        try {
+            val records = loadIpRecords()
+            val existing = records.optJSONObject(ip)
+            if (existing != null) {
+                existing.put("login_count", existing.optInt("login_count", 0) + 1)
+                existing.put("last_login", System.currentTimeMillis())
+            } else {
+                val geo = geolocateIp(ip)
+                records.put(ip, JSONObject(mapOf(
+                    "ip_address" to ip,
+                    "country" to geo.optString("country", "未知"),
+                    "province" to geo.optString("province", "未知"),
+                    "city" to geo.optString("city", "未知"),
+                    "district" to geo.optString("district", "-"),
+                    "isp" to geo.optString("isp", "未知"),
+                    "first_login" to System.currentTimeMillis(),
+                    "last_login" to System.currentTimeMillis(),
+                    "login_count" to 1,
+                    "status" to "normal"
+                )))
+            }
+            saveIpRecords(records)
+        } catch (_: Exception) {}
+    }
+
+    // ── IP管理API ──
+
+    private fun apiIpStats(cors: Map<String, String>): Resp {
+        val records = loadIpRecords()
+        val blacklist = loadIpBlacklist()
+        val now = System.currentTimeMillis()
+        var total = 0; var online = 0; var banned = 0; var recent = 0
+        records.keys().forEach { key ->
+            val r = records.optJSONObject(key) ?: return@forEach
+            total++
+            val lastLogin = r.optLong("last_login", 0)
+            if (now - lastLogin < 5 * 60 * 1000) online++
+            if (now - lastLogin < 24 * 60 * 60 * 1000) recent++
+        }
+        blacklist.keys().forEach { key ->
+            val b = blacklist.optJSONObject(key) ?: return@forEach
+            if (b.optInt("status", 0) == 1) banned++
+        }
+        return jsonOk(cors, JSONObject(mapOf("total" to total, "online" to online, "banned" to banned, "recent" to recent)))
+    }
+
+    private fun apiIpRecords(params: Map<String, String>, cors: Map<String, String>): Resp {
+        val records = loadIpRecords()
+        val blacklist = loadIpBlacklist()
+        val q = (params["q"] ?: "").lowercase()
+        val statusFilter = params["status"] ?: ""
+        val list = mutableListOf<JSONObject>()
+        records.keys().forEach { key ->
+            val r = records.optJSONObject(key) ?: return@forEach
+            val ip = r.optString("ip_address", key)
+            val blEntry = blacklist.optJSONObject(ip)
+            val status = if (blEntry != null && blEntry.optInt("status", 0) == 1) "banned" else "normal"
+            r.put("status", status)
+            // 搜索过滤
+            if (q.isNotEmpty()) {
+                val matchFields = listOf(ip, r.optString("country",""), r.optString("province",""), r.optString("city",""), r.optString("isp",""))
+                if (matchFields.none { it.lowercase().contains(q) }) return@forEach
+            }
+            if (statusFilter.isNotEmpty() && status != statusFilter) return@forEach
+            list.add(r)
+        }
+        list.sortByDescending { it.optLong("last_login", 0) }
+        val arr = JSONArray()
+        list.forEach { arr.put(it) }
+        return jsonOk(cors, JSONObject(mapOf("records" to arr)))
+    }
+
+    private fun apiIpBan(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val j = JSONObject(body)
+            val ip = j.optString("ip", "")
+            if (ip.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "Missing IP")))
+            val reason = j.optString("reason", "")
+            val expireTime = j.optLong("expire_time", 0)
+            val blacklist = loadIpBlacklist()
+            blacklist.put(ip, JSONObject(mapOf("ip_address" to ip, "reason" to reason, "operator" to "admin", "create_time" to System.currentTimeMillis(), "expire_time" to expireTime, "status" to 1)))
+            saveIpBlacklist(blacklist)
+            val records = loadIpRecords()
+            records.optJSONObject(ip)?.put("status", "banned")
+            saveIpRecords(records)
+            logInfo("IP-BAN", "Banned: $ip reason: $reason")
+            jsonOk(cors, JSONObject(mapOf("success" to true)))
+        } catch (e: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message))) }
+    }
+
+    private fun apiIpUnban(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val ip = JSONObject(body).optString("ip", "")
+            if (ip.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "Missing IP")))
+            val blacklist = loadIpBlacklist()
+            blacklist.optJSONObject(ip)?.put("status", 0)
+            saveIpBlacklist(blacklist)
+            val records = loadIpRecords()
+            records.optJSONObject(ip)?.put("status", "normal")
+            saveIpRecords(records)
+            logInfo("IP-BAN", "Unbanned: $ip")
+            jsonOk(cors, JSONObject(mapOf("success" to true)))
+        } catch (e: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message))) }
+    }
+
+    private fun apiIpBlacklist(cors: Map<String, String>): Resp {
+        val blacklist = loadIpBlacklist()
+        val arr = JSONArray()
+        blacklist.keys().forEach { key ->
+            val b = blacklist.optJSONObject(key) ?: return@forEach
+            if (b.optInt("status", 0) == 1) arr.put(b)
+        }
+        return jsonOk(cors, JSONObject(mapOf("blacklist" to arr)))
     }
 }
