@@ -190,9 +190,8 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
       setLoading(false);
 
       if (result.success) {
-        if (remember) {
-          try { localStorage.setItem('aperture_session', JSON.stringify({ email: trimmedEmail, loggedIn: true })) } catch {}
-        }
+        // 保存账号信息和类型（admin/user）
+        try { localStorage.setItem('aperture_session', JSON.stringify({ email: trimmedEmail, loggedIn: true, type: result.type || 'user' })) } catch {}
         onLoginSuccess?.();
       } else {
         setLoginError(result.message);

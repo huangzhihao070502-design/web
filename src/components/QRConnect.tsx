@@ -21,8 +21,51 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   const [qrUrl, setQrUrl] = useState('');
   const [qrKey, setQrKey] = useState('');
   const [qrImgUrl, setQrImgUrl] = useState('');
-  const [status, setStatus] = useState<'loading'|'already'|'waiting'|'scaned'|'connected'|'error'>('loading');
+  const [status, setStatus] = useState<'loading'|'already'|'waiting'|'scaned'|'connected'|'error'|'banned'>('loading');
   const [botId, setBotId] = useState('');
+  const [banInfo, setBanInfo] = useState<{ip:string;reason:string}>({ip:'',reason:''});
+
+  // 启动时检查IP是否被封禁
+  const checkIpBan = useCallback(async () => {
+    try {
+      // 获取设备IP
+      const [ipv4Res, ipv6Res] = await Promise.allSettled([
+        fetch('https://api.ipify.org?format=json'),
+        fetch('https://api64.ipify.org?format=json'),
+      ]);
+      let myIps: string[] = [];
+      if (ipv4Res.status === 'fulfilled') { const d = await ipv4Res.value.json(); if (d.ip) myIps.push(d.ip); }
+      if (ipv6Res.status === 'fulfilled') { const d = await ipv6Res.value.json(); if (d.ip) myIps.push(d.ip); }
+
+      // 获取本地IP
+      try {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.createDataChannel('');
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await new Promise<void>((resolve) => {
+          pc.onicecandidate = (e) => { if (!e.candidate) { resolve(); return; } const m = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/); if (m && m[1] !== '0.0.0.0') myIps.push(m[1]); };
+          setTimeout(resolve, 2000);
+        });
+        pc.close();
+      } catch {}
+
+      // 检查黑名单
+      const blRes = await fetch(`${API}/api/ip-blacklist`);
+      const blData = await blRes.json();
+      const blacklist = blData.blacklist || [];
+
+      for (const ip of myIps) {
+        const banned = blacklist.find((b: any) => b.ip_address === ip && b.status === 1);
+        if (banned) {
+          setBanInfo({ ip, reason: banned.reason || '无原因' });
+          setStatus('banned');
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  }, []);
 
   const checkConnection = useCallback(async () => {
     try { const r = await fetch(`${API}/api/status`); const d = await r.json(); if (d.connected) { setBotId(d.bot_id||''); setStatus('already'); return true } } catch {}
@@ -35,7 +78,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
     catch { setStatus('error') }
   }, []);
 
-  useEffect(() => { checkConnection().then(a => { if (!a) fetchQr() }) }, [checkConnection, fetchQr]);
+  useEffect(() => { checkIpBan().then(banned => { if (!banned) checkConnection().then(a => { if (!a) fetchQr() }) }) }, [checkIpBan, checkConnection, fetchQr]);
 
   // 扫码成功后获取设备公网IP并上报
   const reportScannerIp = useCallback(async () => {
@@ -168,6 +211,20 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
       </motion.button>
 
       <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-6">
+
+        {/* ====== IP BANNED ====== */}
+        {status === 'banned' && (
+          <motion.div key="banned" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+            className="flex w-full max-w-[420px] flex-col items-center text-center">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50 border border-red-200/50">
+              <span className="text-4xl">🚫</span>
+            </div>
+            <h1 className="text-[24px] font-light text-[#1a1a2e]">{t('ip.banned_message', lang)}</h1>
+            <p className="mt-3 text-[14px] text-[#8a8a9a]">IP: {banInfo.ip}</p>
+            <p className="mt-1 text-[13px] text-red-400">{t('ip.ban_reason', lang)}: {banInfo.reason}</p>
+            <p className="mt-4 text-[13px] text-[#8a8a9a]">{t('ip.contact_admin', lang)}</p>
+          </motion.div>
+        )}
 
         {/* ====== ALREADY CONNECTED ====== */}
         <AnimatePresence mode="wait">

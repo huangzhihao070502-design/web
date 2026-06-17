@@ -289,7 +289,10 @@ export default function SettingsPage({ onLogout }: Props) {
           <div className="flex flex-col gap-3">
             <button onClick={async () => { if (!confirm(t("account.logout_scan", lang) + "?")) return; try { await fetch(`${API}/api/logout`, { method: "POST" }); alert(t("account.logout_scan", lang)); } catch {} }} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent-light)] px-4 py-3.5 text-sm font-medium text-[var(--color-accent)] transition-all hover:bg-[var(--color-accent-light)]"><LogOut size={16} strokeWidth={1.5} /> {t("account.logout_scan", lang)}</button>
             <button onClick={handleDeleteAccount} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/4 px-4 py-3.5 text-sm font-medium text-red-500 transition-all hover:bg-red-500/8"><AlertTriangle size={16} strokeWidth={1.5} /> {t("account.delete", lang)}</button>
-            <button onClick={() => setPage("ip")} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent-light)] px-4 py-3.5 text-sm font-medium text-[var(--color-accent)] transition-all hover:bg-[var(--color-accent-light)]">🌐 {t("ip.title", lang)}</button>
+            {/* IP管理仅管理员可见 */}
+            {(() => { try { const s = JSON.parse(localStorage.getItem('aperture_session') || '{}'); return s.type === 'admin'; } catch { return false; } })() && (
+              <button onClick={() => setPage("ip")} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent-light)] px-4 py-3.5 text-sm font-medium text-[var(--color-accent)] transition-all hover:bg-[var(--color-accent-light)]">🌐 {t("ip.title", lang)}</button>
+            )}
           </div>
         </div>
       </div>
