@@ -1,0 +1,237 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Base
+   ============================================ */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #f5f0eb;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ============================================
+   Noise texture overlay
+   ============================================ */
+.noise-overlay::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 100;
+  animation: noiseShift 10s steps(8) infinite;
+}
+
+@keyframes noiseShift {
+  0%   { transform: translate(0, 0); }
+  12%  { transform: translate(-2%, -3%); }
+  25%  { transform: translate(-4%, 1%); }
+  37%  { transform: translate(3%, 2%); }
+  50%  { transform: translate(-1%, 4%); }
+  62%  { transform: translate(4%, -2%); }
+  75%  { transform: translate(-3%, 1%); }
+  87%  { transform: translate(2%, -3%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ============================================
+   Input glow bar — animated underline on focus
+   ============================================ */
+.input-glow-bar {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, #2d2b55, #625f9a);
+  border-radius: 2px;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), left 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 12px rgba(45, 43, 85, 0.25), 0 0 4px rgba(45, 43, 85, 0.15);
+}
+
+.input-wrapper:focus-within .input-glow-bar {
+  width: 100%;
+  left: 0;
+}
+
+/* ============================================
+   Input focus ring (soft glow)
+   ============================================ */
+.input-wrapper:focus-within {
+  --tw-ring-color: rgba(45, 43, 85, 0.08);
+}
+
+/* ============================================
+   Button shine overlay
+   ============================================ */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 25%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.08) 75%,
+    transparent 100%
+  );
+  transform: translateX(-120%) skewX(-12deg);
+  transition: none;
+  pointer-events: none;
+}
+
+.btn-shine:hover::after {
+  transform: translateX(200%) skewX(-12deg);
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================
+   Custom checkbox
+   ============================================ */
+.checkbox-custom {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #d1d1db;
+  border-radius: 4px;
+  background: white;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:checked + .checkbox-custom {
+  background: #2d2b55;
+  border-color: #2d2b55;
+}
+
+input[type="checkbox"]:focus-visible + .checkbox-custom {
+  box-shadow: 0 0 0 3px rgba(45, 43, 85, 0.15);
+}
+
+.checkbox-custom svg {
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+input[type="checkbox"]:checked + .checkbox-custom svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ============================================
+   Shake animation for errors
+   ============================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(1px); }
+}
+
+.shake {
+  animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ============================================
+   Focus visible utility
+   ============================================ */
+.focus-ring:focus-visible {
+  outline: 2px solid #2d2b55;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================
+   Scrollbar (subtle)
+   ============================================ */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+::selection {
+  background: rgba(45, 43, 85, 0.12);
+  color: #1e1b4b;
+}
+
+/* ============================================
+   Font size from settings
+   ============================================ */
+:root {
+  --font-size-base: 14px;
+}
+
+/* ============================================
+   Dark mode theme
+   ============================================ */
+[data-theme="dark"] {
+  --color-bg: #1a1a2e;
+  --color-surface: #252540;
+  --color-surface-hover: #2e2e4a;
+  --color-text: #e0e0e0;
+  --color-text-secondary: #a0a0b0;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-accent: #C89F7E;
+  --color-accent-light: rgba(200, 159, 126, 0.15);
+}
+
+[data-theme="dark"] body {
+  background: #1a1a2e;
+}
+
+[data-theme="light"] {
+  --color-bg: #F7F3EE;
+  --color-surface: #ffffff;
+  --color-surface-hover: #F7F3EE;
+  --color-text: #3E2723;
+  --color-text-secondary: #8D6E63;
+  --color-border: rgba(234, 224, 213, 0.6);
+  --color-accent: #C89F7E;
+  --color-accent-light: rgba(200, 159, 126, 0.12);
+}
+
+[data-theme="light"] body {
+  background: #f5f0eb;
+}

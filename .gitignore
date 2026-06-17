@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+/.idea
+.DS_Store
+/build/
+/app/build/
+*.pyc
+__pycache__
+node_modules/
+server/node_modules/
+*.apk
+/local.properties
+server/node_modules/
+node_modules/
+dist/
+*.apk
+android/app/build/
