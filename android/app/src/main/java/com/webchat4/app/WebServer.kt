@@ -49,6 +49,7 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
     // ── IP管理 ──
     private val ipRecordsFile = File(context.filesDir, "ip_records.json")
     private val ipBlacklistFile = File(context.filesDir, "ip_blacklist.json")
+    private val ipFileLock = Object() // 文件读写锁
 
     // 主用户会话（登录二维码建立）
     private var botToken: String? = null
@@ -221,12 +222,12 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
                 } else ""
 
                 // ── IP追踪与封禁检查 ──
-                // 异步记录IP访问（非阻塞）
-                if (!pathOnly.startsWith("/api/ip-") && !pathOnly.startsWith("/api/media/")) {
+                // 异步记录IP访问（跳过本地127.0.0.1和IP管理接口）
+                if (clientIp != "127.0.0.1" && !pathOnly.startsWith("/api/ip-") && !pathOnly.startsWith("/api/media/")) {
                     threadPool.execute { recordIpAccess(clientIp) }
                 }
-                // 检查IP是否被封禁（允许IP管理端点以便管理员解封）
-                if (isIpBanned(clientIp) && !pathOnly.startsWith("/api/ip-") && pathOnly.startsWith("/api/")) {
+                // 检查IP是否被封禁（允许IP管理端点以便管理员解封，跳过本地127.0.0.1）
+                if (clientIp != "127.0.0.1" && isIpBanned(clientIp) && !pathOnly.startsWith("/api/ip-") && pathOnly.startsWith("/api/")) {
                     val errJson = JSONObject(mapOf("error" to "IP_BANNED", "message" to "当前IP已被封禁")).toString()
                     val out = s.getOutputStream()
                     out.write("HTTP/1.1 403 Forbidden\r\n".toByteArray())
@@ -1483,10 +1484,10 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
     //  IP管理功能（匹配 server.cjs）
     // ═══════════════════════════════════════════════
 
-    private fun loadIpRecords(): JSONObject = try { JSONObject(ipRecordsFile.readText()) } catch (_: Exception) { JSONObject() }
-    private fun saveIpRecords(records: JSONObject) { try { ipRecordsFile.writeText(records.toString(2)) } catch (_: Exception) {} }
-    private fun loadIpBlacklist(): JSONObject = try { JSONObject(ipBlacklistFile.readText()) } catch (_: Exception) { JSONObject() }
-    private fun saveIpBlacklist(list: JSONObject) { try { ipBlacklistFile.writeText(list.toString(2)) } catch (_: Exception) {} }
+    private fun loadIpRecords(): JSONObject = synchronized(ipFileLock) { try { JSONObject(ipRecordsFile.readText()) } catch (_: Exception) { JSONObject() } }
+    private fun saveIpRecords(records: JSONObject) { synchronized(ipFileLock) { try { ipRecordsFile.writeText(records.toString(2)) } catch (_: Exception) {} } }
+    private fun loadIpBlacklist(): JSONObject = synchronized(ipFileLock) { try { JSONObject(ipBlacklistFile.readText()) } catch (_: Exception) { JSONObject() } }
+    private fun saveIpBlacklist(list: JSONObject) { synchronized(ipFileLock) { try { ipBlacklistFile.writeText(list.toString(2)) } catch (_: Exception) {} } }
 
     private fun isIpBanned(ip: String): Boolean {
         val bl = loadIpBlacklist()
