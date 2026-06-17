@@ -200,6 +200,13 @@ export default function SettingsPage({ onLogout }: Props) {
             {aiCfg.scheduled_reply && (<div className="mt-3 flex items-center gap-2"><span className="whitespace-nowrap text-sm text-[var(--color-text-secondary)]">{t("ai.every", lang)}</span><input type="number" min={1} max={1440} value={aiCfg.active_interval} onChange={e => setAiCfg(p => ({ ...p, active_interval: Math.max(1, parseInt(e.target.value) || 60) }))} className="w-16 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#C89F7E]/50 sm:w-20" /><span className="text-sm text-[var(--color-text-secondary)]">{t("ai.minutes", lang)}</span></div>)}
             {aiCfg.scheduled_reply && <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">{t("ai.scheduled_desc", lang)}</p>}
           </Card>
+          <Card className="mb-4">
+            <div className="flex items-center gap-3">
+              <Toggle enabled={!!aiCfg.memory_enabled} onToggle={() => setAiCfg(p => ({ ...p, memory_enabled: !p.memory_enabled }))} />
+              <span className="text-sm font-medium text-[var(--color-text)] sm:text-[15px]">对话记忆</span>
+            </div>
+            <p className="mt-1.5 pl-[58px] text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">开启后 AI 会记住每条对话历史，回复时参考上下文，让对话更连贯。每用户最多保存 30 条记录。</p>
+          </Card>
           <div className="flex gap-3">
             <button onClick={handleSaveAi} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C89F7E] to-[#B08968] px-4 py-3 text-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95">{aiSaved ? <><Check size={16} strokeWidth={2} /> {t("ai.saved", lang)}</> : t("ai.save", lang)}</button>
             <button onClick={handleTestAi} disabled={aiTesting || !aiCfg.api_url || !aiCfg.api_key} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#C89F7E]/30 bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[#C89F7E] transition-all hover:bg-[var(--color-accent-light)] disabled:opacity-40">{aiTesting ? <><Loader size={16} strokeWidth={2} className="animate-spin" /> {t("ai.testing", lang)}</> : t("ai.test", lang)}</button>
