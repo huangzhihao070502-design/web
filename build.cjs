@@ -4,32 +4,11 @@ const path = require('path');
 
 const ROOT = __dirname;
 
-// Step 1: Build frontend using esbuild-wasm
-console.log('=== Building frontend with esbuild-wasm ===');
+// Step 1: Build frontend using Vite (handles Tailwind CSS + PostCSS properly)
+console.log('=== Building frontend with vite build ===');
 try {
-  const esbuild = require('esbuild-wasm');
-
-  esbuild.buildSync({
-    entryPoints: [path.join(ROOT, 'src/main.tsx')],
-    bundle: true,
-    outfile: path.join(ROOT, 'dist/assets/index.js'),
-    format: 'esm',
-    minify: true,
-    loader: { '.tsx': 'tsx', '.ts': 'ts' },
-    define: { 'process.env.NODE_ENV': '"production"' },
-    jsx: 'automatic',
-  });
-  console.log('JS bundled!');
-
-  let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  html = html.replace(
-    '<script type="module" src="/src/main.tsx"></script>',
-    '<link rel="stylesheet" href="/assets/index.css" />\n<script type="module" src="/assets/index.js"></script>'
-  );
-  fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
-  fs.writeFileSync(path.join(ROOT, 'dist/index.html'), html);
-  console.log('index.html created!');
-
+  execSync('npx vite build', { cwd: ROOT, stdio: 'inherit' });
+  console.log('Frontend built!');
 } catch (e) {
   console.error('Frontend build failed:', e.message);
   process.exit(1);
