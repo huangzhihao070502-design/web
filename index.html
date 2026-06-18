@@ -132,11 +132,12 @@
 (function(){
   var CDN = 'https://cdn.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/';
 
-  function loadScript(code) {
+  function loadScript(code, wrap) {
     return new Promise(function(resolve, reject) {
       try {
         var s = document.createElement('script');
-        s.textContent = code;
+        // wrap=true 时用 IIFE 包裹，隔离作用域
+        s.textContent = wrap ? ('(function(){' + code + '\n})();') : code;
         document.body.appendChild(s);
         resolve();
       } catch(e) {
@@ -180,7 +181,10 @@
     // 通过正则找到 logger 的方法调用模式，确认变量名
 
     console.log('[Live2D] Loading waifu-tips.js (de-module)...');
-    return loadScript(waifuCode).then(function() {
+    // 用 IIFE 包裹 waifu-tips.js，防止变量冲突
+    // 但要在 IIFE 结束前把 logger 暴露到全局
+    waifuCode += '\ntry { if(typeof a !== "undefined") window._l2dLogger = a; } catch(x){}';
+    return loadScript(waifuCode, true).then(function() {
       console.log('[Live2D] waifu-tips.js loaded, initWidget:', typeof window.initWidget);
 
       // Step 4: 处理 chunk/index.js
@@ -188,9 +192,11 @@
       chunkCode = chunkCode.replace(/import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?/, '');
       chunkCode = chunkCode.replace(/export\s*\{[^}]*\}\s*;?/, '');
       chunkCode = chunkCode.replace(/export\s+default\s+/g, '');
+      // 替换 logger 引用：chunk 里用 t 作为 logger
+      chunkCode = 'var t = window._l2dLogger || {info:function(){},warn:function(){},error:function(){},trace:function(){}};\n' + chunkCode;
 
       console.log('[Live2D] Loading chunk/index.js (de-module)...');
-      return loadScript(chunkCode);
+      return loadScript(chunkCode, false); // 不包裹，让类定义在全局
     });
   }).then(function() {
     console.log('[Live2D] All scripts loaded!');
