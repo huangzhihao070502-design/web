@@ -161,16 +161,19 @@
   link.href = CDN + 'waifu.css';
   document.head.appendChild(link);
 
-  // Step 2: 并行获取 waifu-tips.js 和 chunk/index.js
+  // Step 2: 并行获取所有脚本
   Promise.all([
     fetchText(CDN + 'waifu-tips.js'),
-    fetchText(CDN + 'chunk/index.js')
+    fetchText(CDN + 'chunk/index.js'),
+    fetchText(CDN + 'live2d.min.js')
   ]).then(function(codes) {
     var waifuCode = codes[0];
     var chunkCode = codes[1];
+    var cubismCode = codes[2];
 
     console.log('[Live2D] Fetched waifu-tips.js (' + waifuCode.length + ' bytes)');
     console.log('[Live2D] Fetched chunk/index.js (' + chunkCode.length + ' bytes)');
+    console.log('[Live2D] Fetched live2d.min.js (' + cubismCode.length + ' bytes)');
 
     // Step 3: 处理 waifu-tips.js
     // 去掉 export 语句，暴露 logger 到全局
@@ -187,16 +190,20 @@
     return loadScript(waifuCode, true).then(function() {
       console.log('[Live2D] waifu-tips.js loaded, initWidget:', typeof window.initWidget);
 
-      // Step 4: 处理 chunk/index.js
-      // 去掉 import 和 export 语句
+      // Step 4: 加载 Cubism 2 运行时（chunk 依赖它）
+      console.log('[Live2D] Loading live2d.min.js...');
+      return loadScript(cubismCode, false);
+    }).then(function() {
+      console.log('[Live2D] live2d.min.js loaded, Live2D:', typeof window.Live2D);
+
+      // Step 5: 处理 chunk/index.js
       chunkCode = chunkCode.replace(/import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?/, '');
       chunkCode = chunkCode.replace(/export\s*\{[^}]*\}\s*;?/, '');
       chunkCode = chunkCode.replace(/export\s+default\s+/g, '');
-      // 替换 logger 引用：chunk 里用 t 作为 logger
       chunkCode = 'var t = window._l2dLogger || {info:function(){},warn:function(){},error:function(){},trace:function(){}};\n' + chunkCode;
 
       console.log('[Live2D] Loading chunk/index.js (de-module)...');
-      return loadScript(chunkCode, false); // 不包裹，让类定义在全局
+      return loadScript(chunkCode, false);
     });
   }).then(function() {
     console.log('[Live2D] All scripts loaded!');
