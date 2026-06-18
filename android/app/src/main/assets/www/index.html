@@ -134,16 +134,14 @@
     }
   })();
   </script>
-    <script type="module" crossorigin src="/assets/index-CoLpyhS5.js"></script>
+    <script type="module" crossorigin src="/assets/index-BVqakl8L.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-C3NhqyYf.css">
   </head>
 <body>
 <div id="root"></div>
-<!-- Live2D 看板娘 -->
+<!-- Live2D 看板娘（Cubism 2 核心库需要全局加载） -->
 <script src="/live2d/live2d.min.js"></script>
-<script src="/live2d/chunk/index.js"></script>
-<script src="/live2d/chunk/index2.js"></script>
-<script src="/live2d/waifu-tips.js"></script>
+<!-- 其余 Live2D 脚本通过 autoload.js 以 IIFE 方式隔离加载，避免变量名冲突 -->
 <script src="/live2d/autoload.js"></script>
 </body>
 </html>
