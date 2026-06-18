@@ -10,11 +10,12 @@ interface Props {
   onSendImage: (file: File) => void;
   onSendFile: (file: File) => void;
   onSendLocation: (lat: number, lng: number) => void;
+  isDark?: boolean;
 }
 
-export default function InputArea({ onSendText, onSendVoice, onSendImage, onSendFile, onSendLocation }: Props) {
+export default function InputArea({ onSendText, onSendVoice, onSendImage, onSendFile, onSendLocation, isDark: _isDark }: Props) {
   const { resolvedTheme, lang } = useSettings();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = _isDark !== undefined ? _isDark : resolvedTheme === 'dark';
   const [mode, setMode] = useState<'text'|'voice'>('text');
   const [text, setText] = useState('');
   const [showMore, setShowMore] = useState(false);
@@ -87,6 +88,7 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
     { icon: MapPin, label: t('input.location', lang), color: '#8D6E63', action: handleLocation },
   ];
 
+  // Spec hardcoded values
   const composerBg = isDark ? 'rgba(34,34,34,0.85)' : 'rgba(255,255,255,0.82)';
   const composerBorder = isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.6)';
   const composerShadow = isDark ? '0 15px 50px rgba(0,0,0,0.15)' : '0 15px 50px rgba(0,0,0,0.05)';
@@ -98,7 +100,7 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
     <input ref={fileInput} type="file" onChange={handleFilePick} style={{display:'none'}} />
     <input ref={cameraInput} type="file" accept="image/*" capture="camera" onChange={handleCameraCapture} style={{display:'none'}} />
 
-    {/* Floating Composer — spec: 78px, 999px pill, blur backdrop */}
+    {/* Floating Composer — spec: 78px pill, 999px radius, blur backdrop */}
     <div style={{padding:'0 16px calc(env(safe-area-inset-bottom, 8px))',position:'relative',zIndex:10}}>
       <div style={{
         height:78,display:'flex',alignItems:'center',gap:8,
