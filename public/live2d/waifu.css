@@ -28,20 +28,32 @@
 }
 
 #waifu {
-  bottom: -500px;
+  bottom: 0;
   position: fixed;
-  right: max(16px, calc((100vw - 430px) / 2 - 20px));
+  right: 20px;
   transform: translateY(25px);
-  transition: transform .3s ease-in-out, bottom 3s ease-in-out;
+  transition: transform .3s ease-in-out;
   z-index: 1000;
 }
 
+/* waifu-active is used as a JS flag for visibility; positioning is handled by CSS defaults and the drag system */
 #waifu.waifu-active {
-  bottom: 0;
+  /* No positioning changes needed — position is managed by fixed layout or drag inline styles */
 }
 
 #waifu.waifu-hidden {
   display: none;
+}
+
+/* Drag state visual feedback */
+#waifu.waifu-dragging {
+  cursor: grabbing !important;
+  opacity: 0.85;
+  transition: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
+  z-index: 1001;
 }
 
 #waifu:hover {
