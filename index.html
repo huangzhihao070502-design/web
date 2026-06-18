@@ -184,8 +184,10 @@
       console.log('[Live2D] waifu-tips.js loaded, initWidget:', typeof window.initWidget);
 
       // Step 4: 处理 chunk/index.js
-      // 去掉 import 语句，添加 logger 引用
+      // 去掉 import 和 export 语句
       chunkCode = chunkCode.replace(/import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?/, '');
+      chunkCode = chunkCode.replace(/export\s*\{[^}]*\}\s*;?/, '');
+      chunkCode = chunkCode.replace(/export\s+default\s+/g, '');
 
       console.log('[Live2D] Loading chunk/index.js (de-module)...');
       return loadScript(chunkCode);
