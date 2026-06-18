@@ -1,52 +1,34 @@
 /*!
- * Live2D Widget - Modified for Capacitor WebView
- * All scripts loaded as regular (not ES modules)
+ * Live2D Widget - Init
+ * Scripts loaded in index.html, this file handles CSS + init.
  */
+(function () {
+  var live2dPath = '/live2d/';
 
-const live2d_path = '/live2d/';
-
-function loadScript(url, wrapInIIFE) {
-  return new Promise((resolve, reject) => {
-    if (wrapInIIFE) {
-      // Fetch, wrap in IIFE, inject as textContent
-      fetch(url).then(r => r.text()).then(code => {
-        const tag = document.createElement('script');
-        tag.textContent = '(function(){' + code + '})();';
-        document.body.appendChild(tag);
-        resolve(url);
-      }).catch(reject);
-    } else {
-      const tag = document.createElement('script');
-      tag.src = url;
-      tag.onload = () => resolve(url);
-      tag.onerror = () => reject(new Error('Failed to load ' + url));
-      document.body.appendChild(tag);
-    }
-  });
-}
-
-(async () => {
-  // 1. CSS
-  const link = document.createElement('link');
+  // Load CSS
+  var link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = live2d_path + 'waifu.css';
+  link.href = live2dPath + 'waifu.css';
   document.head.appendChild(link);
 
-  // 2. Scripts: runtime first (chunks depend on it), then chunks+waifu-tips wrapped in IIFE
-  await loadScript(live2d_path + 'live2d.min.js', false);
-  await loadScript(live2d_path + 'chunk/index.js', true);
-  await loadScript(live2d_path + 'chunk/index2.js', true);
-  await loadScript(live2d_path + 'waifu-tips.js', true);
+  function init() {
+    if (window.initWidget) {
+      window.initWidget({
+        waifuPath: live2dPath + 'waifu-tips.json',
+        cubism2Path: live2dPath + 'live2d.min.js',
+        cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+        tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
+        logLevel: 'warn',
+        drag: true,
+      });
+    } else {
+      console.warn('[Live2D] initWidget not found');
+    }
+  }
 
-  // 3. Init
-  if (window.initWidget) {
-    window.initWidget({
-      waifuPath: live2d_path + 'waifu-tips.json',
-      cubism2Path: live2d_path + 'live2d.min.js',
-      cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
-      tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
-      logLevel: 'info',
-      drag: true,
-    });
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    init();
+  } else {
+    document.addEventListener('DOMContentLoaded', init);
   }
 })();

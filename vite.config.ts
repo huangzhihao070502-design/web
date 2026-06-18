@@ -9,10 +9,4 @@ export default defineConfig({
       input: 'index.html',
     },
   },
-  // Force WASM rollup on Android
-  resolve: {
-    alias: {
-      '@rollup/rollup-android-arm64': '@rollup/wasm-node',
-    },
-  },
 })

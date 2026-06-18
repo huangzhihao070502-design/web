@@ -5,6 +5,7 @@ import UserPage from './chat/UserPage';
 import SettingsPage from './chat/SettingsPage';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../lib/i18n';
+import Live2DWidget from './Live2DWidget';
 
 const API = '';
 
@@ -149,6 +150,7 @@ export default function Dashboard({ onLogout }: Props) {
           })}
         </div>
       </div>
+      <Live2DWidget />
     </div>
   );
 }

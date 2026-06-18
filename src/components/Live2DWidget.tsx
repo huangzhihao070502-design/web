@@ -1,49 +1,41 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Live2D 看板娘组件 — 全局加载
- * 在 index.html 或 App.tsx 中引入即可
+ * Live2D 看板娘组件
+ * 脚本已在 index.html 中加载，此组件负责生命周期管理
  */
 export default function Live2DWidget() {
+  const inited = useRef(false);
+
   useEffect(() => {
-    // 避免重复加载
-    if (document.getElementById('waifu-css')) return;
+    if (inited.current) return;
+    inited.current = true;
 
-    // 1. 加载 CSS
-    const link = document.createElement('link');
-    link.id = 'waifu-css';
-    link.rel = 'stylesheet';
-    link.href = '/live2d/waifu.css';
-    document.head.appendChild(link);
-
-    // 2. 加载 waifu-tips.js（initWidget 会在这里面定义）
-    const script = document.createElement('script');
-    script.id = 'waifu-tips-js';
-    script.type = 'module';
-    script.src = '/live2d/waifu-tips.js';
-    script.onload = () => {
-      // 3. 脚本加载完成后初始化
-      (window as any).initWidget?.({
-        waifuPath: '/live2d/waifu-tips.json',
-        cubism2Path: '/live2d/live2d.min.js',
-        cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
-        tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
-        logLevel: 'warn',
-        drag: true,
-      });
-    };
-    document.body.appendChild(script);
-
-    // Cleanup
-    return () => {
-      // 移除看板娘 DOM
+    // 确保 waifu DOM 存在
+    const checkInterval = setInterval(() => {
       const waifu = document.getElementById('waifu');
-      if (waifu) waifu.remove();
-      // 移除脚本和样式
-      link.remove();
-      script.remove();
+      if (waifu) {
+        waifu.style.display = 'block';
+        clearInterval(checkInterval);
+      }
+    }, 500);
+
+    // 页面不可见时暂停
+    const handleVisibility = () => {
+      const waifu = document.getElementById('waifu');
+      if (waifu) {
+        waifu.style.display = document.hidden ? 'none' : 'block';
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(checkInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      const waifu = document.getElementById('waifu');
+      if (waifu) waifu.style.display = 'none';
     };
   }, []);
 
-  return null; // 看板娘通过脚本直接注入 DOM，React 不渲染任何内容
+  return null;
 }
