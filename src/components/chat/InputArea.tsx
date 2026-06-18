@@ -12,8 +12,6 @@ interface Props {
   onSendLocation: (lat: number, lng: number) => void;
 }
 
-const iconBg = (c: string) => `linear-gradient(135deg, ${c}, ${c}dd)`;
-
 export default function InputArea({ onSendText, onSendVoice, onSendImage, onSendFile, onSendLocation }: Props) {
   const { resolvedTheme, lang } = useSettings();
   const isDark = resolvedTheme === 'dark';
@@ -89,73 +87,105 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
     { icon: MapPin, label: t('input.location', lang), color: '#8D6E63', action: handleLocation },
   ];
 
+  const composerBg = isDark ? 'rgba(34,34,34,0.85)' : 'rgba(255,255,255,0.82)';
+  const composerBorder = isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.6)';
+  const composerShadow = isDark ? '0 15px 50px rgba(0,0,0,0.15)' : '0 15px 50px rgba(0,0,0,0.05)';
+  const inputTextColor = isDark ? '#F2F2F2' : '#202124';
+  const labelColor = isDark ? '#999999' : '#8D8D8D';
+
   return (<>
     <input ref={imgInput} type="file" accept="image/*" onChange={handleImagePick} style={{display:'none'}} />
     <input ref={fileInput} type="file" onChange={handleFilePick} style={{display:'none'}} />
     <input ref={cameraInput} type="file" accept="image/*" capture="camera" onChange={handleCameraCapture} style={{display:'none'}} />
 
-    <div style={{borderTop:`1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(234,224,213,0.6)'}`,background:isDark ? '#252540' : 'white',padding:'10px 12px calc(env(safe-area-inset-bottom,8px))'}}>
-      <div style={{display:'flex',alignItems:'flex-end',gap:8}}>
-        <button onClick={()=>setMode(m=>m==='text'?'voice':'text')}
-          style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:12,border:'none',background:'none',cursor:'pointer',color:isDark ? '#a0a0b0' : '#8D6E63',flexShrink:0}}>
-          {mode==='text' ? <Mic size={20} strokeWidth={1.5}/> : <Keyboard size={20} strokeWidth={1.5}/>}
-        </button>
-        {mode==='text' ? (
-          <div style={{flex:1,display:'flex',alignItems:'center',borderRadius:14,background:isDark ? '#1a1a2e' : '#F7F3EE',padding:'0 12px'}}>
-            <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={handleKey}
-              placeholder={t('input.placeholder', lang)} style={{flex:1,border:'none',background:'none',padding:'8px 0',fontSize:15,color:isDark ? '#e0e0e0' : '#3E2723',outline:'none'}}/>
-            <Smile size={18} strokeWidth={1.5} style={{color:isDark ? '#a0a0b0' : '#8D6E63',flexShrink:0}}/>
+    {/* Floating Composer — spec: 78px, 999px pill, blur backdrop */}
+    <div style={{padding:'0 16px calc(env(safe-area-inset-bottom, 8px))',position:'relative',zIndex:10}}>
+      <div style={{
+        height:78,display:'flex',alignItems:'center',gap:8,
+        padding:'0 8px 0 12px',borderRadius:999,
+        background:composerBg,
+        backdropFilter:'blur(30px)',WebkitBackdropFilter:'blur(30px)',
+        border:composerBorder,boxShadow:composerShadow,
+      }}>
+        {/* 左侧：附件按钮 */}
+        {mode === 'text' ? (
+          <button onClick={() => setShowMore(s => !s)}
+            style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'none',cursor:'pointer',color:labelColor,flexShrink:0}}>
+            <Plus size={20} strokeWidth={1.8}/>
+          </button>
+        ) : (
+          <button onClick={()=>setMode('text')}
+            style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'none',cursor:'pointer',color:labelColor,flexShrink:0}}>
+            <Keyboard size={20} strokeWidth={1.8}/>
+          </button>
+        )}
+
+        {/* 中间：输入 */}
+        {mode === 'text' ? (
+          <div style={{flex:1,display:'flex',alignItems:'center',height:'100%'}}>
+            <input value={text} onChange={e => setText(e.target.value)} onKeyDown={handleKey}
+              placeholder={t('input.placeholder', lang)}
+              style={{flex:1,border:'none',background:'none',padding:0,fontSize:16,fontWeight:450,lineHeight:1.5,color:inputTextColor,outline:'none'}}/>
           </div>
         ) : (
           <button onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}
-            style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:14,background:isDark ? '#1a1a2e' : '#F7F3EE',padding:'10px 0',fontSize:14,fontWeight:500,color:isDark ? '#a0a0b0' : '#8D6E63',border:'none',cursor:'pointer',userSelect:'none',transition:'all 0.15s'}}>
+            style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:999,height:48,fontSize:14,fontWeight:450,color:labelColor,border:'none',cursor:'pointer',userSelect:'none',background:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.02)'}}>
             {t('input.hold_talk', lang)}
           </button>
         )}
-        {mode==='text' && text.trim() ? (
-          <button onClick={handleSend}
-            style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:12,border:'none',cursor:'pointer',color:'white',background:iconBg('#C89F7E'),flexShrink:0}}>
-            <Send size={16} strokeWidth={2}/>
-          </button>
-        ) : mode==='text' ? (
-          <button onClick={()=>setShowMore(s=>!s)}
-            style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:12,border:'none',cursor:'pointer',color:'#8D6E63',background:'none',flexShrink:0}}>
-            <Plus size={22} strokeWidth={1.5}/>
-          </button>
+
+        {/* 右侧：发送/语音按钮 */}
+        {mode === 'text' ? (
+          text.trim() ? (
+            <motion.button onClick={handleSend}
+              whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+              style={{
+                width:58,height:58,display:'flex',alignItems:'center',justifyContent:'center',
+                borderRadius:'50%',border:'none',cursor:'pointer',flexShrink:0,
+                background:isDark?'#333333':'#F4EBDD',
+                boxShadow:'0 10px 30px rgba(0,0,0,0.08)',
+              }}>
+              <Send size={18} strokeWidth={1.8} color={isDark?'#F2F2F2':'#202124'}/>
+            </motion.button>
+          ) : (
+            <button onClick={() => setMode('voice')}
+              style={{width:58,height:58,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'none',cursor:'pointer',color:labelColor,flexShrink:0}}>
+              <Mic size={22} strokeWidth={1.8}/>
+            </button>
+          )
         ) : null}
       </div>
 
       {/* More panel */}
-      <AnimatePresence>{showMore && <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} style={{overflow:'hidden'}}>
-        <div style={{display:'flex',gap:16,padding:'12px 4px'}}>
+      <AnimatePresence>{showMore && <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} style={{overflow:'hidden',paddingTop:8}}>
+        <div style={{display:'flex',gap:16,padding:'8px 4px 4px'}}>
           {moreItems.map((item,i)=>(
             <button key={i} onClick={item.action}
-              style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,border:'none',background:'none',cursor:'pointer',transition:'all 0.15s'}}>
-              <div style={{width:56,height:56,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:16,color:'white',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',background:iconBg(item.color)}}>
-                <item.icon size={22} strokeWidth={1.5}/>
+              style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,border:'none',background:'none',cursor:'pointer'}}>
+              <div style={{width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',color:'white',boxShadow:'0 4px 12px rgba(0,0,0,0.08)',background:item.color}}>
+                <item.icon size={20} strokeWidth={1.5}/>
               </div>
-              <span style={{fontSize:11,fontWeight:500,color:isDark ? '#a0a0b0' : '#8D6E63'}}>{item.label}</span>
+              <span style={{fontSize:11,fontWeight:450,color:labelColor}}>{item.label}</span>
             </button>
           ))}
         </div>
       </motion.div>}</AnimatePresence>
     </div>
 
-    {/* Voice recording overlay - centered */}
+    {/* Voice recording overlay */}
     <AnimatePresence>{recording && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
       style={{position:'fixed',inset:0,zIndex:999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.2)',backdropFilter:'blur(4px)'}}
       onMouseUp={stopRecording} onTouchEnd={stopRecording}>
       <motion.div initial={{scale:0.8}} animate={{scale:1}} exit={{scale:0.8}}
-        style={{display:'flex',flexDirection:'column',alignItems:'center',gap:16,borderRadius:32,background:'white',padding:'40px 48px',boxShadow:'0 20px 60px rgba(0,0,0,0.15)'}}>
-        {/* Voice wave animation */}
+        style={{display:'flex',flexDirection:'column',alignItems:'center',gap:16,borderRadius:32,background:isDark?'#222222':'white',padding:'40px 48px',boxShadow:'0 20px 60px rgba(0,0,0,0.15)'}}>
         <div style={{display:'flex',alignItems:'flex-end',gap:4,height:48}}>
           {[4,8,14,20,26,20,14,8,4].map((h,i)=>(
             <motion.div key={i} animate={{height:[6,h,6]}} transition={{repeat:Infinity,duration:0.6,delay:i*0.08}}
               style={{width:6,borderRadius:3,background:'linear-gradient(180deg,#C89F7E,#B08968)'}}/>
           ))}
         </div>
-        <p style={{fontSize:16,fontWeight:500,color:'#3E2723'}}>{t('input.recording', lang)}</p>
-        <p style={{fontSize:13,color:'#8D6E63'}}>{t('input.release_end', lang)}</p>
+        <p style={{fontSize:16,fontWeight:450,color:inputTextColor}}>{t('input.recording', lang)}</p>
+        <p style={{fontSize:13,color:labelColor}}>{t('input.release_end', lang)}</p>
       </motion.div>
     </motion.div>}</AnimatePresence>
   </>);

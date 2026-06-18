@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================
-   Base
+   Base — INS × Apple × Linear 设计系统
    ============================================ */
 html {
   -webkit-font-smoothing: antialiased;
@@ -15,12 +15,19 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: #f5f0eb;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(180deg, #F9F8F7, #F6F5F3);
+  font-family:
+    'Inter',
+    'PingFang SC',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 }
 
 /* ============================================
-   Noise texture overlay
+   Noise texture overlay — 2% 超轻噪点
    ============================================ */
 .noise-overlay::after {
   content: '';
@@ -30,7 +37,7 @@ body {
   height: 200%;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-repeat: repeat;
-  opacity: 0.025;
+  opacity: 0.02;
   pointer-events: none;
   z-index: 100;
   animation: noiseShift 10s steps(8) infinite;
@@ -49,7 +56,78 @@ body {
 }
 
 /* ============================================
-   Input glow bar — animated underline on focus
+   Custom scrollbar — 4px 细滚动条
+   ============================================ */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E8E2DA;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D7CEC5;
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+::selection {
+  background: rgba(200, 159, 126, 0.2);
+  color: #202124;
+}
+
+/* ============================================
+   动画曲线 — 全局统一
+   ============================================ */
+:root {
+  --ease-smooth: cubic-bezier(.22, .61, .36, 1);
+  --font-size-base: 16px;
+}
+
+/* ============================================
+   Light theme
+   ============================================ */
+[data-theme="light"] {
+  --color-bg-start: #F9F8F7;
+  --color-bg-end: #F6F5F3;
+  --color-surface: rgba(255, 255, 255, 0.96);
+  --color-surface-hover: #FAFAF9;
+  --color-text: #202124;
+  --color-text-secondary: #8D8D8D;
+  --color-border: rgba(0, 0, 0, 0.04);
+  --color-accent: #C89F7E;
+  --color-accent-light: rgba(200, 159, 126, 0.12);
+  --bubble-user: #FAF5EF;
+  --bubble-ai: rgba(255, 255, 255, 0.96);
+}
+
+/* ============================================
+   Dark theme — 非纯黑，保持空气感
+   ============================================ */
+[data-theme="dark"] {
+  --color-bg-start: #161616;
+  --color-bg-end: #161616;
+  --color-surface: #222222;
+  --color-surface-hover: #2A2A2A;
+  --color-text: #F2F2F2;
+  --color-text-secondary: #999999;
+  --color-border: rgba(255, 255, 255, 0.04);
+  --color-accent: #C89F7E;
+  --color-accent-light: rgba(200, 159, 126, 0.12);
+  --bubble-user: #2A2A2A;
+  --bubble-ai: #222222;
+}
+
+[data-theme="dark"] body {
+  background: #161616;
+}
+
+/* ============================================
+   其他遗留样式
    ============================================ */
 .input-glow-bar {
   position: absolute;
@@ -57,10 +135,10 @@ body {
   left: 50%;
   width: 0;
   height: 1.5px;
-  background: linear-gradient(90deg, #2d2b55, #625f9a);
+  background: linear-gradient(90deg, #C89F7E, #B08968);
   border-radius: 2px;
-  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), left 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 0 12px rgba(45, 43, 85, 0.25), 0 0 4px rgba(45, 43, 85, 0.15);
+  transition: width 0.35s var(--ease-smooth), left 0.35s var(--ease-smooth);
+  box-shadow: 0 0 12px rgba(200, 159, 126, 0.25), 0 0 4px rgba(200, 159, 126, 0.15);
 }
 
 .input-wrapper:focus-within .input-glow-bar {
@@ -68,16 +146,10 @@ body {
   left: 0;
 }
 
-/* ============================================
-   Input focus ring (soft glow)
-   ============================================ */
 .input-wrapper:focus-within {
-  --tw-ring-color: rgba(45, 43, 85, 0.08);
+  --tw-ring-color: rgba(200, 159, 126, 0.08);
 }
 
-/* ============================================
-   Button shine overlay
-   ============================================ */
 .btn-shine {
   position: relative;
   overflow: hidden;
@@ -105,12 +177,9 @@ body {
 
 .btn-shine:hover::after {
   transform: translateX(200%) skewX(-12deg);
-  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.8s var(--ease-smooth);
 }
 
-/* ============================================
-   Custom checkbox
-   ============================================ */
 .checkbox-custom {
   position: relative;
   display: flex;
@@ -121,17 +190,17 @@ body {
   border: 1.5px solid #d1d1db;
   border-radius: 4px;
   background: white;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.25s var(--ease-smooth);
   flex-shrink: 0;
 }
 
 input[type="checkbox"]:checked + .checkbox-custom {
-  background: #2d2b55;
-  border-color: #2d2b55;
+  background: #C89F7E;
+  border-color: #C89F7E;
 }
 
 input[type="checkbox"]:focus-visible + .checkbox-custom {
-  box-shadow: 0 0 0 3px rgba(45, 43, 85, 0.15);
+  box-shadow: 0 0 0 3px rgba(200, 159, 126, 0.15);
 }
 
 .checkbox-custom svg {
@@ -145,9 +214,6 @@ input[type="checkbox"]:checked + .checkbox-custom svg {
   transform: scale(1);
 }
 
-/* ============================================
-   Shake animation for errors
-   ============================================ */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   15% { transform: translateX(-6px); }
@@ -159,79 +225,11 @@ input[type="checkbox"]:checked + .checkbox-custom svg {
 }
 
 .shake {
-  animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  animation: shake 0.45s var(--ease-smooth) both;
 }
 
-/* ============================================
-   Focus visible utility
-   ============================================ */
 .focus-ring:focus-visible {
-  outline: 2px solid #2d2b55;
+  outline: 2px solid #C89F7E;
   outline-offset: 2px;
   border-radius: 4px;
-}
-
-/* ============================================
-   Scrollbar (subtle)
-   ============================================ */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.12);
-}
-
-/* ============================================
-   Selection
-   ============================================ */
-::selection {
-  background: rgba(45, 43, 85, 0.12);
-  color: #1e1b4b;
-}
-
-/* ============================================
-   Font size from settings
-   ============================================ */
-:root {
-  --font-size-base: 14px;
-}
-
-/* ============================================
-   Dark mode theme
-   ============================================ */
-[data-theme="dark"] {
-  --color-bg: #1a1a2e;
-  --color-surface: #252540;
-  --color-surface-hover: #2e2e4a;
-  --color-text: #e0e0e0;
-  --color-text-secondary: #a0a0b0;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-accent: #C89F7E;
-  --color-accent-light: rgba(200, 159, 126, 0.15);
-}
-
-[data-theme="dark"] body {
-  background: #1a1a2e;
-}
-
-[data-theme="light"] {
-  --color-bg: #F7F3EE;
-  --color-surface: #ffffff;
-  --color-surface-hover: #F7F3EE;
-  --color-text: #3E2723;
-  --color-text-secondary: #8D6E63;
-  --color-border: rgba(234, 224, 213, 0.6);
-  --color-accent: #C89F7E;
-  --color-accent-light: rgba(200, 159, 126, 0.12);
-}
-
-[data-theme="light"] body {
-  background: #f5f0eb;
 }

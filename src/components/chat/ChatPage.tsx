@@ -280,27 +280,102 @@ export default function ChatPage({ userId }: Props) {
           )}
         </div>}
         {msgs.filter(msg => !searchQuery || (msg.text || '').toLowerCase().includes(searchQuery.toLowerCase())).map((msg, i) => {
-          const mine = msg.isMine; const isPlaying = playingId === msg.id;
-          const showDate = i === 0 || msgs[i-1].time.slice(0,5) !== msg.time.slice(0,5);
-          const showAiBadge = msg.is_ai && settings.notify_ai_indicator && !mine;
+          const mine = msg.isMine;
+          const isPlaying = playingId === msg.id;
+          const prev = msgs[i - 1];
+          const next = msgs[i + 1];
+          const showDate = i === 0 || prev.time.slice(0, 5) !== msg.time.slice(0, 5);
+          const sameSenderNext = next && next.isMine === mine;
+          const sameSenderPrev = prev && prev.isMine === mine;
+          const isFirst = !sameSenderPrev;
+          const isLast = !sameSenderNext;
+
+          // 方案规格：AI 32/32/32/10，用户 32/32/10/32
+          const br = mine
+            ? (isFirst&&isLast?'32px':isFirst?'32px 32px 10px 32px':isLast?'10px 32px 32px 32px':'10px 32px 10px 32px')
+            : (isFirst&&isLast?'32px':isFirst?'32px 32px 32px 10px':isLast?'32px 10px 32px 32px':'32px 10px 32px 10px');
+
+          const showAvatar = !mine && isLast;
+          const showName = !mine && isFirst;
+
           return (<div key={msg.id}>
-            {showDate && <div style={{display:'flex',justifyContent:'center',marginBottom:8}}><span style={{borderRadius:999,background:tc.dateChip,padding:'2px 12px',fontSize:11,color:tc.textSec}}>{msg.time}</span></div>}
-            <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} style={{display:'flex',justifyContent:mine?'flex-end':'flex-start',marginBottom:10}}>
-              <div style={{maxWidth:'75%',borderRadius:16,padding:'10px 16px',fontSize:baseFontSize,lineHeight:1.5,wordBreak:'break-word',background:mine?'linear-gradient(135deg,#C89F7E,#B08968)':tc.bubbleOther,color:mine?'white':tc.text,borderBottomRightRadius:mine?4:16,borderBottomLeftRadius:mine?16:4}}>
-                {showAiBadge && <div style={{display:'inline-block',background:'rgba(200,159,126,0.2)',borderRadius:6,padding:'1px 6px',fontSize:10,fontWeight:600,color:mine?'rgba(255,255,255,0.8)':'#C89F7E',marginBottom:4,marginRight:4}}>AI</div>}
-                {msg.isImage && (msg.imageData || msg.mediaCacheKey) && <img src={msg.imageData || `/api/media/${msg.mediaCacheKey}`} alt="" style={{maxWidth:'100%',borderRadius:8,marginBottom:4,display:'block'}} loading="lazy"/>}
-                {msg.isVoice ? (<button onClick={()=>playVoice(msg)} disabled={!msg.voiceUrl} style={{display:'flex',alignItems:'center',gap:10,border:'none',background:'none',cursor:msg.voiceUrl?'pointer':'default',padding:0,color:'inherit',width:'100%'}}>
-                  {isPlaying ? <Pause size={16} strokeWidth={1.5} fill={mine?'white':'#C89F7E'}/> : <Play size={16} strokeWidth={1.5} fill={mine?'white':'#C89F7E'}/>}
-                  <span style={{fontSize:13}}>{msg.voiceDuration||3}"</span>
-                </button>) : msg.isLocation ? <div style={{display:'flex',alignItems:'center',gap:6}}><MapPin size={16} strokeWidth={1.5}/><span>{msg.text}</span></div>
-                : msg.isFile ? <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <File size={16} strokeWidth={1.5}/>
-                  {msg.mediaCacheKey ? (
-                    <a href={`/api/media/${msg.mediaCacheKey}`} download style={{color:'inherit',textDecoration:'underline'}}>{msg.text}</a>
-                  ) : <span>{msg.text}</span>}
+            {/* 日期分隔线 */}
+            {showDate && <div style={{display:'flex',alignItems:'center',gap:12,margin:'24px 0 32px',padding:'0 24px'}}>
+              <div style={{flex:1,height:'1px',background:'rgba(0,0,0,0.04)'}} />
+              <span style={{fontSize:12,color:'#8D8D8D',whiteSpace:'nowrap',fontWeight:450,letterSpacing:'1px'}}>{msg.time}</span>
+              <div style={{flex:1,height:'1px',background:'rgba(0,0,0,0.04)'}} />
+            </div>}
+
+            <motion.div
+              initial={{opacity:0, y:12, filter:'blur(10px)'}}
+              animate={{opacity:1, y:0, filter:'blur(0px)'}}
+              transition={{duration:0.45, ease:[0.22,0.61,0.36,1]}}
+              style={{
+                display:'flex',
+                flexDirection: mine ? 'row-reverse' : 'row',
+                alignItems:'flex-end',
+                marginBottom: sameSenderNext ? (isLast ? 32 : 4) : 32,
+                paddingLeft: 24,
+                paddingRight: 24,
+                gap: 12,
+              }}
+            >
+              {/* 头像 — Pearl Gradient */}
+              {showAvatar ? (
+                <div style={{
+                  width:42,height:42,borderRadius:'50%',flexShrink:0,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  color:'#B08968',fontSize:14,fontWeight:500,
+                  background:'radial-gradient(#FFFFFF,#EDE9E4)',
+                  boxShadow:'0 4px 12px rgba(0,0,0,0.04)',
+                }}>
+                  {userId ? userId.slice(0,1).toUpperCase() : 'B'}
                 </div>
-                : msg.text}
-                <div style={{marginTop:2,fontSize:10,textAlign:'right',color:mine?'rgba(255,255,255,0.6)':'rgba(141,110,99,0.6)'}}>{showDate?'':msg.time.slice(0,5)}</div>
+              ) : !mine && <div style={{width:42,flexShrink:0}} />}
+
+              {/* 气泡 */}
+              <div style={{display:'flex',flexDirection:'column',alignItems:mine?'flex-end':'flex-start',maxWidth:'700px'}}>
+                {showName && !mine && <div style={{fontSize:12,color:'#8D8D8D',marginBottom:6,marginLeft:4,fontWeight:450,letterSpacing:'0.3px'}}>{userId ? userId.slice(0,8)+'...' : '好友'}</div>}
+
+                <div style={{
+                  borderRadius: br,
+                  padding:'20px',
+                  fontSize:16,fontWeight:450,lineHeight:1.85,letterSpacing:'0.2px',
+                  wordBreak:'break-word',whiteSpace:'pre-wrap',
+                  color:'#202124',
+                  background: mine ? '#FAF5EF' : 'rgba(255,255,255,0.96)',
+                  boxShadow: mine ? '0 12px 35px rgba(0,0,0,0.05)' : '0 15px 40px rgba(0,0,0,0.05)',
+                  border: mine ? 'none' : '1px solid rgba(255,255,255,0.6)',
+                  transition:'transform 0.3s cubic-bezier(.22,.61,.36,1)',
+                }}
+                  onMouseEnter={e=>{if(!mine)(e.currentTarget as HTMLElement).style.transform='translateY(-1px)'}}
+                  onMouseLeave={e=>{if(!mine)(e.currentTarget as HTMLElement).style.transform='translateY(0)'}}
+                >
+                  {msg.isImage && (msg.imageData || msg.mediaCacheKey) && (
+                    <img src={msg.imageData || `/api/media/${msg.mediaCacheKey}`} alt=""
+                      style={{maxWidth:'100%',borderRadius:24,marginBottom:8,display:'block',boxShadow:'0 4px 12px rgba(0,0,0,0.04)'}} loading="lazy"/>
+                  )}
+                  {msg.isVoice ? (
+                    <button onClick={()=>playVoice(msg)} disabled={!msg.voiceUrl}
+                      style={{display:'flex',alignItems:'center',gap:10,border:'none',background:'none',cursor:msg.voiceUrl?'pointer':'default',padding:0,color:'#202124',width:'100%',fontSize:16,fontWeight:450}}>
+                      {isPlaying ? <Pause size={16} strokeWidth={1.8}/> : <Play size={16} strokeWidth={1.8}/>}
+                      <span style={{fontSize:14,color:'#8D8D8D'}}>{msg.voiceDuration||3}"</span>
+                    </button>
+                  ) : msg.isLocation ? (
+                    <div style={{display:'flex',alignItems:'center',gap:8}}><MapPin size={16} strokeWidth={1.8}/><span>{msg.text}</span></div>
+                  ) : msg.isFile ? (
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <File size={16} strokeWidth={1.8}/>
+                      {msg.mediaCacheKey ? (
+                        <a href={`/api/media/${msg.mediaCacheKey}`} download style={{color:'#202124',textDecoration:'underline',textUnderlineOffset:3}}>{msg.text}</a>
+                      ) : <span>{msg.text}</span>}
+                    </div>
+                  ) : msg.text}
+                </div>
+
+                {mine && isLast && <div style={{marginTop:4,marginRight:2}}>
+                  <span style={{fontSize:10,color:'#BFB8B0',letterSpacing:'0.5px'}}>✓ 已读</span>
+                </div>}
               </div>
             </motion.div>
           </div>);

@@ -23,15 +23,15 @@ const fontSizeMap: Record<string, number> = { small: 13, normal: 14, large: 16 }
 function getThemeColors(theme: string) {
   const dark = theme === 'dark';
   return {
-    outerBg: dark ? '#12122a' : '#E8E0D8',
-    bg: dark ? '#1a1a2e' : '#F7F3EE',
-    surface: dark ? '#252540' : '#ffffff',
-    text: dark ? '#e0e0e0' : '#3E2723',
-    textSec: dark ? '#a0a0b0' : '#8D6E63',
-    border: dark ? 'rgba(255,255,255,0.08)' : 'rgba(234,224,213,0.6)',
+    outerBg: dark ? '#161616' : '#F9F8F7',
+    bg: dark ? '#161616' : '#F9F8F7',
+    surface: dark ? '#222222' : 'rgba(255,255,255,0.96)',
+    text: dark ? '#F2F2F2' : '#202124',
+    textSec: dark ? '#999999' : '#8D8D8D',
+    border: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
     accent: '#C89F7E',
     accentActive: '#B08968',
-    tabBg: dark ? '#252540' : 'white',
+    tabBg: dark ? '#222222' : 'rgba(255,255,255,0.96)',
   };
 }
 
@@ -82,8 +82,9 @@ export default function Dashboard({ onLogout }: Props) {
   return (
     <div style={{
       position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: c.outerBg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: baseFontSize,
-    }}>
+      background: `linear-gradient(180deg, ${c.outerBg}, ${c.outerBg === '#F9F8F7' ? '#F6F5F3' : '#161616'})`,
+      fontFamily: '"Inter","PingFang SC",system-ui,sans-serif', fontSize: baseFontSize,
+    }} className="noise-overlay">
       <div style={{
         width: '100%', maxWidth: 430, height: '100%', maxHeight: '100vh',
         background: c.bg, display: 'flex', flexDirection: 'column',
