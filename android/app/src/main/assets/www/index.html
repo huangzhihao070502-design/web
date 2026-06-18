@@ -4,10 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="description" content="登录您的账号" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://fastly.jsdelivr.net https://cubism.live2d.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fastly.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self' data: https:;">
 <title>登录 — Aperture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flat-ui@2.3.0/dist/css/flat-ui.min.css" />
   <script>
   window.onerror = function(msg, url, line) {
     var x = new XMLHttpRequest();
@@ -15,9 +17,133 @@
     x.send(JSON.stringify({msg: msg, url: url, line: line}));
   };
   </script>
+  <!-- 调试面板 -->
+  <script>
+  (function(){
+    var logs = [];
+    var MAX = 200;
+    var panel = null;
+    var btn = null;
+    var isOpen = false;
+
+    function createUI() {
+      btn = document.createElement('div');
+      btn.innerHTML = '🐛';
+      btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);user-select:none;';
+      btn.onclick = function() { togglePanel(); };
+      document.body.appendChild(btn);
+
+      panel = document.createElement('div');
+      panel.style.cssText = 'position:fixed;bottom:130px;right:8px;z-index:99998;width:calc(100vw - 16px);max-width:400px;height:50vh;background:#0d0d0d;color:#e0e0e0;font-family:monospace;font-size:11px;line-height:1.5;overflow:auto;border-radius:12px;padding:8px;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.5);';
+      document.body.appendChild(panel);
+
+      var topBar = document.createElement('div');
+      topBar.style.cssText = 'position:sticky;top:0;display:flex;gap:4px;margin-bottom:4px;z-index:1;';
+
+      var clearBtn = document.createElement('div');
+      clearBtn.innerHTML = '清除';
+      clearBtn.style.cssText = 'flex:1;background:#333;color:#fff;text-align:center;padding:4px;border-radius:6px;font-size:11px;cursor:pointer;';
+      clearBtn.onclick = function() { logs = []; renderLogs(); };
+
+      var copyBtn = document.createElement('div');
+      copyBtn.innerHTML = '复制';
+      copyBtn.style.cssText = 'flex:1;background:#2d2b55;color:#fff;text-align:center;padding:4px;border-radius:6px;font-size:11px;cursor:pointer;';
+      copyBtn.onclick = function() {
+        var text = logs.map(function(l) { return '[' + l.time + '] [' + l.level.toUpperCase() + '] ' + l.msg; }).join('\n');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(function() { copyBtn.innerHTML = '已复制'; setTimeout(function(){ copyBtn.innerHTML = '复制'; }, 1500); });
+        } else {
+          var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          copyBtn.innerHTML = '已复制'; setTimeout(function(){ copyBtn.innerHTML = '复制'; }, 1500);
+        }
+      };
+
+      topBar.appendChild(clearBtn);
+      topBar.appendChild(copyBtn);
+      panel.appendChild(topBar);
+
+      renderLogs();
+    }
+
+    function togglePanel() {
+      isOpen = !isOpen;
+      if (panel) panel.style.display = isOpen ? 'block' : 'none';
+      if (btn) btn.innerHTML = isOpen ? '✕' : '🐛';
+    }
+
+    function renderLogs() {
+      if (!panel) return;
+      var topBar = panel.firstChild;
+      panel.innerHTML = '';
+      panel.appendChild(topBar);
+      for (var i = 0; i < logs.length; i++) {
+        var div = document.createElement('div');
+        div.style.cssText = 'padding:2px 4px;border-bottom:1px solid #1a1a1a;word-break:break-all;white-space:pre-wrap;';
+        var l = logs[i];
+        if (l.level === 'error') div.style.color = '#ff6b6b';
+        else if (l.level === 'warn') div.style.color = '#ffd43b';
+        else if (l.level === 'info') div.style.color = '#69db7c';
+        div.textContent = '[' + l.time + '] [' + l.level.toUpperCase() + '] ' + l.msg;
+        panel.appendChild(div);
+      }
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function addLog(level, args) {
+      var msg = [];
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (typeof a === 'object') {
+          try { msg.push(JSON.stringify(a, null, 0)); } catch(e) { msg.push(String(a)); }
+        } else {
+          msg.push(String(a));
+        }
+      }
+      var now = new Date();
+      var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+      logs.push({ level: level, msg: msg.join(' '), time: time });
+      if (logs.length > MAX) logs.shift();
+      renderLogs();
+      if (level === 'error' && !isOpen && btn) {
+        btn.style.background = '#e03131';
+        setTimeout(function(){ btn.style.background = '#1a1a2e'; }, 2000);
+      }
+    }
+
+    var origLog = console.log;
+    var origWarn = console.warn;
+    var origError = console.error;
+    var origInfo = console.info;
+
+    console.log = function() { origLog.apply(console, arguments); addLog('log', arguments); };
+    console.warn = function() { origWarn.apply(console, arguments); addLog('warn', arguments); };
+    console.error = function() { origError.apply(console, arguments); addLog('error', arguments); };
+    console.info = function() { origInfo.apply(console, arguments); addLog('info', arguments); };
+
+    window.addEventListener('error', function(e) {
+      addLog('error', ['[Uncaught] ' + e.message + ' at ' + (e.filename||'') + ':' + (e.lineno||'')]);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      addLog('error', ['[UnhandledRejection] ' + (e.reason ? (e.reason.message || e.reason) : 'unknown')]);
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', createUI);
+    } else {
+      createUI();
+    }
+  })();
+  </script>
+    <script type="module" crossorigin src="/assets/index-CoLpyhS5.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C3NhqyYf.css">
   </head>
 <body>
 <div id="root"></div>
-<script type="module" src="/assets/index.js"></script>
+<!-- Live2D 看板娘 -->
+<script src="/live2d/live2d.min.js"></script>
+<script src="/live2d/chunk/index.js"></script>
+<script src="/live2d/chunk/index2.js"></script>
+<script src="/live2d/waifu-tips.js"></script>
+<script src="/live2d/autoload.js"></script>
 </body>
 </html>
