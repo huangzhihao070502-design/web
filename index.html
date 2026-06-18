@@ -216,10 +216,21 @@
           waifuPath: CDN + 'waifu-tips.json',
           cubism2Path: CDN + 'live2d.min.js',
           cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
-          cdnPath: 'https://cdn.jsdelivr.net/gh/fghrsh/live2d_api/',
           tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
           logLevel: 'info',
-          drag: true
+          drag: true,
+          models: [
+            {
+              name: 'Potion-Maker/Pio',
+              paths: ['https://cdn.jsdelivr.net/gh/fghrsh/live2d_api/model/Potion-Maker/Pio/index.json'],
+              message: '来自 Potion Maker 的 Pio 酱 ~'
+            },
+            {
+              name: 'Potion-Maker/Tia',
+              paths: ['https://cdn.jsdelivr.net/gh/fghrsh/live2d_api/model/Potion-Maker/Tia/index.json'],
+              message: '来自 Potion Maker 的 Tia 酱 ~'
+            }
+          ]
         });
         console.log('[Live2D] initWidget called successfully!');
       } catch(e) {
