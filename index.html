@@ -27,19 +27,16 @@
     var isOpen = false;
 
     function createUI() {
-      // 悬浮按钮
       btn = document.createElement('div');
       btn.innerHTML = '🐛';
       btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);user-select:none;';
       btn.onclick = function() { togglePanel(); };
       document.body.appendChild(btn);
 
-      // 面板
       panel = document.createElement('div');
       panel.style.cssText = 'position:fixed;bottom:130px;right:8px;z-index:99998;width:calc(100vw - 16px);max-width:400px;height:50vh;background:#0d0d0d;color:#e0e0e0;font-family:monospace;font-size:11px;line-height:1.5;overflow:auto;border-radius:12px;padding:8px;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.5);';
       document.body.appendChild(panel);
 
-      // 清除按钮
       var clearBtn = document.createElement('div');
       clearBtn.innerHTML = '清除';
       clearBtn.style.cssText = 'position:sticky;top:0;background:#333;color:#fff;text-align:center;padding:4px;border-radius:6px;margin-bottom:4px;font-size:11px;cursor:pointer;';
@@ -88,14 +85,12 @@
       logs.push({ level: level, msg: msg.join(' '), time: time });
       if (logs.length > MAX) logs.shift();
       renderLogs();
-      // 自动弹出错误
       if (level === 'error' && !isOpen && btn) {
         btn.style.background = '#e03131';
         setTimeout(function(){ btn.style.background = '#1a1a2e'; }, 2000);
       }
     }
 
-    // 拦截 console
     var origLog = console.log;
     var origWarn = console.warn;
     var origError = console.error;
@@ -106,7 +101,6 @@
     console.error = function() { origError.apply(console, arguments); addLog('error', arguments); };
     console.info = function() { origInfo.apply(console, arguments); addLog('info', arguments); };
 
-    // 拦截未捕获错误
     window.addEventListener('error', function(e) {
       addLog('error', ['[Uncaught] ' + e.message + ' at ' + (e.filename||'') + ':' + (e.lineno||'')]);
     });
@@ -114,7 +108,6 @@
       addLog('error', ['[UnhandledRejection] ' + (e.reason ? (e.reason.message || e.reason) : 'unknown')]);
     });
 
-    // DOM ready 后创建 UI
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', createUI);
     } else {
@@ -126,123 +119,6 @@
 <body>
 <div id="root"></div>
 <script type="module" src="/src/main.tsx"></script>
-<script>
-// Live2D 看板娘 — ES Module 转普通脚本方案
-// 核心思路：fetch ES Module 源码 → 去掉 import/export → 作为普通脚本加载
-(function(){
-  var CDN = 'https://cdn.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/';
-
-  function loadScript(code, wrap) {
-    return new Promise(function(resolve, reject) {
-      try {
-        var s = document.createElement('script');
-        // wrap=true 时用 IIFE 包裹，隔离作用域
-        s.textContent = wrap ? ('(function(){' + code + '\n})();') : code;
-        document.body.appendChild(s);
-        resolve();
-      } catch(e) {
-        reject(e);
-      }
-    });
-  }
-
-  function fetchText(url) {
-    return fetch(url).then(function(r) {
-      if (!r.ok) throw new Error('fetch ' + url + ' failed: ' + r.status);
-      return r.text();
-    });
-  }
-
-  console.log('[Live2D] Starting de-module injection...');
-
-  // Step 1: 加载 CSS
-  var link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = CDN + 'waifu.css';
-  document.head.appendChild(link);
-
-  // Step 2: 并行获取所有脚本
-  Promise.all([
-    fetchText(CDN + 'waifu-tips.js'),
-    fetchText(CDN + 'chunk/index.js'),
-    fetchText(CDN + 'live2d.min.js')
-  ]).then(function(codes) {
-    var waifuCode = codes[0];
-    var chunkCode = codes[1];
-    var cubismCode = codes[2];
-
-    console.log('[Live2D] Fetched waifu-tips.js (' + waifuCode.length + ' bytes)');
-    console.log('[Live2D] Fetched chunk/index.js (' + chunkCode.length + ' bytes)');
-    console.log('[Live2D] Fetched live2d.min.js (' + cubismCode.length + ' bytes)');
-
-    // Step 3: 处理 waifu-tips.js
-    // 去掉 export 语句，暴露 logger 到全局
-    waifuCode = waifuCode.replace(/export\s*\{[^}]*\}\s*;?/, '');
-    waifuCode += '\nwindow._l2dLogger = (function(){ try { var e = function(lvl){this.level=lvl}; e.prototype.info=function(){}; e.prototype.warn=function(){}; e.prototype.error=function(){}; e.prototype.trace=function(){}; return new e("warn"); } catch(x){ return {info:function(){},warn:function(){},error:function(){},trace:function(){}}; } })();\n';
-    // 从 waifu-tips.js 中提取 logger 实例
-    // waifu-tips.js 定义了 class a (logger), 我们需要暴露它
-    // 通过正则找到 logger 的方法调用模式，确认变量名
-
-    console.log('[Live2D] Loading waifu-tips.js (de-module)...');
-    // 用 IIFE 包裹 waifu-tips.js，防止变量冲突
-    // 但要在 IIFE 结束前把 logger 暴露到全局
-    waifuCode += '\ntry { if(typeof a !== "undefined") window._l2dLogger = a; } catch(x){}';
-    return loadScript(waifuCode, true).then(function() {
-      console.log('[Live2D] waifu-tips.js loaded, initWidget:', typeof window.initWidget);
-
-      // Step 4: 加载 Cubism 2 运行时（chunk 依赖它）
-      console.log('[Live2D] Loading live2d.min.js...');
-      return loadScript(cubismCode, false);
-    }).then(function() {
-      console.log('[Live2D] live2d.min.js loaded, Live2D:', typeof window.Live2D);
-
-      // Step 5: 处理 chunk/index.js
-      chunkCode = chunkCode.replace(/import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?/, '');
-      chunkCode = chunkCode.replace(/export\s*\{[^}]*\}\s*;?/, '');
-      chunkCode = chunkCode.replace(/export\s+default\s+/g, '');
-      chunkCode = 'var t = window._l2dLogger || {info:function(){},warn:function(){},error:function(){},trace:function(){}};\n' + chunkCode;
-
-      console.log('[Live2D] Loading chunk/index.js (de-module)...');
-      return loadScript(chunkCode, false);
-    });
-  }).then(function() {
-    console.log('[Live2D] All scripts loaded!');
-
-    // Step 5: 调用 initWidget
-    if (window.initWidget) {
-      console.log('[Live2D] Calling initWidget...');
-      try {
-        window.initWidget({
-          waifuPath: CDN + 'waifu-tips.json',
-          cubism2Path: CDN + 'live2d.min.js',
-          cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
-          tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
-          logLevel: 'info',
-          drag: true,
-          models: [
-            {
-              name: 'Potion-Maker/Pio',
-              paths: ['https://cdn.jsdelivr.net/gh/fghrsh/live2d_api/model/Potion-Maker/Pio/index.json'],
-              message: '来自 Potion Maker 的 Pio 酱 ~'
-            },
-            {
-              name: 'Potion-Maker/Tia',
-              paths: ['https://cdn.jsdelivr.net/gh/fghrsh/live2d_api/model/Potion-Maker/Tia/index.json'],
-              message: '来自 Potion Maker 的 Tia 酱 ~'
-            }
-          ]
-        });
-        console.log('[Live2D] initWidget called successfully!');
-      } catch(e) {
-        console.error('[Live2D] initWidget error:', e.message, e.stack);
-      }
-    } else {
-      console.error('[Live2D] initWidget not found after loading waifu-tips.js');
-    }
-  }).catch(function(err) {
-    console.error('[Live2D] Pipeline error:', err.message);
-  });
-})();
-</script>
+<script src="/live2d/autoload.js"></script>
 </body>
 </html>
