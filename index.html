@@ -16,6 +16,111 @@
     x.send(JSON.stringify({msg: msg, url: url, line: line}));
   };
   </script>
+  <!-- 调试面板 -->
+  <script>
+  (function(){
+    var logs = [];
+    var MAX = 200;
+    var panel = null;
+    var btn = null;
+    var isOpen = false;
+
+    function createUI() {
+      // 悬浮按钮
+      btn = document.createElement('div');
+      btn.innerHTML = '🐛';
+      btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);user-select:none;';
+      btn.onclick = function() { togglePanel(); };
+      document.body.appendChild(btn);
+
+      // 面板
+      panel = document.createElement('div');
+      panel.style.cssText = 'position:fixed;bottom:130px;right:8px;z-index:99998;width:calc(100vw - 16px);max-width:400px;height:50vh;background:#0d0d0d;color:#e0e0e0;font-family:monospace;font-size:11px;line-height:1.5;overflow:auto;border-radius:12px;padding:8px;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.5);';
+      document.body.appendChild(panel);
+
+      // 清除按钮
+      var clearBtn = document.createElement('div');
+      clearBtn.innerHTML = '清除';
+      clearBtn.style.cssText = 'position:sticky;top:0;background:#333;color:#fff;text-align:center;padding:4px;border-radius:6px;margin-bottom:4px;font-size:11px;cursor:pointer;';
+      clearBtn.onclick = function() { logs = []; renderLogs(); };
+      panel.appendChild(clearBtn);
+
+      renderLogs();
+    }
+
+    function togglePanel() {
+      isOpen = !isOpen;
+      if (panel) panel.style.display = isOpen ? 'block' : 'none';
+      if (btn) btn.innerHTML = isOpen ? '✕' : '🐛';
+    }
+
+    function renderLogs() {
+      if (!panel) return;
+      var clearBtn = panel.firstChild;
+      panel.innerHTML = '';
+      panel.appendChild(clearBtn);
+      for (var i = 0; i < logs.length; i++) {
+        var div = document.createElement('div');
+        div.style.cssText = 'padding:2px 4px;border-bottom:1px solid #1a1a1a;word-break:break-all;white-space:pre-wrap;';
+        var l = logs[i];
+        if (l.level === 'error') div.style.color = '#ff6b6b';
+        else if (l.level === 'warn') div.style.color = '#ffd43b';
+        else if (l.level === 'info') div.style.color = '#69db7c';
+        div.textContent = '[' + l.time + '] [' + l.level.toUpperCase() + '] ' + l.msg;
+        panel.appendChild(div);
+      }
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function addLog(level, args) {
+      var msg = [];
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (typeof a === 'object') {
+          try { msg.push(JSON.stringify(a, null, 0)); } catch(e) { msg.push(String(a)); }
+        } else {
+          msg.push(String(a));
+        }
+      }
+      var now = new Date();
+      var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+      logs.push({ level: level, msg: msg.join(' '), time: time });
+      if (logs.length > MAX) logs.shift();
+      renderLogs();
+      // 自动弹出错误
+      if (level === 'error' && !isOpen && btn) {
+        btn.style.background = '#e03131';
+        setTimeout(function(){ btn.style.background = '#1a1a2e'; }, 2000);
+      }
+    }
+
+    // 拦截 console
+    var origLog = console.log;
+    var origWarn = console.warn;
+    var origError = console.error;
+    var origInfo = console.info;
+
+    console.log = function() { origLog.apply(console, arguments); addLog('log', arguments); };
+    console.warn = function() { origWarn.apply(console, arguments); addLog('warn', arguments); };
+    console.error = function() { origError.apply(console, arguments); addLog('error', arguments); };
+    console.info = function() { origInfo.apply(console, arguments); addLog('info', arguments); };
+
+    // 拦截未捕获错误
+    window.addEventListener('error', function(e) {
+      addLog('error', ['[Uncaught] ' + e.message + ' at ' + (e.filename||'') + ':' + (e.lineno||'')]);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      addLog('error', ['[UnhandledRejection] ' + (e.reason ? (e.reason.message || e.reason) : 'unknown')]);
+    });
+
+    // DOM ready 后创建 UI
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', createUI);
+    } else {
+      createUI();
+    }
+  })();
+  </script>
   </head>
 <body>
 <div id="root"></div>
