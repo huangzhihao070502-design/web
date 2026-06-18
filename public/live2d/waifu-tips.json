@@ -257,35 +257,35 @@
   },
   "models": [{
     "name": "Potion-Maker/Pio",
-    "paths": ["https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/Potion-Maker/Pio/index.json"],
+    "paths": ["/live2d/model/model/Potion-Maker/Pio/index.json"],
     "message": "来自 Potion Maker 的 Pio 酱 ~"
   }, {
     "name": "Potion-Maker/Tia",
-    "paths": ["https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/Potion-Maker/Tia/index.json"],
+    "paths": ["/live2d/model/model/Potion-Maker/Tia/index.json"],
     "message": "来自 Potion Maker 的 Tia 酱 ~"
   }, {
     "name": "HyperdimensionNeptunia",
     "paths": [
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/neptune_classic/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/nepnep/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/neptune_santa/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/nepmaid/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/nepswim/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/noir_classic/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/noir/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/noir_santa/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/noireswim/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/blanc_classic/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/blanc_normal/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/blanc_swimwear/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/vert_classic/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/vert_normal/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/vert_swimwear/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/nepgear/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/nepgear_extra/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/nepgearswim/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/histoire/index.json",
-      "https://raw.githubusercontent.com/fghrsh/live2d_api/master/model/HyperdimensionNeptunia/histoirenohover"
+      "/live2d/model/model/HyperdimensionNeptunia/neptune_classic/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/nepnep/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/neptune_santa/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/nepmaid/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/nepswim/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/noir_classic/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/noir/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/noir_santa/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/noireswim/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/blanc_classic/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/blanc_normal/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/blanc_swimwear/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/vert_classic/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/vert_normal/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/vert_swimwear/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/nepgear/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/nepgear_extra/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/nepgearswim/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/histoire/index.json",
+      "/live2d/model/model/HyperdimensionNeptunia/histoirenohover"
     ],
     "message": "Nep! Nep! 超次元游戏：海王星 系列"
   }, {
