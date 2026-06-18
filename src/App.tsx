@@ -5,6 +5,7 @@ import RegisterPage from './components/RegisterPage';
 import QRConnect from './components/QRConnect';
 import Dashboard from './components/Dashboard';
 import SplashScreen from './components/SplashScreen';
+import Live2DWidget from './components/Live2DWidget';
 import { SettingsProvider } from './contexts/SettingsContext';
 
 type Page = 'login' | 'register' | 'qrcode' | 'dashboard';
@@ -68,6 +69,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <Live2DWidget />
     <AnimatePresence mode="wait">
       {page === 'login' && (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
