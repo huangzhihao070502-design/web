@@ -20,6 +20,43 @@
 <body>
 <div id="root"></div>
 <script type="module" src="/src/main.tsx"></script>
-<script src="https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/autoload.js"></script>
+<script>
+// Live2D 看板娘 — 自定义加载（使用可靠的 CDN）
+(function(){
+  var live2d_path = 'https://cdn.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/';
+  function loadResource(url, type) {
+    return new Promise(function(resolve, reject) {
+      var tag;
+      if (type === 'css') {
+        tag = document.createElement('link');
+        tag.rel = 'stylesheet';
+        tag.href = url;
+      } else if (type === 'js') {
+        tag = document.createElement('script');
+        tag.type = 'module';
+        tag.src = url;
+      }
+      if (tag) {
+        tag.onload = function() { resolve(url); };
+        tag.onerror = function() { reject(url); };
+        document.head.appendChild(tag);
+      }
+    });
+  }
+  Promise.all([
+    loadResource(live2d_path + 'waifu.css', 'css'),
+    loadResource(live2d_path + 'waifu-tips.js', 'js')
+  ]).then(function() {
+    window.initWidget({
+      waifuPath: live2d_path + 'waifu-tips.json',
+      cubism2Path: live2d_path + 'live2d.min.js',
+      cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+      tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
+      logLevel: 'warn',
+      drag: true
+    });
+  });
+})();
+</script>
 </body>
 </html>
