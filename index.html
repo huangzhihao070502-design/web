@@ -37,11 +37,30 @@
       panel.style.cssText = 'position:fixed;bottom:130px;right:8px;z-index:99998;width:calc(100vw - 16px);max-width:400px;height:50vh;background:#0d0d0d;color:#e0e0e0;font-family:monospace;font-size:11px;line-height:1.5;overflow:auto;border-radius:12px;padding:8px;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.5);';
       document.body.appendChild(panel);
 
+      var topBar = document.createElement('div');
+      topBar.style.cssText = 'position:sticky;top:0;display:flex;gap:4px;margin-bottom:4px;z-index:1;';
+
       var clearBtn = document.createElement('div');
       clearBtn.innerHTML = '清除';
-      clearBtn.style.cssText = 'position:sticky;top:0;background:#333;color:#fff;text-align:center;padding:4px;border-radius:6px;margin-bottom:4px;font-size:11px;cursor:pointer;';
+      clearBtn.style.cssText = 'flex:1;background:#333;color:#fff;text-align:center;padding:4px;border-radius:6px;font-size:11px;cursor:pointer;';
       clearBtn.onclick = function() { logs = []; renderLogs(); };
-      panel.appendChild(clearBtn);
+
+      var copyBtn = document.createElement('div');
+      copyBtn.innerHTML = '复制';
+      copyBtn.style.cssText = 'flex:1;background:#2d2b55;color:#fff;text-align:center;padding:4px;border-radius:6px;font-size:11px;cursor:pointer;';
+      copyBtn.onclick = function() {
+        var text = logs.map(function(l) { return '[' + l.time + '] [' + l.level.toUpperCase() + '] ' + l.msg; }).join('\n');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(function() { copyBtn.innerHTML = '已复制'; setTimeout(function(){ copyBtn.innerHTML = '复制'; }, 1500); });
+        } else {
+          var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          copyBtn.innerHTML = '已复制'; setTimeout(function(){ copyBtn.innerHTML = '复制'; }, 1500);
+        }
+      };
+
+      topBar.appendChild(clearBtn);
+      topBar.appendChild(copyBtn);
+      panel.appendChild(topBar);
 
       renderLogs();
     }
@@ -54,9 +73,9 @@
 
     function renderLogs() {
       if (!panel) return;
-      var clearBtn = panel.firstChild;
+      var topBar = panel.firstChild;
       panel.innerHTML = '';
-      panel.appendChild(clearBtn);
+      panel.appendChild(topBar);
       for (var i = 0; i < logs.length; i++) {
         var div = document.createElement('div');
         div.style.cssText = 'padding:2px 4px;border-bottom:1px solid #1a1a1a;word-break:break-all;white-space:pre-wrap;';
