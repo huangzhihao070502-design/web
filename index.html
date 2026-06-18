@@ -134,13 +134,14 @@
 
   function loadScript(code) {
     return new Promise(function(resolve, reject) {
-      var blob = new Blob([code], {type: 'application/javascript'});
-      var url = URL.createObjectURL(blob);
-      var s = document.createElement('script');
-      s.src = url;
-      s.onload = function() { URL.revokeObjectURL(url); resolve(); };
-      s.onerror = function() { URL.revokeObjectURL(url); reject(new Error('script load failed')); };
-      document.body.appendChild(s);
+      try {
+        var s = document.createElement('script');
+        s.textContent = code;
+        document.body.appendChild(s);
+        resolve();
+      } catch(e) {
+        reject(e);
+      }
     });
   }
 
