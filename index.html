@@ -127,114 +127,94 @@
 <div id="root"></div>
 <script type="module" src="/src/main.tsx"></script>
 <script>
-// Live2D 看板娘 — 直接用 Cubism 2 运行时（绕过 ES Module 问题）
+// Live2D 看板娘 — ES Module 转普通脚本方案
+// 核心思路：fetch ES Module 源码 → 去掉 import/export → 作为普通脚本加载
 (function(){
   var CDN = 'https://cdn.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/';
-  var MODEL_URL = 'https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/model/Potion-Maker/Pio/index.json';
 
-  // 1. 创建容器
-  var container = document.createElement('div');
-  container.id = 'waifu';
-  container.innerHTML = '<canvas id="live2d-canvas" width="300" height="400" style="position:fixed;bottom:0;left:0;z-index:9997;pointer-events:auto;cursor:grab;"></canvas>';
-  container.style.cssText = 'position:fixed;bottom:0;left:0;z-index:9997;';
-  document.body.appendChild(container);
+  function loadScript(code) {
+    return new Promise(function(resolve, reject) {
+      var blob = new Blob([code], {type: 'application/javascript'});
+      var url = URL.createObjectURL(blob);
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function() { URL.revokeObjectURL(url); resolve(); };
+      s.onerror = function() { URL.revokeObjectURL(url); reject(new Error('script load failed')); };
+      document.body.appendChild(s);
+    });
+  }
 
-  // 2. 加载 Cubism 2 运行时
-  var s = document.createElement('script');
-  s.src = CDN + 'live2d.min.js';
-  s.onload = function() {
-    console.log('[Live2D] Cubism 2 runtime loaded, loading model...');
-    try {
-      // 3. 直接用 Live2D 框架加载模型
-      var model = null;
-      var live2d = new L2DTargetPoint();
+  function fetchText(url) {
+    return fetch(url).then(function(r) {
+      if (!r.ok) throw new Error('fetch ' + url + ' failed: ' + r.status);
+      return r.text();
+    });
+  }
 
-      // 加载模型
-      var loadTimer = setInterval(function() {
-        if (window.Live2D && window.Live2DFramework) {
-          clearInterval(loadTimer);
-          initLive2D();
-        }
-      }, 100);
+  console.log('[Live2D] Starting de-module injection...');
 
-      // 超时保护
-      setTimeout(function() { clearInterval(loadTimer); }, 10000);
+  // Step 1: 加载 CSS
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = CDN + 'waifu.css';
+  document.head.appendChild(link);
 
-      function initLive2D() {
-        console.log('[Live2D] Framework ready, initializing...');
-        try {
-          // 使用 Live2D 官方方式加载
-          var canvas = document.getElementById('live2d-canvas');
-          if (!canvas) { console.error('[Live2D] Canvas not found'); return; }
+  // Step 2: 并行获取 waifu-tips.js 和 chunk/index.js
+  Promise.all([
+    fetchText(CDN + 'waifu-tips.js'),
+    fetchText(CDN + 'chunk/index.js')
+  ]).then(function(codes) {
+    var waifuCode = codes[0];
+    var chunkCode = codes[1];
 
-          // 检查 Live2D 全局对象
-          if (typeof Live2D === 'undefined') {
-            console.error('[Live2D] Live2D global not found');
-            return;
-          }
+    console.log('[Live2D] Fetched waifu-tips.js (' + waifuCode.length + ' bytes)');
+    console.log('[Live2D] Fetched chunk/index.js (' + chunkCode.length + ' bytes)');
 
-          console.log('[Live2D] Live2D version:', Live2D.version);
+    // Step 3: 处理 waifu-tips.js
+    // 去掉 export 语句，暴露 logger 到全局
+    waifuCode = waifuCode.replace(/export\s*\{[^}]*\}\s*;?/, '');
+    waifuCode += '\nwindow._l2dLogger = (function(){ try { var e = function(lvl){this.level=lvl}; e.prototype.info=function(){}; e.prototype.warn=function(){}; e.prototype.error=function(){}; e.prototype.trace=function(){}; return new e("warn"); } catch(x){ return {info:function(){},warn:function(){},error:function(){},trace:function(){}}; } })();\n';
+    // 从 waifu-tips.js 中提取 logger 实例
+    // waifu-tips.js 定义了 class a (logger), 我们需要暴露它
+    // 通过正则找到 logger 的方法调用模式，确认变量名
 
-          // 尝试加载模型
-          Live2D.init();
-          console.log('[Live2D] Live2D.init() called');
+    console.log('[Live2D] Loading waifu-tips.js (de-module)...');
+    return loadScript(waifuCode).then(function() {
+      console.log('[Live2D] waifu-tips.js loaded, initWidget:', typeof window.initWidget);
 
-          // 创建模型
-          var modelDef = {
-            type: 'Live2D Model Setting',
-            name: 'Pio',
-            model: MODEL_URL.replace('index.json', 'Pio.model.moc'),
-            textures: [
-              MODEL_URL.replace('index.json', 'textures/texture_00.png')
-            ]
-          };
+      // Step 4: 处理 chunk/index.js
+      // 去掉 import 语句，添加 logger 引用
+      chunkCode = chunkCode.replace(/import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?/, '');
 
-          console.log('[Live2D] Model definition ready:', JSON.stringify(modelDef).slice(0, 100));
+      console.log('[Live2D] Loading chunk/index.js (de-module)...');
+      return loadScript(chunkCode);
+    });
+  }).then(function() {
+    console.log('[Live2D] All scripts loaded!');
 
-          // 使用 LAppModel 加载
-          if (window.LAppModel) {
-            console.log('[Live2D] LAppModel found, loading...');
-            window.LAppModel.load(canvas, modelDef);
-          } else if (window.LAppLive2DManager) {
-            console.log('[Live2D] LAppLive2DManager found, loading...');
-            window.LAppLive2DManager.loadModel(canvas, MODEL_URL);
-          } else {
-            console.log('[Live2D] No model loader found, trying direct approach...');
-            // 直接尝试最简单的方式
-            loadModelDirect(canvas);
-          }
-        } catch(e) {
-          console.error('[Live2D] initLive2D error:', e.message);
-        }
+    // Step 5: 调用 initWidget
+    if (window.initWidget) {
+      console.log('[Live2D] Calling initWidget...');
+      try {
+        window.initWidget({
+          waifuPath: CDN + 'waifu-tips.json',
+          cubism2Path: CDN + 'live2d.min.js',
+          cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+          cdnPath: 'https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/',
+          tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
+          logLevel: 'info',
+          drag: true
+        });
+        console.log('[Live2D] initWidget called successfully!');
+      } catch(e) {
+        console.error('[Live2D] initWidget error:', e.message, e.stack);
       }
-
-      function loadModelDirect(canvas) {
-        console.log('[Live2D] Direct model load attempt...');
-        // 获取模型 JSON
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', MODEL_URL, true);
-        xhr.onload = function() {
-          if (xhr.status === 200) {
-            var modelJson = JSON.parse(xhr.responseText);
-            console.log('[Live2D] Model JSON loaded:', modelJson.name || 'unknown');
-            console.log('[Live2D] Model version:', modelJson.version);
-            console.log('[Live2D] Textures:', (modelJson.textures || []).length);
-
-            // 提示用户
-            console.log('[Live2D] Model data loaded successfully! Display requires full Live2D framework integration.');
-          } else {
-            console.error('[Live2D] Model JSON load failed:', xhr.status);
-          }
-        };
-        xhr.onerror = function() { console.error('[Live2D] Model JSON network error'); };
-        xhr.send();
-      }
-    } catch(e) {
-      console.error('[Live2D] Initialization error:', e.message);
+    } else {
+      console.error('[Live2D] initWidget not found after loading waifu-tips.js');
     }
-  };
-  s.onerror = function() { console.error('[Live2D] Cubism 2 runtime load failed'); };
-  document.body.appendChild(s);
+  }).catch(function(err) {
+    console.error('[Live2D] Pipeline error:', err.message);
+  });
 })();
 </script>
 </body>
