@@ -15,14 +15,14 @@ const fontSizeMap: Record<string, number> = { small: 13, normal: 14, large: 16 }
 function getThemeColors(theme: string) {
   const dark = theme === 'dark';
   return {
-    bg: dark ? '#1a1a2e' : '#F7F3EE',
-    surface: dark ? '#252540' : 'rgba(255,255,255,0.9)',
-    text: dark ? '#e0e0e0' : '#3E2723',
-    textSec: dark ? '#a0a0b0' : '#8D6E63',
-    border: dark ? 'rgba(255,255,255,0.08)' : 'rgba(234,224,213,0.6)',
-    bubbleOther: dark ? '#2e2e4a' : '#EAE0D5',
-    dateChip: dark ? 'rgba(255,255,255,0.08)' : 'rgba(234,224,213,0.6)',
-    emptyBg: dark ? 'rgba(200,159,126,0.08)' : 'rgba(200,159,126,0.12)',
+    bg: dark ? '#1A1A1A' : '#F2F0EB',
+    surface: dark ? '#2A2A2A' : '#FFFFFF',
+    text: dark ? '#F0F0F0' : '#1A1A1A',
+    textSec: dark ? '#888888' : '#888888',
+    border: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    bubbleOther: dark ? '#2A2A2A' : '#FFFFFF',
+    dateChip: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+    emptyBg: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
   };
 }
 
@@ -242,7 +242,7 @@ export default function ChatPage({ userId }: Props) {
   }, [showAddQr, addQrStatus]);
 
   return (
-    <div style={{display:'flex',flexDirection:'column' as const,height:'100%',minHeight:0,background:'linear-gradient(180deg, #F9F8F7, #F6F5F3)',position:'relative'}}>
+    <div style={{display:'flex',flexDirection:'column' as const,height:'100%',minHeight:0,background:tc.bg,position:'relative'}}>
       {/* Noise overlay — 2% across entire chat */}
       <div style={{
         position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
@@ -257,10 +257,10 @@ export default function ChatPage({ userId }: Props) {
         .chat-scroll { scrollbar-width: thin; scrollbar-color: #E8E2DA transparent; }
       `}</style>
 
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${tc.border}`,background:tc.surface,padding:'12px 16px',backdropFilter:'blur(12px)',flexShrink:0,position:'relative',zIndex:1}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${tc.border}`,background:tc.surface,padding:'12px 16px',height:64,boxSizing:'border-box' as const,backdropFilter:'blur(12px)',flexShrink:0,position:'relative',zIndex:1}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <div style={{width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontSize:baseFontSize,fontWeight:500,background:'linear-gradient(135deg,#C89F7E,#B08968)',boxShadow:'0 2px 8px rgba(192,159,126,0.3)'}}>{userId?userId.slice(0,2).toUpperCase():'B'}</div>
-          <div><div style={{fontSize:baseFontSize+1,fontWeight:600,color:tc.text}}>{userId?userId.slice(0,8)+'...':'微信 Bot'}</div><div style={{fontSize:11,color:connected?'#10b981':tc.textSec}}>{!connected?'未连接':userId?'在线':'等待消息'}</div></div>
+          <div style={{width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontSize:baseFontSize,fontWeight:450,background:'linear-gradient(135deg,#C89F7E,#B08968)',boxShadow:'0 2px 8px rgba(192,159,126,0.3)'}}>{userId?userId.slice(0,2).toUpperCase():'B'}</div>
+          <div><div style={{fontSize:baseFontSize+1,fontWeight:450,color:tc.text}}>{userId?userId.slice(0,8)+'...':'微信 Bot'}</div><div style={{fontSize:11,color:connected?'#10b981':tc.textSec}}>{!connected?'未连接':userId?'在线':'等待消息'}</div></div>
         </div>
         <div style={{display:'flex',gap:4}}>{[Phone,MoreVertical].map((Icon,i)=>(
           <button key={i} style={{width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:12,border:'none',background:'none',cursor:'pointer'}}><Icon size={17} strokeWidth={1.5} color={tc.textSec}/></button>
@@ -270,26 +270,26 @@ export default function ChatPage({ userId }: Props) {
       <div style={{padding:'8px 16px',borderBottom:`1px solid ${tc.border}`,background:tc.surface,flexShrink:0,position:'relative',zIndex:1}}>
         <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索消息..." style={{width:'100%',padding:'6px 12px',borderRadius:8,border:'none',background:tc.bg,color:tc.text,fontSize:13,outline:'none'}} />
       </div>
-      <div className="chat-scroll" style={{flex:1,minHeight:0,overflowY:'auto' as const,padding:'16px',fontSize:baseFontSize,position:'relative',zIndex:1}}>
+      <div className="chat-scroll" style={{flex:1,minHeight:0,overflowY:'auto' as const,padding:'16px',position:'relative',zIndex:1}}>
         {msgs.length === 0 && <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',textAlign:'center',padding:'0 32px'}}>
           <div style={{width:56,height:56,borderRadius:'50%',background:tc.emptyBg,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16,fontSize:28}}>💬</div>
           {!connected ? (
-            <><p style={{fontSize:baseFontSize+1,fontWeight:500,color:tc.text}}>未连接到微信</p><p style={{marginTop:6,fontSize:baseFontSize-1,color:tc.textSec,lineHeight:1.6}}>请先退出到登录页<br/>扫码连接微信后再使用</p></>
+            <><p style={{fontSize:baseFontSize+1,fontWeight:450,color:tc.text,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>未连接到微信</p><p style={{marginTop:6,fontSize:baseFontSize-1,color:tc.textSec,lineHeight:1.5,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>请先退出到登录页<br/>扫码连接微信后再使用</p></>
           ) : userId ? (
-            <p style={{fontSize:baseFontSize-1,color:tc.textSec}}>暂无消息</p>
+            <p style={{fontSize:baseFontSize-1,color:tc.textSec,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>暂无消息</p>
           ) : (
-            <><p style={{fontSize:baseFontSize+1,fontWeight:500,color:tc.text,marginBottom:8}}>已连接到微信</p>
-            <p style={{fontSize:baseFontSize-1,color:tc.textSec,lineHeight:1.8}}>
+            <><p style={{fontSize:baseFontSize+1,fontWeight:450,color:tc.text,marginBottom:8,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>已连接到微信</p>
+            <p style={{fontSize:baseFontSize-1,color:tc.textSec,lineHeight:1.8,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>
               Bot 已连接，等待消息中...
               <br/><br/>
-              <span style={{color:'#B08968',fontWeight:500}}>方式一：</span>用好友给你的微信号发一条消息
+              <span style={{color:'#B08968',fontWeight:450}}>方式一：</span>用好友给你的微信号发一条消息
               <br/>消息会自动出现在这里
               <br/><br/>
-              <span style={{color:'#B08968',fontWeight:500}}>方式二：</span>点击下方按钮生成二维码
+              <span style={{color:'#B08968',fontWeight:450}}>方式二：</span>点击下方按钮生成二维码
               <br/>用微信扫描后即可建立会话
             </p>
             <button onClick={handleAddFriend}
-              style={{marginTop:20,display:'flex',alignItems:'center',gap:8,padding:'12px 24px',borderRadius:14,border:'none',background:'linear-gradient(135deg,#C89F7E,#B08968)',color:'white',fontSize:baseFontSize,fontWeight:500,cursor:'pointer',boxShadow:'0 4px 16px rgba(200,159,126,0.3)'}}>
+              style={{marginTop:20,display:'flex',alignItems:'center',gap:8,padding:'12px 24px',borderRadius:14,border:'none',background:'linear-gradient(135deg,#C89F7E,#B08968)',color:'white',fontSize:baseFontSize,fontWeight:450,cursor:'pointer',boxShadow:'0 4px 16px rgba(200,159,126,0.3)'}}>
               <UserPlus size={18} strokeWidth={1.5}/> 生成添加好友二维码
             </button>
           </>
@@ -306,135 +306,123 @@ export default function ChatPage({ userId }: Props) {
           const isFirst = !sameSenderPrev;
           const isLast = !sameSenderNext;
 
-          // 方案规格：User（自己）32/32/10/32，AI（对方）32/32/32/10
+          // 18px base radius, 4px connecting corners for grouped messages
           const br = mine
-            ? (isFirst&&isLast?'32px':isFirst?'32px 32px 10px 32px':isLast?'10px 32px 32px 32px':'10px 32px 10px 32px')
-            : (isFirst&&isLast?'32px':isFirst?'32px 32px 32px 10px':isLast?'32px 10px 32px 32px':'32px 10px 32px 10px');
+            ? (isFirst&&isLast?'18px':isFirst?'18px 18px 4px 18px':isLast?'4px 18px 18px 18px':'4px 18px 4px 18px')
+            : (isFirst&&isLast?'18px':isFirst?'18px 18px 18px 4px':isLast?'18px 4px 18px 18px':'18px 4px 18px 4px');
 
           const showAvatar = !mine && isLast;
           const showName = !mine && isFirst;
 
-          // Dark mode bubble colors
+          // Exact spec colors
           const bubbleBg = mine
-            ? (isDark ? '#2A2A2A' : '#FAF5EF')
-            : (isDark ? '#222222' : 'rgba(255,255,255,0.96)');
-          const bubbleShadow = mine
-            ? '0 12px 35px rgba(0,0,0,0.05)'
-            : '0 15px 40px rgba(0,0,0,0.05)';
-          const bubbleBorder = mine
-            ? 'none'
-            : '1px solid rgba(255,255,255,0.6)';
-          const textColor = isDark ? '#F2F2F2' : '#202124';
+            ? (isDark ? '#3A3028' : '#F5EAE2')
+            : (isDark ? '#2A2A2A' : '#FFFFFF');
+          const textColor = isDark ? '#F0F0F0' : '#1A1A1A';
+          const secColor = isDark ? '#888888' : '#888888';
 
           return (<div key={msg.id}>
-            {/* 日期分隔线 — thin line with centered time */}
-            {showDate && <div style={{display:'flex',alignItems:'center',gap:12,margin:'24px 0 32px',padding:'0 24px'}}>
+            {/* Date separator */}
+            {showDate && <div style={{display:'flex',alignItems:'center',gap:12,margin:'20px 0 24px',padding:'0 16px'}}>
               <div style={{flex:1,height:'1px',background:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)'}} />
-              <span style={{fontSize:12,color:isDark?'#888888':'#8D8D8D',whiteSpace:'nowrap',fontWeight:450,letterSpacing:'1px'}}>{msg.time}</span>
+              <span style={{fontSize:11,color:secColor,whiteSpace:'nowrap',fontWeight:400,letterSpacing:'0.5px'}}>{msg.time}</span>
               <div style={{flex:1,height:'1px',background:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)'}} />
             </div>}
 
             <motion.div
-              initial={{opacity:0, y:12, filter:'blur(10px)'}}
-              animate={{opacity:1, y:0, filter:'blur(0px)'}}
-              transition={{duration:0.45, ease:[0.22,0.61,0.36,1]}}
+              initial={{opacity:0, y:8}}
+              animate={{opacity:1, y:0}}
+              transition={{duration:0.3, ease:[0.16,1,0.3,1]}}
               style={{
                 display:'flex',
                 flexDirection: mine ? 'row-reverse' : 'row',
                 alignItems:'flex-end',
-                marginBottom: sameSenderNext ? 4 : 32,
-                paddingLeft: 24,
-                paddingRight: 24,
-                gap: 12,
+                marginBottom: sameSenderNext ? 4 : 24,
+                paddingLeft: 16,
+                paddingRight: 16,
+                gap: 10,
               }}
             >
-              {/* 头像 — Aurora Orb (radial gradient, no photos) */}
+              {/* Avatar — 32px circle, neutral warm gray */}
               {showAvatar ? (
                 <div style={{
-                  width:42,height:42,borderRadius:'50%',flexShrink:0,
+                  width:32,height:32,borderRadius:'50%',flexShrink:0,
                   display:'flex',alignItems:'center',justifyContent:'center',
-                  color:isDark?'#C0B0A0':'#B08968',fontSize:14,fontWeight:500,
-                  background:'radial-gradient(#FFFFFF,#EDE9E4)',
-                  boxShadow:'0 4px 12px rgba(0,0,0,0.04)',
+                  color:isDark?'#C0B0A0':'#8D7B6B',fontSize:13,fontWeight:400,
+                  background:'#e8e2dc',
                 }}>
                   {userId ? userId.slice(0,1).toUpperCase() : 'B'}
                 </div>
-              ) : !mine && <div style={{width:42,flexShrink:0}} />}
+              ) : !mine && <div style={{width:32,flexShrink:0}} />}
 
-              {/* 气泡 */}
-              <div style={{display:'flex',flexDirection:'column',alignItems:mine?'flex-end':'flex-start',maxWidth: mine ? '680px' : '700px'}}>
-                {showName && !mine && <div style={{fontSize:12,color:isDark?'#888888':'#8D8D8D',marginBottom:6,marginLeft:4,fontWeight:450,letterSpacing:'0.3px'}}>{userId ? userId.slice(0,8)+'...' : '好友'}</div>}
+              {/* Bubble */}
+              <div style={{display:'flex',flexDirection:'column',alignItems:mine?'flex-end':'flex-start',maxWidth:'68%'}}>
+                {showName && !mine && <div style={{fontSize:12,color:secColor,marginBottom:4,marginLeft:4,fontWeight:400,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>{userId ? userId.slice(0,8)+'...' : '好友'}</div>}
 
                 <div style={{
                   borderRadius: br,
-                  padding:'20px',
-                  fontFamily:"'Inter','PingFang SC',-apple-system,sans-serif",
-                  fontSize:16,fontWeight:450,lineHeight:1.85,letterSpacing:'0.2px',
+                  padding:'10px 14px',
+                  fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  fontSize:15,fontWeight:400,lineHeight:1.5,letterSpacing:'0.2px',
                   wordBreak:'break-word',whiteSpace:'pre-wrap',
                   color: textColor,
                   background: bubbleBg,
-                  boxShadow: bubbleShadow,
-                  border: bubbleBorder,
-                  transition:'transform 0.3s cubic-bezier(.22,.61,.36,1)',
-                }}
-                  onMouseEnter={e=>{if(!mine)(e.currentTarget as HTMLElement).style.transform='translateY(-1px)'}}
-                  onMouseLeave={e=>{if(!mine)(e.currentTarget as HTMLElement).style.transform='translateY(0)'}}
-                >
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                }}>
                   {msg.isImage && (msg.imageData || msg.mediaCacheKey) && (
                     <img src={msg.imageData || `/api/media/${msg.mediaCacheKey}`} alt=""
-                      style={{maxWidth:'100%',borderRadius:24,marginBottom:8,display:'block',boxShadow:'0 4px 12px rgba(0,0,0,0.04)'}} loading="lazy"/>
+                      style={{maxWidth:'100%',borderRadius:12,marginBottom:4,display:'block'}} loading="lazy"/>
                   )}
                   {msg.isVoice ? (
                     <button onClick={()=>playVoice(msg)} disabled={!msg.voiceUrl}
-                      style={{display:'flex',alignItems:'center',gap:10,border:'none',background:'none',cursor:msg.voiceUrl?'pointer':'default',padding:0,color:textColor,width:'100%',fontSize:16,fontWeight:450,fontFamily:"'Inter','PingFang SC',-apple-system,sans-serif"}}>
+                      style={{display:'flex',alignItems:'center',gap:8,border:'none',background:'none',cursor:msg.voiceUrl?'pointer':'default',padding:0,color:textColor,width:'100%',fontSize:15,fontWeight:400,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>
                       {isPlaying ? <Pause size={16} strokeWidth={1.8}/> : <Play size={16} strokeWidth={1.8}/>}
-                      <span style={{fontSize:14,color:isDark?'#888888':'#8D8D8D'}}>{msg.voiceDuration||3}"</span>
+                      <span style={{fontSize:13,color:secColor}}>{msg.voiceDuration||3}"</span>
                     </button>
                   ) : msg.isLocation ? (
-                    <div style={{display:'flex',alignItems:'center',gap:8,fontFamily:"'Inter','PingFang SC',-apple-system,sans-serif"}}><MapPin size={16} strokeWidth={1.8}/><span>{msg.text}</span></div>
+                    <div style={{display:'flex',alignItems:'center',gap:6,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}><MapPin size={15} strokeWidth={1.8}/><span style={{fontSize:15}}>{msg.text}</span></div>
                   ) : msg.isFile ? (
-                    <div style={{display:'flex',alignItems:'center',gap:8,fontFamily:"'Inter','PingFang SC',-apple-system,sans-serif"}}>
-                      <File size={16} strokeWidth={1.8}/>
+                    <div style={{display:'flex',alignItems:'center',gap:6,fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>
+                      <File size={15} strokeWidth={1.8}/>
                       {msg.mediaCacheKey ? (
-                        <a href={`/api/media/${msg.mediaCacheKey}`} download style={{color:textColor,textDecoration:'underline',textUnderlineOffset:3}}>{msg.text}</a>
-                      ) : <span>{msg.text}</span>}
+                        <a href={`/api/media/${msg.mediaCacheKey}`} download style={{color:textColor,textDecoration:'underline',textUnderlineOffset:3,fontSize:15}}>{msg.text}</a>
+                      ) : <span style={{fontSize:15}}>{msg.text}</span>}
                     </div>
                   ) : (
-                    <span style={{fontFamily:"'Inter','PingFang SC',-apple-system,sans-serif"}}>{msg.text}</span>
+                    <span style={{fontSize:15}}>{msg.text}</span>
                   )}
                 </div>
 
                 {mine && isLast && <div style={{marginTop:4,marginRight:2}}>
-                  <span style={{fontSize:10,color:isDark?'#666666':'#BFB8B0',letterSpacing:'0.5px'}}>✓ 已读</span>
+                  <span style={{fontSize:10,color:secColor,letterSpacing:'0.5px',fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"}}>✓ 已读</span>
                 </div>}
               </div>
             </motion.div>
           </div>);
         })}
 
-        {/* Typing indicator — 3 pearl particles */}
+        {/* Typing indicator — 3 bouncing dots */}
         {isTyping && (
-          <div style={{display:'flex',paddingLeft:24,gap:12,marginTop:32,marginBottom:8}}>
-            <div style={{width:42,flexShrink:0}} />
+          <div style={{display:'flex',paddingLeft:16,gap:10,marginTop:0,marginBottom:4}}>
+            <div style={{width:32,flexShrink:0}} />
             <motion.div
-              initial={{opacity:0, y:12, filter:'blur(10px)'}}
-              animate={{opacity:1, y:0, filter:'blur(0px)'}}
-              transition={{duration:0.45, ease:[0.22,0.61,0.36,1]}}
+              initial={{opacity:0, y:8}}
+              animate={{opacity:1, y:0}}
+              transition={{duration:0.3, ease:[0.16,1,0.3,1]}}
               style={{
-                display:'flex',alignItems:'center',gap:8,
-                padding:'16px 20px',
-                borderRadius:'32px 32px 32px 10px',
-                background: isDark ? '#222222' : 'rgba(255,255,255,0.96)',
-                boxShadow:'0 15px 40px rgba(0,0,0,0.05)',
-                border:'1px solid rgba(255,255,255,0.6)',
+                display:'flex',alignItems:'center',gap:5,
+                padding:'12px 16px',
+                borderRadius:'18px 18px 18px 4px',
+                background: isDark ? '#2A2A2A' : '#FFFFFF',
+                boxShadow:'0 1px 2px rgba(0,0,0,0.05)',
               }}
             >
               {[0,1,2].map(i => (
                 <motion.div
                   key={i}
-                  animate={{y:[2,-2,2]}}
+                  animate={{y:[0,-4,0]}}
                   transition={{repeat:Infinity,duration:1.2,delay:i*0.2,ease:'easeInOut'}}
-                  style={{width:8,height:8,borderRadius:'50%',background:'#D7C7B8'}}
+                  style={{width:8,height:8,borderRadius:'50%',background:'#d7c7b8'}}
                 />
               ))}
             </motion.div>

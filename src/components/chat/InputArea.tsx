@@ -88,28 +88,43 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
     { icon: MapPin, label: t('input.location', lang), color: '#8D6E63', action: handleLocation },
   ];
 
-  // Spec hardcoded values
-  const composerBg = isDark ? 'rgba(34,34,34,0.85)' : 'rgba(255,255,255,0.82)';
+  // Theme-aware visual tokens
+  const composerBg = isDark ? 'rgba(34,34,34,0.85)' : '#F0ECEE';
   const composerBorder = isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.6)';
-  const composerShadow = isDark ? '0 15px 50px rgba(0,0,0,0.15)' : '0 15px 50px rgba(0,0,0,0.05)';
-  const inputTextColor = isDark ? '#F2F2F2' : '#202124';
-  const labelColor = isDark ? '#999999' : '#8D8D8D';
+  const composerShadow = isDark ? '0 10px 40px rgba(0,0,0,0.15)' : '0 10px 40px rgba(0,0,0,0.05)';
+  const inputTextColor = isDark ? '#F2F2F2' : '#1A1A1A';
+  const labelColor = isDark ? '#999999' : '#888888';
+  const inputFontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const sendBtnBg = '#1D2026';
 
   return (<>
     <input ref={imgInput} type="file" accept="image/*" onChange={handleImagePick} style={{display:'none'}} />
     <input ref={fileInput} type="file" onChange={handleFilePick} style={{display:'none'}} />
     <input ref={cameraInput} type="file" accept="image/*" capture="camera" onChange={handleCameraCapture} style={{display:'none'}} />
 
-    {/* Floating Composer — spec: 78px pill, 999px radius, blur backdrop */}
+    <style>{`
+      .input-area-placeholder::placeholder {
+        color: #888888 !important;
+        opacity: 1;
+      }
+      @media (prefers-color-scheme: dark) {
+        .input-area-placeholder::placeholder {
+          color: #999999 !important;
+          opacity: 1;
+        }
+      }
+    `}</style>
+
+    {/* Floating Composer — 72px pill, 999px radius, blur backdrop */}
     <div style={{padding:'0 16px calc(env(safe-area-inset-bottom, 8px))',position:'relative',zIndex:10}}>
       <div style={{
-        height:78,display:'flex',alignItems:'center',gap:8,
+        height:72,display:'flex',alignItems:'center',gap:8,
         padding:'0 8px 0 12px',borderRadius:999,
         background:composerBg,
         backdropFilter:'blur(30px)',WebkitBackdropFilter:'blur(30px)',
         border:composerBorder,boxShadow:composerShadow,
       }}>
-        {/* 左侧：附件按钮 */}
+        {/* Left: Plus (text mode) / Keyboard (voice mode) */}
         {mode === 'text' ? (
           <button onClick={() => setShowMore(s => !s)}
             style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'none',cursor:'pointer',color:labelColor,flexShrink:0}}>
@@ -122,43 +137,56 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
           </button>
         )}
 
-        {/* 中间：输入 */}
+        {/* Center: Text input / Voice hold-to-talk */}
         {mode === 'text' ? (
           <div style={{flex:1,display:'flex',alignItems:'center',height:'100%'}}>
-            <input value={text} onChange={e => setText(e.target.value)} onKeyDown={handleKey}
+            <input
+              className="input-area-placeholder"
+              value={text} onChange={e => setText(e.target.value)} onKeyDown={handleKey}
               placeholder={t('input.placeholder', lang)}
-              style={{flex:1,border:'none',background:'none',padding:0,fontSize:16,fontWeight:450,lineHeight:1.5,color:inputTextColor,outline:'none'}}/>
+              style={{
+                flex:1,border:'none',background:'none',padding:0,
+                fontSize:15,fontWeight:400,lineHeight:1.5,
+                fontFamily:inputFontFamily,
+                color:inputTextColor,outline:'none',
+              }}/>
           </div>
         ) : (
           <button onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}
-            style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:999,height:48,fontSize:14,fontWeight:450,color:labelColor,border:'none',cursor:'pointer',userSelect:'none',background:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.02)'}}>
+            style={{
+              flex:1,display:'flex',alignItems:'center',justifyContent:'center',
+              borderRadius:999,height:48,fontSize:14,fontWeight:400,
+              fontFamily:inputFontFamily,color:labelColor,
+              border:'none',cursor:'pointer',userSelect:'none',
+              background:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.02)',
+            }}>
             {t('input.hold_talk', lang)}
           </button>
         )}
 
-        {/* 右侧：发送/语音按钮 */}
+        {/* Right: Send button (when text non-empty) / Mic (when text empty) */}
         {mode === 'text' ? (
           text.trim() ? (
             <motion.button onClick={handleSend}
               whileHover={{scale:1.05}} whileTap={{scale:0.95}}
               style={{
-                width:58,height:58,display:'flex',alignItems:'center',justifyContent:'center',
+                width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',
                 borderRadius:'50%',border:'none',cursor:'pointer',flexShrink:0,
-                background:isDark?'#333333':'#F4EBDD',
+                background:sendBtnBg,
                 boxShadow:'0 10px 30px rgba(0,0,0,0.08)',
               }}>
-              <Send size={18} strokeWidth={1.8} color={isDark?'#F2F2F2':'#202124'}/>
+              <Send size={18} strokeWidth={1.8} color="white"/>
             </motion.button>
           ) : (
             <button onClick={() => setMode('voice')}
-              style={{width:58,height:58,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'none',cursor:'pointer',color:labelColor,flexShrink:0}}>
+              style={{width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'none',cursor:'pointer',color:labelColor,flexShrink:0}}>
               <Mic size={22} strokeWidth={1.8}/>
             </button>
           )
         ) : null}
       </div>
 
-      {/* More panel */}
+      {/* More actions panel */}
       <AnimatePresence>{showMore && <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} style={{overflow:'hidden',paddingTop:8}}>
         <div style={{display:'flex',gap:16,padding:'8px 4px 4px'}}>
           {moreItems.map((item,i)=>(
@@ -167,7 +195,7 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
               <div style={{width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',color:'white',boxShadow:'0 4px 12px rgba(0,0,0,0.08)',background:item.color}}>
                 <item.icon size={20} strokeWidth={1.5}/>
               </div>
-              <span style={{fontSize:11,fontWeight:450,color:labelColor}}>{item.label}</span>
+              <span style={{fontSize:11,fontWeight:400,color:labelColor}}>{item.label}</span>
             </button>
           ))}
         </div>
@@ -186,7 +214,7 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
               style={{width:6,borderRadius:3,background:'linear-gradient(180deg,#C89F7E,#B08968)'}}/>
           ))}
         </div>
-        <p style={{fontSize:16,fontWeight:450,color:inputTextColor}}>{t('input.recording', lang)}</p>
+        <p style={{fontSize:16,fontWeight:400,color:inputTextColor}}>{t('input.recording', lang)}</p>
         <p style={{fontSize:13,color:labelColor}}>{t('input.release_end', lang)}</p>
       </motion.div>
     </motion.div>}</AnimatePresence>
