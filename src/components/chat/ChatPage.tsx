@@ -10,6 +10,17 @@ interface Msg { id: number; text: string; isMine: boolean; time: string; isVoice
 
 function fmt(t: number) { return new Date(t).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
 
+// Generate a unique gradient color from a user ID string
+const AVATAR_COLORS = [
+  ['#94C1D6', '#747CBB'], ['#BBA2CA', '#747CBB'], ['#94C1D6', '#BBA2CA'],
+  ['#747CBB', '#94C1D6'], ['#A78BFA', '#747CBB'], ['#94C1D6', '#A78BFA'],
+];
+function getAvatarGradient(uid: string): [string, string] {
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 interface Props { userId?: string | null; onBack?: () => void }
 
 export default function ChatPage({ userId, onBack }: Props) {
@@ -221,8 +232,8 @@ export default function ChatPage({ userId, onBack }: Props) {
             <ArrowLeft size={20} strokeWidth={2} color="white"/>
           </button>}
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontSize:14,fontWeight:500,background:'rgba(255,255,255,0.25)'}}>
-              {userId ? userId.slice(0,2).toUpperCase() : 'B'}
+            <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
+              <img src="/avatar.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
             </div>
             <div>
               <div style={{fontSize:18,fontWeight:500,color:'white'}}>{userId ? userId.slice(0,8)+'...' : '微信 Bot'}</div>
@@ -275,8 +286,9 @@ export default function ChatPage({ userId, onBack }: Props) {
               <motion.div initial={{opacity:0, y:8}} animate={{opacity:1, y:0}} transition={{duration:0.25, ease:'easeOut'}}
                 style={{display:'flex',flexDirection:mine?'row-reverse':'row',alignItems:'flex-end',marginBottom:sameSenderNext?4:8,gap:8}}>
                 {!mine && isLast ? (
-                  <div style={{width:28,height:28,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',color:BUBBLE_OTHER,fontSize:11,fontWeight:500,background:'rgba(187,162,202,0.2)'}}>
-                    {userId ? userId.slice(0,1).toUpperCase() : 'B'}</div>) : (!mine && <div style={{width:28,flexShrink:0}}/>)}
+                  <div style={{width:32,height:32,borderRadius:'50%',flexShrink:0,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.1)'}}>
+                    <img src="/avatar.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                  </div>) : (!mine && <div style={{width:32,flexShrink:0}}/>)}
                 <div style={{display:'flex',flexDirection:'column',alignItems:mine?'flex-end':'flex-start',maxWidth:'68%'}}>
                   <div style={{borderRadius:br,padding:'10px 14px',fontSize:14,fontWeight:400,lineHeight:1.5,wordBreak:'break-word',whiteSpace:'pre-wrap',color:bubbleTextColor,background:bubbleBg,boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
                     {msg.isImage && (msg.imageData || msg.mediaCacheKey) && <img src={msg.imageData || `/api/media/${msg.mediaCacheKey}`} alt="" style={{maxWidth:'100%',borderRadius:12,marginBottom:4,display:'block'}} loading="lazy"/>}
