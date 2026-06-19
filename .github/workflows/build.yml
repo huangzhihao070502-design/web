@@ -47,21 +47,36 @@ jobs:
         REPO="${{ github.repository }}"
         TAG="latest"
         APK="android/app/build/outputs/apk/debug/app-debug.apk"
+        SHA="${{ github.sha }}"
 
-        # Authenticate gh CLI
-        echo "\$GITHUB_TOKEN" | gh auth login --with-token
+        echo "Repo: $REPO, APK: $APK"
 
-        # Create release (ignore error if already exists)
+        # Create release via API
         echo "Creating release..."
-        gh release create "$TAG" --repo "$REPO" \
-          --title "WebChat4 APK" \
-          --notes "Automated APK build from latest code" \
-          --target "${{ github.sha }}" 2>/dev/null || true
+        RESP=$(curl -s -w "\n%{http_code}" -X POST \
+          "https://api.github.com/repos/$REPO/releases" \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
+          -d "{\"tag_name\":\"$TAG\",\"name\":\"WebChat4 APK\",\"body\":\"Automated APK build\",\"target_commitish\":\"$SHA\",\"draft\":false,\"prerelease\":false}")
 
-        # Upload APK (overwrite if exists)
+        HTTP_CODE=$(echo "$RESP" | tail -1)
+        BODY=$(echo "$RESP" | sed '$d')
+        echo "Create release HTTP: $HTTP_CODE"
+
+        # Get upload URL
+        UPLOAD_URL=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['upload_url'])")
+        echo "Upload URL: $UPLOAD_URL"
+
+        # Upload APK
         echo "Uploading APK..."
-        gh release upload "$TAG" "$APK" \
-          --repo "$REPO" \
-          --clobber
+        RESP2=$(curl -s -w "\n%{http_code}" -X POST \
+          "$UPLOAD_URL?name=app-debug.apk" \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/vnd.android.package-archive" \
+          --data-binary "@$APK")
 
+        HTTP_CODE2=$(echo "$RESP2" | tail -1)
+        echo "Upload APK HTTP: $HTTP_CODE2"
         echo "Done!"
