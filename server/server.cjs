@@ -873,7 +873,9 @@ function startScheduledReplies() {
             limitHint = `（回复不超过 ${c.reply_max_chars} 字）`;
           }
         }
-        const sPrompt = c.prompt ? `${c.prompt}\n\n请主动发送一条问候消息${limitHint}。` : `你是微信上的一个真实好友${limitHint}，语气自然亲切。`;
+        const sPrompt = c.prompt
+          ? `${c.prompt}\n\n你现在想主动给对方发一条消息。随便说点什么日常的。${limitHint}`
+          : `你是微信上的一个真实好友。说话短而自然，像真人聊天。${limitHint}\n\n你现在想主动给对方发一条消息。不用很正式，随便说点什么就好。`;
         const msgs = [{ role: 'system', content: sPrompt }];
         msgs.push({ role: 'user', content: '发一条问候' });
         let schedMaxTokens;
@@ -895,6 +897,12 @@ function startScheduledReplies() {
         let reply = j.choices?.[0]?.message?.content || '';
         if (!reply) continue;
         // 后端硬性截断（定时发送也应用字数限制）
+        // 后处理：剥离括号、emoji、标签
+        const cleanSched = cleanReply(reply);
+        if (cleanSched !== reply) {
+          console.log(`[SCHED] Cleaned: "${reply.slice(0,40)}" → "${cleanSched.slice(0,40)}"`);
+          reply = cleanSched;
+        }
         if (c.reply_max_chars > 0 && reply.length > c.reply_max_chars) {
           reply = reply.slice(0, c.reply_max_chars);
         }
@@ -917,6 +925,32 @@ const origConfirm = startQrPolling;
 
 // ---- AI Auto-reply ----
 const autoReplyCounts = {};
+// ====== 回复后处理：剥离括号、emoji、标签，只保留纯对话文字 ======
+function cleanReply(text) {
+  if (!text) return '';
+  // 1. 剥离中文括号内容（动作描写）：（看了看手机）→ 删除
+  text = text.replace(/（[^）]*）/g, '');
+  // 2. 剥离英文括号内容
+  text = text.replace(/\([^)]*\)/g, '');
+  // 3. 剥离方括号标签（情绪/好感度/记忆等元标签）：[情绪:开心] → 删除
+  text = text.replace(/\[[^\]]*\]/g, '');
+  // 4. 剥离尖括号内容
+  text = text.replace(/〈[^〉]*〉/g, '');
+  text = text.replace(/<[^>]*>/g, '');
+  // 5. 剥离 emoji 表情符号
+  text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}]/gu, '');
+  // 6. 剥离常见符号表情：XD :D :) :( :P ;) 等
+  text = text.replace(/[:;=][-']?[)D(P\/|3@$*]/gi, '');
+  // 7. 清理多余空格、连续换行
+  text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.replace(/ {2,}/g, ' ');
+  // 8. 去掉首尾空格和空行
+  text = text.trim();
+  // 9. 如果清理后变成了空字符串，返回一个安全的兜底
+  if (!text || text.length === 0) return '嗯嗯';
+  return text;
+}
+
 async function autoReply(toUser, userMsg) {
   // 用并发队列包装
   return enqueueAiCall(() => _autoReplyInner(toUser, userMsg));
@@ -959,17 +993,29 @@ async function _autoReplyInner(toUser, userMsg) {
       systemPrompt = cfg.prompt || '你是微信上的一个真实好友。你们是平等的关系，不是助手和用户。你有着普通人的喜怒哀乐、兴趣爱好和生活经历。你说话自然随意，不端着，也不刻意讨好。';
     }
 
-    const OUTPUT_RULES = [
-      '你的每条回复都必须是纯粹的对话文字，就像微信聊天框里打出来的那样。',
-      '绝对不要输出任何括号里的内容——不管是中文括号（）、英文括号()、方括号[]还是尖括号<>。',
-      '不要输出任何动作描写、神态描写、场景描写、心理描写。你不是在写小说。',
-      '不要输出任何emoji表情符号。',
-      '不要用任何编号、列表、标题、加粗、引用等格式。',
-      '不要说"作为XX"、"根据设定"、"按照角色"之类暴露你有人设的话。',
-      '不要输出你自己的想法、思考过程、内心独白。只输出你要说的话本身。',
-      '回复要像真人微信聊天：简短自然，该长则长该短则短，不用每句话都完整。',
+    // 回复风格和内部标签系统
+    const STYLE_GUIDE = [
+      '【回复风格】',
+      '短而自然。大多数回复20-40字，像真人微信聊天。',
+      '口语化。用"嗯嗯""呀""啦""嘛""哼""~"这些语气词。',
+      '反问代替说教。不说"你应该休息"，说"还不快去躺一会儿？"。',
+      '可以没内容，但不能没温度。偶尔只回一个"嗯"或"好"也是可以的。',
+      '',
+      '【内部标签——系统自动处理，你不会看到括号】',
+      '你的回复里可以包含动作描写和情绪表达，使用括号和标签：',
+      '  （动作标记）— 如（笑）（叹气）（摸摸头）',
+      '  [情绪:类型] — 表达你此刻的情绪',
+      '这些括号和标签会在发送前由系统自动清理，对方只会看到干净的文字。',
+      '所以你不需要担心括号的问题——想表达什么就自然表达。',
+      '',
+      '【绝对不做的】',
+      '不要用"您"称呼对方——永远用"你"',
+      '不要说"作为AI""根据设定""按照角色"这种暴露身份的话',
+      '不要连续追问',
+      '不要给编号列表建议',
+      '不要在一条消息里切换多个话题',
     ];
-    systemPrompt += '\n\n' + OUTPUT_RULES.join('\n');
+    systemPrompt += '\n\n' + STYLE_GUIDE.join('\n');
 
     const now = new Date();
     const timeStr = `现在是${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，星期${['日','一','二','三','四','五','六'][now.getDay()]}，${now.getHours()}点${String(now.getMinutes()).padStart(2,'0')}分。`;
@@ -1028,6 +1074,12 @@ async function _autoReplyInner(toUser, userMsg) {
     const j = JSON.parse(result);
     let reply = j.choices?.[0]?.message?.content || '';
     if (!reply) return;
+    // 后处理：剥离括号、emoji、标签，只保留纯对话文字
+    const cleanText = cleanReply(reply);
+    if (cleanText !== reply) {
+      console.log(`[AI] Cleaned reply: "${reply.slice(0,50)}" → "${cleanText.slice(0,50)}"`);
+      reply = cleanText;
+    }
     // 后端硬性截断：确保回复不超出字数限制（最终保险）
     if (cfg.reply_max_chars > 0 && reply.length > cfg.reply_max_chars) {
       reply = reply.slice(0, cfg.reply_max_chars);
