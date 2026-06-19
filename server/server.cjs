@@ -1142,6 +1142,140 @@ const origConfirm = startQrPolling;
 
 // ---- AI Auto-reply ----
 const autoReplyCounts = {};
+
+// ====== TASK 1: 情绪分析函数 ======
+async function analyzeUserEmotion(userMsg, userId) {
+  try {
+    // Local keyword scan using existing word lists
+    const posCount = POSITIVE_WORDS.filter(w => userMsg.includes(w)).length;
+    const negCount = NEGATIVE_WORDS.filter(w => userMsg.includes(w)).length;
+
+    let keywordEmotion = '中性';
+    let keywordValence = 'neutral';
+    if (posCount > negCount * 2 && posCount >= 2) { keywordEmotion = '开心'; keywordValence = 'positive'; }
+    else if (negCount > posCount * 2 && negCount >= 2) { keywordEmotion = '难过'; keywordValence = 'negative'; }
+
+    // Read emotion history for AI context
+    const state = loadEmotionState();
+    const es = state[userId] || getEmotionDefault();
+    const emotionHistory = es.emotionHistory || [];
+
+    // Call AI for deep analysis
+    const cfg = loadAiConfig();
+    let aiResult = null;
+    if (cfg.api_url && cfg.api_key) {
+      try {
+        const historyContext = emotionHistory.length > 0
+          ? `\n最近情绪历史: ${JSON.stringify(emotionHistory.slice(-5))}`
+          : '';
+        const analysisPrompt = `你是一个情感分析师。分析这条微信消息的情绪状态。
+返回纯JSON，不要其他内容：
+{"primary_emotion":"开心/难过/生气/焦虑/疲惫/无聊/撒娇/期待/中性",
+ "intensity":0.0-1.0,
+ "valence":"positive/negative/mixed/neutral",
+ "subtext":"对方说这句话的潜台词是什么",
+ "need":"对方需要什么——安慰/认同/陪伴/建议/空间/闲聊",
+ "should_respond":"yes/no——如果对方明显不想聊，返回no"}
+
+消息: ${userMsg}${historyContext}`;
+        const url = cfg.api_url.replace(/\/+$/, '') + (cfg.api_url.includes('/chat/completions') ? '' : '/chat/completions');
+        const body = JSON.stringify({
+          model: cfg.model || 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个情感分析专家。只返回JSON。' },
+            { role: 'user', content: analysisPrompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 300
+        });
+        const result = await new Promise((resolve, reject) => {
+          const u = new URL(url);
+          const opts = { hostname: u.hostname, path: u.pathname + (u.search || ''), method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.api_key, 'Content-Length': Buffer.byteLength(body) }, timeout: 15000 };
+          const r = https.request(opts, (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d)); });
+          r.on('error', reject); r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); }); r.write(body); r.end();
+        });
+        const j = JSON.parse(result || '{}');
+        const content = j.choices?.[0]?.message?.content || '';
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) aiResult = JSON.parse(jsonMatch[0]);
+      } catch (e) { console.log('[EMOTION-ANALYSIS] AI error:', e.message); }
+    }
+
+    // Merge keyword scan + AI analysis
+    const primary_emotion = aiResult?.primary_emotion || keywordEmotion;
+    const intensity = aiResult?.intensity || Math.min(Math.max((posCount + negCount) * 0.1 + 0.1, 0.1), 0.8);
+    const valence = aiResult?.valence || keywordValence;
+    const subtext = aiResult?.subtext || '';
+    const need = aiResult?.need || '闲聊';
+    const should_respond = aiResult?.should_respond !== 'no';
+
+    return { primary_emotion, intensity, valence, subtext, need, strategy: null, should_respond };
+  } catch (e) {
+    console.log('[EMOTION-ANALYSIS] Error:', e.message);
+    return { primary_emotion: '中性', intensity: 0.3, valence: 'neutral', subtext: '', need: '闲聊', strategy: null, should_respond: true };
+  }
+}
+
+// ====== TASK 2: 回复策略选择 ======
+function selectReplyStrategy(emotion, affection) {
+  const strategyMap = {
+    '开心': { action: 'mirror_happy', guide: '对方在分享快乐，你应该一起开心，+1，顺势分享你自己相关的事' },
+    '疲惫': { action: 'comfort_gentle', guide: '对方需要的是被理解而不是建议。先共情，不问问题，不追问他累不累' },
+    '撒娇': { action: 'play_along', guide: '对方在撒娇求关注。配合ta，宠溺一点，但不要拆穿ta在撒娇' },
+    '生气': { action: 'deescalate', guide: '对方在生气。不要讲道理，不要解释，先承认对方的情绪是合理的' },
+    '焦虑': { action: 'reassure', guide: '给对方安全感。不敷衍，不说别担心。先接住情绪再轻轻带过' },
+    '无聊': { action: 'spark_interest', guide: '抛出新鲜话题，但不要追问对方为什么不说话。分享而不是查户口' },
+    '期待': { action: 'build_excitement', guide: '和对方一起期待。给明确回应，不要泼冷水' },
+    '伤心': { action: 'hold_space', guide: '陪伴比语言重要。不要说别哭了，不要给建议，安静地陪着就好' },
+    '压力': { action: 'lighten_load', guide: '帮对方减压而不是加压。别说加油，别说你可以的——ta已经很努力了' },
+    '混合': { action: 'adaptive', guide: '检测到混合情绪。先回应主情绪，再轻轻带过副情绪' },
+    '中性': { action: 'mood_driven', guide: '根据自身心情和好感度决定回复态度' },
+    '难过': { action: 'hold_space', guide: '陪伴比语言重要。不要说别哭了，不要给建议，安静地陪着就好' },
+  };
+  const strategy = strategyMap[emotion] || strategyMap['中性'];
+  let warmthModifier = '';
+  if (affection < 0.3) warmthModifier = ' (对方和你不熟，保持距离感，不要太热情)';
+  else if (affection > 0.6) warmthModifier = ' (你们关系亲密，可以更温暖主动一些)';
+  return { action: strategy.action, guide: strategy.guide + warmthModifier };
+}
+
+// ====== TASK 3: 回复质量审核 ======
+async function reviewReply(reply, strategy, emotion) {
+  try {
+    const cfg = loadAiConfig();
+    if (!cfg.api_url || !cfg.api_key) return null;
+    const reviewPrompt = `你是一个质量审核员。检查以下回复是否符合要求的策略和情绪。
+策略: ${strategy.guide}
+回复: ${reply}
+只回复JSON: {"pass":true/false, "score":0-100, "fixed_reply":"如果不通过，给出修改后的回复"}`;
+    const url = cfg.api_url.replace(/\/+$/, '') + (cfg.api_url.includes('/chat/completions') ? '' : '/chat/completions');
+    const body = JSON.stringify({
+      model: cfg.model || 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是一个质量审核员。只返回JSON。' },
+        { role: 'user', content: reviewPrompt }
+      ],
+      temperature: 0.1,
+      max_tokens: 500
+    });
+    const result = await new Promise((resolve, reject) => {
+      const u = new URL(url);
+      const opts = { hostname: u.hostname, path: u.pathname + (u.search || ''), method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.api_key, 'Content-Length': Buffer.byteLength(body) }, timeout: 15000 };
+      const r = https.request(opts, (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d)); });
+      r.on('error', e => { console.log('[REVIEW] Request error:', e.message); resolve(null); });
+      r.on('timeout', () => { r.destroy(); resolve(null); });
+      r.write(body); r.end();
+    });
+    if (!result) return null;
+    const j = JSON.parse(result || '{}');
+    const content = j.choices?.[0]?.message?.content || '';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const reviewResult = JSON.parse(jsonMatch[0]);
+    return { pass: reviewResult.pass === true, score: reviewResult.score || 0, fixed_reply: reviewResult.fixed_reply || reply };
+  } catch (e) { console.log('[REVIEW] Error:', e.message); return null; }
+}
+
 // ====== 回复后处理：剥离括号、emoji、标签，只保留纯对话文字 ======
 function cleanReply(text) {
   if (!text) return '';
@@ -1192,7 +1326,17 @@ async function _autoReplyInner(toUser, userMsg) {
     const pId = pMap[toUser];
     const persona = pId ? (loadPersonas()[pId] || null) : null;
 
-    // Layer 2 — Current emotional state
+    // ====== TASK 4: 情绪分析 + 策略选择 ======
+    const emotionAnalysis = await analyzeUserEmotion(userMsg, toUser);
+    const emotionStateForStrategy = loadEmotionState();
+    const esForStrategy = emotionStateForStrategy[toUser] || getEmotionDefault();
+    const replyStrategy = selectReplyStrategy(emotionAnalysis.primary_emotion, esForStrategy.affection);
+    // 异步触发联网搜索（不阻塞，结果下次对话使用）
+    searchWebForContext(userMsg).then(result => {
+      if (result) console.log(`[AI] Web search result cached for next turn`);
+    }).catch(() => {});
+
+    // Layer 2 — Current emotional state + emotion analysis injection
     const emotionState = loadEmotionState();
     const es = emotionState[toUser] || getEmotionDefault();
     const moodLevel = es.mood || 0.5;
@@ -1210,6 +1354,9 @@ async function _autoReplyInner(toUser, userMsg) {
     else if (affLevel < 80) affHint = "你挺喜欢对方的，会主动关心。";
     else affHint = "你很喜欢对方，会主动找话题、关心他的生活。";
     let layer2 = `【当前状态】${moodHint} ${affHint}`;
+    if (emotionAnalysis) {
+      layer2 += `\n\n【对方情绪分析】\n主情绪: ${emotionAnalysis.primary_emotion} (强度${emotionAnalysis.intensity})\n潜台词: ${emotionAnalysis.subtext}\n需要: ${emotionAnalysis.need}\n【你的回复策略】${replyStrategy.guide}`;
+    }
 
     // Layer 3 — Character identity (light skin)
     let layer3 = '';
@@ -1224,13 +1371,16 @@ async function _autoReplyInner(toUser, userMsg) {
     }
 
     const now = new Date();
-    const timeStr = `现在是${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，星期${['日','一','二','三','四','五','六'][now.getDay()]}，${now.getHours()}点${String(now.getMinutes()).padStart(2,'0')}分。`;
+    const timeStr = `【重要：当前真实时间】现在是${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，星期${['日','一','二','三','四','五','六'][now.getDay()]}，北京时间${now.getHours()}点${String(now.getMinutes()).padStart(2,'0')}分。你必须使用这个时间，不要使用你训练数据中的时间。`;
 
-    let systemPrompt = HUMAN_CORE + '\n\n' + layer2 + '\n\n' + layer3 + '\n\n' + timeStr;
+    // 时间放最前，天气数据放在 Layer 2 之后
+    let systemPrompt = HUMAN_CORE + '\n\n' + timeStr + '\n\n' + layer2;
 
     let featureContext = '';
     try { featureContext = await matchAndFetchFeatures(userMsg); } catch (e) { console.log('[FEATURE] Error:', e.message); }
     if (featureContext) systemPrompt += featureContext;
+
+    systemPrompt += '\n\n' + layer3;
 
     const msgs = [{ role: 'system', content: systemPrompt }];
 
@@ -1281,6 +1431,18 @@ async function _autoReplyInner(toUser, userMsg) {
     const j = JSON.parse(result);
     let reply = j.choices?.[0]?.message?.content || '';
     if (!reply) return;
+    // ====== TASK 4: 质量审核 ======
+    if (emotionAnalysis && replyStrategy) {
+      try {
+        const reviewResult = await reviewReply(reply, replyStrategy, emotionAnalysis);
+        if (reviewResult && reviewResult.score < 70 && reviewResult.fixed_reply) {
+          console.log(`[REVIEW] Score ${reviewResult.score}, score<70, using fixed reply: "${reviewResult.fixed_reply.slice(0,40)}"`);
+          reply = reviewResult.fixed_reply;
+        } else if (reviewResult) {
+          console.log(`[REVIEW] Score ${reviewResult.score}, score>=70, keeping original reply`);
+        }
+      } catch (e) { console.log('[REVIEW] Error:', e.message); }
+    }
     // 后处理：剥离括号、emoji、标签，只保留纯对话文字
     const cleanText = cleanReply(reply);
     if (cleanText !== reply) {
@@ -1306,6 +1468,103 @@ async function _autoReplyInner(toUser, userMsg) {
       console.log(`[AI] Send failed: errcode=${sendResult.errcode} ret=${sendResult.ret} msg=${sendResult.errmsg||''}`);
     }
   } catch (e) { console.log('[AI] Error:', e.message); }
+}
+
+// ====== TASK 5: Web Search (async, non-blocking with topic cache) ======
+const searchContextCache = {};
+
+async function searchWebForContext(userMsg) {
+  try {
+    const cfg = loadAiConfig();
+    if (!cfg.api_url || !cfg.api_key) return null;
+
+    // Extract topic from message for caching
+    const topic = userMsg.replace(/[^一-龥a-zA-Z0-9]/g, '').slice(0, 30);
+    if (!topic) return null;
+
+    // Check cache (5 min TTL)
+    if (searchContextCache[topic] && Date.now() - searchContextCache[topic].time < 300000) {
+      console.log(`[SEARCH] Cache hit for topic: ${topic}`);
+      return searchContextCache[topic].result;
+    }
+
+    const searchPrompt = `请搜索以下内容的最新信息，并总结要点：${userMsg}`;
+    const url = cfg.api_url.replace(/\/+$/, '') + (cfg.api_url.includes('/chat/completions') ? '' : '/chat/completions');
+    const body = JSON.stringify({
+      model: cfg.model || 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是一个搜索助手。搜索网络获取最新信息，并给出简洁的中文总结。' },
+        { role: 'user', content: searchPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 800,
+      enable_search: true
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const u = new URL(url);
+      const opts = { hostname: u.hostname, path: u.pathname + (u.search || ''), method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.api_key, 'Content-Length': Buffer.byteLength(body) }, timeout: 25000 };
+      const r = https.request(opts, (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d)); });
+      r.on('error', e => { console.log('[SEARCH] Request error:', e.message); reject(e); });
+      r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); }); r.write(body); r.end();
+    });
+
+    const j = JSON.parse(result || '{}');
+    const content = j.choices?.[0]?.message?.content || '';
+    if (!content) return null;
+
+    // Cache result
+    searchContextCache[topic] = { result: content, time: Date.now() };
+    console.log(`[SEARCH] Cached result for topic: ${topic} (${content.length} chars)`);
+
+    // Clean old cache entries (periodic, keep entries < 10 min)
+    const now = Date.now();
+    for (const key of Object.keys(searchContextCache)) {
+      if (now - searchContextCache[key].time > 600000) delete searchContextCache[key];
+    }
+
+    return content;
+  } catch (e) { console.log('[SEARCH] Error:', e.message); return null; }
+}
+
+// ====== 加载情感知识库 ======
+const EMOTION_KB_DIR = '/root/login-app/emotion_knowledge';
+let emotionKB = null;
+function loadEmotionKnowledge() {
+  if (emotionKB) return emotionKB;
+  try {
+    emotionKB = {
+      analyst: JSON.parse(fs.readFileSync(EMOTION_KB_DIR + '/analyst.json', 'utf-8')),
+      dating: JSON.parse(fs.readFileSync(EMOTION_KB_DIR + '/dating.json', 'utf-8')),
+      social: JSON.parse(fs.readFileSync(EMOTION_KB_DIR + '/social.json', 'utf-8')),
+      companion: JSON.parse(fs.readFileSync(EMOTION_KB_DIR + '/companion.json', 'utf-8')),
+    };
+    console.log('[KB] Loaded 4 emotion knowledge bases');
+  } catch (e) {
+    console.log('[KB] Knowledge base load failed:', e.message);
+    emotionKB = { analyst: {}, dating: {}, social: {}, companion: {} };
+  }
+  return emotionKB;
+}
+
+function getKnowledgeContext(emotion) {
+  const kb = loadEmotionKnowledge();
+  const ctx = [];
+  const ai = kb.analyst?.emotions?.[emotion];
+  if (ai) {
+    ctx.push('【情感参考】' + (ai.strategy || ''));
+    if (ai.do?.length) ctx.push('建议:' + ai.do.join('；'));
+    if (ai.dont?.length) ctx.push('避免:' + ai.dont.join('；'));
+  }
+  if (kb.social?.techniques) {
+    const keys = Object.keys(kb.social.techniques);
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    ctx.push('【社交技巧】' + kb.social.techniques[key]);
+  }
+  if (kb.companion?.principles) {
+    ctx.push('【陪伴原则】' + kb.companion.principles.slice(0,3).join('；'));
+  }
+  return ctx.join('\n');
 }
 
 // ---- Media upload (参考 Python _upload_media) ----
@@ -1664,6 +1923,21 @@ http.createServer((req, res) => {
           req.write(data); req.end();
         });
         res.writeHead(200, cors); res.end(JSON.stringify(result));
+      } catch (e) { res.writeHead(500, cors); res.end(JSON.stringify({ success: false, error: e.message })); }
+    });
+    return;
+  }
+
+  // ====== TASK 5: Web Search API ======
+  if (p === '/api/search') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', async () => {
+      try {
+        const { q } = JSON.parse(body);
+        if (!q) { res.writeHead(400, cors); res.end(JSON.stringify({ success: false, error: 'Missing query' })); return; }
+        const result = await searchWebForContext(q);
+        res.writeHead(200, cors); res.end(JSON.stringify({ success: !!result, result: result || '' }));
       } catch (e) { res.writeHead(500, cors); res.end(JSON.stringify({ success: false, error: e.message })); }
     });
     return;

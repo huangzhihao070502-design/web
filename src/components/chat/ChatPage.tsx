@@ -31,7 +31,7 @@ export default function ChatPage({ userId, onBack }: Props) {
   const [addQrImg, setAddQrImg] = useState('');
   const [addQrStatus, setAddQrStatus] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement|null>(null);
   const msgIdCounter = useRef(0);
   const settingsCtx = useSettings();
@@ -39,7 +39,10 @@ export default function ChatPage({ userId, onBack }: Props) {
   const resolvedTheme = settingsCtx?.resolvedTheme || 'light';
   const isDark = resolvedTheme === 'dark';
 
-  useEffect(() => { endRef.current?.scrollIntoView({behavior:'smooth'}) }, [msgs]);
+  useEffect(() => {
+    const el = chatRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [msgs]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -247,7 +250,7 @@ export default function ChatPage({ userId, onBack }: Props) {
       </div>
 
       {/* Message list — bg #F6F6F6 */}
-      <div className="chat-scroll" style={{flex:1,minHeight:0,overflowY:'auto' as const,padding:'12px 16px'}}>
+      <div ref={chatRef} className="chat-scroll" style={{flex:1,minHeight:0,overflowY:'auto' as const,padding:'12px 16px'}}>
         {msgs.length === 0 && (
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',textAlign:'center',padding:'0 32px'}}>
             <div style={{width:56,height:56,borderRadius:'50%',background:'rgba(148,193,214,0.15)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16,fontSize:28}}>💬</div>
@@ -310,7 +313,7 @@ export default function ChatPage({ userId, onBack }: Props) {
           <div style={{display:'flex',gap:8,marginBottom:8}}><div style={{width:28,flexShrink:0}}/>
             <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{display:'flex',alignItems:'center',gap:5,padding:'12px 16px',borderRadius:'20px 20px 20px 4px',background:BUBBLE_OTHER,boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
               {[0,1,2].map(j=><motion.div key={j} animate={{y:[0,-4,0]}} transition={{repeat:Infinity,duration:1.2,delay:j*0.2,ease:'easeInOut'}} style={{width:7,height:7,borderRadius:'50%',background:'rgba(255,255,255,0.6)'}}/>)}</motion.div></div>)}
-        <div ref={endRef}/>
+        <div style={{height:1}}/>
       </div>
 
       {userId && <InputArea onSendText={handleSendText} onSendVoice={handleSendVoice} onSendImage={handleSendImage} onSendFile={handleSendFile} onSendLocation={handleSendLocation} isDark={isDark}/>}
