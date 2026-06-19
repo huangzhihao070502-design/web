@@ -206,6 +206,7 @@ function startAddFriendPolling(key) {
           contextTokens[data.ilink_user_id] = '';
           saveState();
           console.log(`[ADD-FRIEND] New user added: ${(data.ilink_user_id||'').slice(0,16)}`);
+          console.log(`[ADD-FRIEND] Context token empty for ${(data.ilink_user_id||'').slice(0,16)} — auto-reply will work after first message poll`);
         }
         exhaustMessages();
       } else if (data.status === 'expired') { addFriendStatus = 'expired'; clearInterval(addFriendTimer); addFriendTimer = null; }
@@ -381,7 +382,7 @@ async function pollMessages() {
     for (const msg of (result.msgs || [])) {
       const fromUser = msg.from_user_id;
       const ctxToken = msg.context_token;
-      if (fromUser && ctxToken && !contextTokens[fromUser]) { contextTokens[fromUser] = ctxToken; saveState(); startScheduledReplies(); console.log(`[POLL] New user: ${(fromUser||'').slice(0,16)}`); }
+      if (fromUser && ctxToken && !contextTokens[fromUser]) { contextTokens[fromUser] = ctxToken; saveState(); startScheduledReplies(); console.log(`[POLL] New user: ${(fromUser||'').slice(0,16)}`); for (const pm of messages) { if (pm.from === fromUser && pm.dir === 'in' && pm.text) autoReply(fromUser, pm.text); } }
       let msgText = '', msgMedia = null;
       for (const item of (msg.item_list || [])) {
         if (item.text_item) msgText = item.text_item.text || '';
@@ -844,7 +845,7 @@ function startScheduledReplies() {
   const cfg = loadAiConfig();
   if (!cfg.enabled || !cfg.scheduled_reply || !cfg.api_url || !cfg.api_key) return;
   // active_interval 统一为秒
-  const intervalSec = cfg.active_interval || 60;
+  const intervalSec = (cfg.active_interval || 1) * 60;
   const intervalMs = intervalSec * 1000;
   console.log(`[SCHED] Started (every ${intervalSec}s, ${Object.keys(contextTokens).length} users)`);
   schedTimer = setInterval(async () => {
@@ -932,8 +933,8 @@ async function _autoReplyInner(toUser, userMsg) {
     const replyKey = toUser + ':' + userMsg;
     const replyCount = (autoReplyCounts[replyKey] || 0) + 1;
     autoReplyCounts[replyKey] = replyCount;
-    if (replyCount > (cfg.max_replies || 2)) { console.log(`[AI] Skip #${replyCount} (max ${cfg.max_replies||2})`); return; }
     setTimeout(() => { delete autoReplyCounts[replyKey]; }, 60000);
+    if (replyCount > (cfg.max_replies ?? 2)) { console.log(`[AI] Skip #${replyCount} (max ${cfg.max_replies??2})`); return; }
     const url = cfg.api_url.replace(/\/+$/, '') + (cfg.api_url.includes('/chat/completions') ? '' : '/chat/completions');
     // Build system prompt: natural persona + skills merged as personality traits
     const pMap = loadPersonaMap();
@@ -1042,6 +1043,8 @@ async function _autoReplyInner(toUser, userMsg) {
       if (cfg.memory_enabled) {
         addMemory(toUser, 'assistant', reply);
       }
+    } else {
+      console.log(`[AI] Send failed: errcode=${sendResult.errcode} ret=${sendResult.ret} msg=${sendResult.errmsg||''}`);
     }
   } catch (e) { console.log('[AI] Error:', e.message); }
 }

@@ -96,7 +96,7 @@ export default function SettingsPage({ onLogout }: Props) {
   const [logs, setLogs] = useState<any[]>([]);
   const [logFilter, setLogFilter] = useState<"all" | "ERROR">("all");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [aiCfg, setAiCfg] = useState({ enabled: false, api_url: "", api_key: "", model: "", prompt: "", scheduled_reply: false, active_interval: 60, max_replies: 2, reply_min_chars: 0, reply_max_chars: 0, token_limit: 0 });
+  const [aiCfg, setAiCfg] = useState({ enabled: false, api_url: "", api_key: "", model: "", prompt: "", scheduled_reply: false, active_interval: 60, max_replies: 2, reply_min_chars: 0, reply_max_chars: 0, token_limit: 0, memory_enabled: false });
   const [aiTestResult, setAiTestResult] = useState<string | null>(null);
   const [aiTesting, setAiTesting] = useState(false);
   const [aiSaved, setAiSaved] = useState(false);
@@ -111,7 +111,7 @@ export default function SettingsPage({ onLogout }: Props) {
   const loadPersonas = useCallback(async () => { try { const r = await fetch(`${API}/api/personas`); const d = await r.json(); if (d.personas) setPersonas(d.personas); if (d.user_map) setPersonaMap(d.user_map); } catch {} }, []);
   useEffect(() => { if (page === "personas") { loadPersonas(); fetch(`${API}/api/users`).then(r => r.json()).then(d => { if (d.users) setUsers(d.users); }).catch(() => {}); fetch(`${API}/api/skills`).then(r => r.json()).then(d => { if (d.skills) setAllSkills(d.skills); }).catch(() => {}); } }, [page, loadPersonas]);
   useEffect(() => { if (page !== "personaEdit") return; fetch(`${API}/api/skills`).then(r => r.json()).then(d => { if (d.skills) { setAllSkills(d.skills); setSelectedSkills(editingPersona.id && editingPersona.skills?.length > 0 ? editingPersona.skills : d.skills.map((s: any) => s.id)); } }).catch(() => {}); }, [page]);
-  useEffect(() => { if (page === "ai") { fetch(`${API}/api/ai-config`).then(r => r.json()).then(d => { if (d && typeof d === "object") setAiCfg({ enabled: d.enabled || false, api_url: d.api_url || "", api_key: d.api_key || "", model: d.model || "", prompt: d.prompt || "", scheduled_reply: d.scheduled_reply || false, active_interval: d.active_interval || 60, max_replies: d.max_replies || 2, reply_min_chars: d.reply_min_chars || 0, reply_max_chars: d.reply_max_chars || 0, token_limit: d.token_limit || 0 }); }).catch(() => {}); } }, [page]);
+  useEffect(() => { if (page === "ai") { fetch(`${API}/api/ai-config`).then(r => r.json()).then(d => { if (d && typeof d === "object") setAiCfg({ enabled: d.enabled || false, api_url: d.api_url || "", api_key: d.api_key || "", model: d.model || "", prompt: d.prompt || "", scheduled_reply: d.scheduled_reply || false, active_interval: d.active_interval || 60, max_replies: d.max_replies || 2, reply_min_chars: d.reply_min_chars || 0, reply_max_chars: d.reply_max_chars || 0, token_limit: d.token_limit || 0, memory_enabled: d.memory_enabled || false }); }).catch(() => {}); } }, [page]);
 
   const loadIpData = useCallback(async () => {
     try {
