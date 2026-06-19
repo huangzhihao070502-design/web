@@ -18,140 +18,67 @@ const tabs = [
   { key: 'settings' as Tab, icon: Settings, labelKey: 'nav.settings' },
 ];
 
-const fontSizeMap: Record<string, number> = { small: 13, normal: 14, large: 16 };
-
-function getThemeColors(theme: string) {
-  const dark = theme === 'dark';
-  return {
-    outerBg: dark ? '#161616' : '#F9F8F7',
-    bg: dark ? '#161616' : '#F9F8F7',
-    surface: dark ? '#222222' : 'rgba(255,255,255,0.96)',
-    text: dark ? '#F2F2F2' : '#202124',
-    textSec: dark ? '#999999' : '#8D8D8D',
-    border: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-    accent: '#C89F7E',
-    accentActive: '#B08968',
-    tabBg: dark ? '#222222' : 'rgba(255,255,255,0.96)',
-  };
-}
-
 export default function Dashboard({ onLogout }: Props) {
   const [tab, setTab] = useState<Tab>('chat');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeChatUsers, setActiveChatUsers] = useState<Set<string>>(new Set());
   const settingsCtx = useSettings();
   const settings = settingsCtx?.settings || { general_font_size: 'normal', general_language: 'zh-CN', general_theme: 'auto' };
-  const resolvedTheme = settingsCtx?.resolvedTheme || 'light';
   const lang = settingsCtx?.lang || 'zh-CN';
-  const c = getThemeColors(resolvedTheme);
-  const baseFontSize = fontSizeMap[settings.general_font_size] || 14;
 
-  // 轮询获取用户列表和当前选中用户
   useEffect(() => {
     const t = setInterval(async () => {
       try {
         const r = await fetch(`${API}/api/users`);
         const d = await r.json();
-        // 函数式更新避免闭包陷阱
         setCurrentUserId(prev => {
           if (d.current_user) return d.current_user;
           if (d.users?.length && !prev) return d.users[0];
           return prev;
         });
         if (d.users) {
-          setActiveChatUsers(prev => {
-            let changed = false;
-            const next = new Set(prev);
-            for (const u of d.users) {
-              if (!next.has(u)) { next.add(u); changed = true; }
-            }
-            return changed ? next : prev;
-          });
+          setActiveChatUsers(prev => { let changed = false; const next = new Set(prev); for (const u of d.users) { if (!next.has(u)) { next.add(u); changed = true; } } return changed ? next : prev; });
         }
       } catch {}
     }, 2000);
     return () => clearInterval(t);
   }, []);
 
-  // 用户切换：立即更新 currentUserId（不等轮询）
-  const handleSwitchUser = useCallback((userId: string) => {
-    setCurrentUserId(userId);
-    setTab('chat');
-  }, []);
+  const handleSwitchUser = useCallback((userId: string) => { setCurrentUserId(userId); setTab('chat'); }, []);
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: `linear-gradient(180deg, ${c.outerBg}, ${c.outerBg === '#F9F8F7' ? '#F6F5F3' : '#161616'})`,
-      fontFamily: '"Inter","PingFang SC",system-ui,sans-serif', fontSize: baseFontSize,
-    }} className="noise-overlay">
-      <div style={{
-        width: '100%', maxWidth: 430, height: '100%', maxHeight: '100vh',
-        background: c.bg, display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
-      }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{
-            display: tab === 'chat' ? 'flex' : 'none', flex: 1,
-            flexDirection: 'column', overflow: 'hidden', position: 'relative',
-          }}>
+    <div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#F6F6F6',fontFamily:'"Noto Sans SC", system-ui, sans-serif',fontSize:14}}>
+      <div style={{width:'100%',maxWidth:430,height:'100%',maxHeight:'100vh',background:'#F6F6F6',display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:'0 25px 50px rgba(0,0,0,0.1)'}}>
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div style={{display:tab==='chat'?'flex':'none',flex:1,flexDirection:'column',overflow:'hidden',position:'relative'}}>
             {activeChatUsers.size === 0 ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textSec, fontSize: baseFontSize }}>
-                {t('dashboard.no_users', lang)}
-              </div>
+              <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#B1BQB8',fontSize:14}}>{t('dashboard.no_users', lang)}</div>
             ) : Array.from(activeChatUsers).map(uid => (
-              <div key={uid} style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                visibility: uid === currentUserId ? 'visible' : 'hidden',
-                pointerEvents: uid === currentUserId ? 'auto' : 'none',
-              }}>
-                <ChatPage userId={uid} />
-              </div>
+              <div key={uid} style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',overflow:'hidden',visibility:uid===currentUserId?'visible':'hidden',pointerEvents:uid===currentUserId?'auto':'none'}}>
+                <ChatPage userId={uid}/></div>
             ))}
           </div>
-
-          <div style={{
-            display: tab === 'user' ? 'flex' : 'none', flex: 1,
-            overflow: 'auto', width: '100%', flexDirection: 'column',
-          }}>
-            <UserPage onSwitchUser={handleSwitchUser} />
-          </div>
-
-          <div style={{
-            display: tab === 'settings' ? 'flex' : 'none', flex: 1,
-            overflow: 'auto', width: '100%', flexDirection: 'column',
-          }}>
-            <SettingsPage onLogout={onLogout} />
-          </div>
+          <div style={{display:tab==='user'?'flex':'none',flex:1,overflow:'auto',width:'100%',flexDirection:'column'}}>
+            <UserPage onSwitchUser={handleSwitchUser}/></div>
+          <div style={{display:tab==='settings'?'flex':'none',flex:1,overflow:'auto',width:'100%',flexDirection:'column'}}>
+            <SettingsPage onLogout={onLogout}/></div>
         </div>
 
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-          borderTop: `1px solid ${c.border}`, background: c.surface,
-          padding: '8px 8px calc(env(safe-area-inset-bottom, 8px))', flexShrink: 0,
-        }}>
-          {tabs.map((tabItem) => {
+        {/* Bottom nav — 56px, white bg, per spec */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-around',height:56,borderTop:'1px solid rgba(0,0,0,0.06)',background:'#FFFFFF',flexShrink:0,paddingBottom:'env(safe-area-inset-bottom, 0px)'}}>
+          {tabs.map(tabItem => {
             const active = tab === tabItem.key;
             return (
               <button key={tabItem.key} onClick={() => setTab(tabItem.key)}
-                style={{
-                  position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: 2, padding: '4px 20px', border: 'none', background: 'none', cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}>
-                <tabItem.icon size={22} strokeWidth={active ? 2 : 1.5} color={active ? c.accentActive : c.textSec + '80'} />
-                <span style={{ fontSize: 10, fontWeight: active ? 600 : 400, color: active ? c.accentActive : c.textSec + '80' }}>{t(tabItem.labelKey, lang)}</span>
-                {active && <div style={{
-                  position: 'absolute', top: -8, height: 3, width: 32, borderRadius: 2,
-                  background: `linear-gradient(135deg, ${c.accent}, ${c.accentActive})`,
-                }} />}
-              </button>
-            );
+                style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,padding:'4px 16px',border:'none',background:'none',cursor:'pointer',position:'relative'}}>
+                <tabItem.icon size={22} strokeWidth={active?2:1.5} color={active?'#747CBB':'#B1BQB8'}/>
+                <span style={{fontSize:12,fontWeight:active?500:400,color:active?'#747CBB':'#B1BQB8'}}>{t(tabItem.labelKey, lang)}</span>
+                {active && <div style={{position:'absolute',top:-1,width:24,height:3,borderRadius:'0 0 3px 3px',background:'#747CBB'}}/>}
+              </button>);
           })}
         </div>
       </div>
-      <Live2DWidget />
+      <Live2DWidget/>
     </div>
   );
 }

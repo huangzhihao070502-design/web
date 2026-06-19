@@ -4,44 +4,47 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f0eff5',
-          100: '#d5d3e6',
-          200: '#b5b2d1',
-          300: '#9491bc',
-          400: '#7b78ab',
-          500: '#625f9a',
-          600: '#4a488a',
-          700: '#3d3b6b',
-          800: '#2d2b55',
-          900: '#1e1b4b',
-        },
+        primary: '#94C1D6',
+        secondary: '#747CBB',
+        accent: '#BBA2CA',
+        'gray-20': '#B1BQB8',
+        'black-50': '#343030',
+        'white-80': '#F6F6F6',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+      },
+      fontSize: {
+        'title': ['20px', { fontWeight: '700' }],
+        'main': ['18px', { lineHeight: '1.5' }],
+        'sub': ['16px', { lineHeight: '1.5' }],
+        'body': ['14px', { lineHeight: '1.6' }],
+        'caption': ['12px', { lineHeight: '1.4' }],
+      },
+      borderRadius: {
+        'bubble': '20px',
+        'card': '16px',
+        'btn': '12px',
+        'input': '24px',
       },
       keyframes: {
-        'noise': {
-          '0%, 100%': { transform: 'translate(0, 0)' },
-          '10%': { transform: 'translate(-3%, -5%)' },
-          '20%': { transform: 'translate(-5%, 2%)' },
-          '30%': { transform: 'translate(7%, 3%)' },
-          '40%': { transform: 'translate(-3%, 6%)' },
-          '50%': { transform: 'translate(5%, -4%)' },
-          '60%': { transform: 'translate(-7%, 2%)' },
-          '70%': { transform: 'translate(3%, 7%)' },
-          '80%': { transform: 'translate(-5%, -3%)' },
-          '90%': { transform: 'translate(2%, -6%)' },
+        'fade-up': {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
-        'shine': {
-          from: { transform: 'translateX(-100%) skewX(-12deg)' },
-          to: { transform: 'translateX(200%) skewX(-12deg)' },
+        'bounce-dot': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' },
+        },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.9)' },
+          to: { opacity: '1', transform: 'scale(1)' },
         },
       },
       animation: {
-        'noise': 'noise 8s steps(10) infinite',
-        'shine': 'shine 1.5s ease-in-out infinite',
-        'spin-slow': 'spin 2s linear infinite',
+        'fade-up': 'fade-up 0.3s ease-out',
+        'bounce-dot': 'bounce-dot 1.2s ease-in-out infinite',
+        'scale-in': 'scale-in 0.2s ease-out',
       },
     },
   },
