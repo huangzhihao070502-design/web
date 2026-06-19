@@ -90,6 +90,8 @@ export default function SettingsPage({ onLogout }: Props) {
   const [personas, setPersonas] = useState<any[]>([]);
   const [personaMap, setPersonaMap] = useState<Record<string, string>>({});
   const [editingPersona, setEditingPersona] = useState<any>({ name: "", personality: "", style: "", background: "", details: "", mes_example: "" });
+  const [affectionValue, setAffectionValue] = useState(50);
+  const [currentAffection, setCurrentAffection] = useState<number | null>(null);
   const [users, setUsers] = useState<string[]>([]);
   const [expandedPersona, setExpandedPersona] = useState<string | null>(null);
   const [allSkills, setAllSkills] = useState<any[]>([]);
@@ -274,6 +276,28 @@ export default function SettingsPage({ onLogout }: Props) {
               {[{ key: "name", label: t("persona.name", lang), placeholder: "" }, { key: "personality", label: t("persona.personality", lang), placeholder: "" }, { key: "style", label: t("persona.style", lang), placeholder: "" }, { key: "background", label: t("persona.background", lang), placeholder: "" }].map(f => (<div key={f.key}><label className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{f.label}</label><input value={(editingPersona as any)[f.key] || ""} onChange={e => setEditingPersona((p: any) => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)]/40 focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10 sm:px-4 sm:py-3" /></div>))}
               <div className="sm:col-span-2"><FormTextarea label={t("persona.details", lang)} value={editingPersona.details || ""} onChange={v => setEditingPersona((p: any) => ({ ...p, details: v }))} placeholder="" rows={3} /></div>
               <div className="sm:col-span-2"><FormTextarea label="对话示例 (mes_example)" value={editingPersona.mes_example || ""} onChange={v => setEditingPersona((p: any) => ({ ...p, mes_example: v }))} placeholder={`示例格式：\n用户：今天好累\n你：抱抱~ 辛苦了，快去休息会儿\n\n用户：晚安\n你：晚安~ 做个好梦\n\n用户：在干嘛\n你：在看书呢，你呢？`} rows={6} /></div>
+            </div>
+            <div className="mt-5">
+              <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">好感度控制</label>
+              {(() => {
+                const uid = Object.entries(personaMap).find(([, pid]) => pid === editingPersona.id)?.[0] || "";
+                if (!uid) return <p className="text-xs text-[var(--color-text-secondary)]">保存角色卡并分配用户后可使用</p>;
+                return (
+                  <div className="space-y-2">
+                    {currentAffection !== null && <p className="text-xs text-[var(--color-text-secondary)]">当前好感度: {Math.round(currentAffection * 100)}%</p>}
+                    <div className="flex items-center gap-3">
+                      <input type="number" min={0} max={100} value={affectionValue} onChange={e => setAffectionValue(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50" />
+                      <span className="text-xs text-[var(--color-text-secondary)]">%</span>
+                      <button onClick={async () => {
+                        try {
+                          const r = await fetch(`${API}/api/emotion/set`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, affection: affectionValue / 100 }) });
+                          if (r.ok) setCurrentAffection(affectionValue / 100);
+                        } catch {}
+                      }} className="ml-auto rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] px-4 py-2 text-xs font-medium text-white transition-all hover:brightness-105">确定</button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="mt-5">
               <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{t("persona.skills", lang)}</label>

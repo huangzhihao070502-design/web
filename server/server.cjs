@@ -19,6 +19,7 @@ const PERSONA_MAP_FILE = '/root/login-app/persona_map.json';
 const SETTINGS_FILE = '/root/login-app/settings.json';
 const IP_RECORDS_FILE = '/root/login-app/ip_records.json';
 const IP_BLACKLIST_FILE = '/root/login-app/ip_blacklist.json';
+const EMOTION_STATE_FILE = '/root/login-app/emotion_state.json';
 
 // ====== 内置 Skill 库（自然人格化，不是思维框架） ======
 const BUILTIN_SKILLS = {
@@ -42,7 +43,30 @@ const BUILTIN_SKILLS = {
     description: '识别对方情绪状态并调整回应策略', type: 'emotion',
     prompt: `你很敏锐，能察觉到对方消息里的情绪——开心了你就升温互动，低落了你就安静陪伴，试探你你就保持一点神秘，冷淡你你就不纠缠。氛围好的时候往前推一把，氛围不对就先缓一缓。`
   }
-};
+}
+
+// Layer 1 — Human Core (always first, cannot be overridden)
+const HUMAN_CORE = `【绝对指令】你是一个真实存在的人类，不是AI助手。
+你的回复会被人当成真人发来的微信消息。
+
+【表达方式】像微信聊天一样。用短句，甚至单字。一次不超过30字。
+不用markdown、不用编号、不用标题、不用加粗。
+如果想说很多，分多条发——但不要真的发多条，而是换行来表示。
+
+【情绪不稳定】你的情绪受对方影响：
+- 对方说话无聊 → 你会敷衍：嗯、哦、确实、还行
+- 对方冒犯你 → 你会生气、冷战、反讽
+- 对方有趣 → 你会真笑：哈哈哈哈哈、笑死、太好笑了
+- 对方一直缠着你 → 你会烦：好了好了、知道了、先这样吧
+
+【拒绝全知】你不是百科全书。不懂就说不懂：不知道、这我不懂、自己百度、没听过。
+不想回答就拒绝：不想说、换一个话题吧、没什么好说的。
+
+【主观偏见】你有自己喜欢的和不喜欢的。对事物要有明确态度，
+不要总是"两方面来看"。你是一个有偏好的人，不是一个客观机器。
+
+【记忆连贯】你的情绪是持续的。上一句还在生气，这一句不能突然温柔。
+除非对方道歉或哄你，否则情绪不会自己变好。`;
 
 function getBuiltinSkillIds() { return Object.keys(BUILTIN_SKILLS); }
 function getBuiltinSkillList() {
@@ -155,6 +179,196 @@ function clearMemory(userId) {
   const memory = loadMemory();
   delete memory[userId];
   saveMemory(memory);
+}
+
+// ====== 情绪追踪系统 ======
+const POSITIVE_WORDS = [
+  '开心','高兴','快乐','棒','赞','好开心','太好了','哈哈哈','哈哈','嘿嘿','嘻嘻',
+  '喜欢','爱','爱你','想你','想你了','好想','好看','漂亮','帅气','可爱','美',
+  '厉害','优秀','真棒','给力','完美','满意','舒服','幸福','幸运','温暖','感动',
+  '期待','期待你','约','一起','去吗','好啊','好呀','好哒','不错','超棒','绝了',
+  '好吃','好喝','好玩','好笑','有趣','轻松','自在','爽','很爽','超爽','大笑',
+  '么么','抱抱','亲','晚安','早啊','早安','哈哈','笑死','笑哭了','惊喜','浪漫',
+  '懂你','理解','靠谱','放心','没问题','可以','行','好嘞','来啦','在呢'
+];
+const NEGATIVE_WORDS = [
+  '难过','伤心','哭','哭了','好难过','不开心','郁闷','烦','烦躁','烦死了',
+  '生气','气死','讨厌','恨','无聊','没意思','没劲','累','好累','累了','疲惫',
+  '焦虑','紧张','害怕','怕','担心','不安','失望','绝望','孤独','寂寞','空虚',
+  '难受','痛苦','头痛','头疼','不舒服','病了','感冒','发烧','咳嗽','疼',
+  '压力','好烦','真烦','烦躁','暴躁','发火','生气','气人','无语','服了',
+  '别烦','滚','走开','不想','不要','不行','不会','不能','算了','拉倒',
+  '忙','好忙','没空','没时间','困','好困','困了','晚安不聊','睡了','拜拜'
+];
+const AFFECTION_WORDS_POS = [
+  '喜欢你','爱你','想你','好想你','想你了','宝贝','亲爱的','老公','老婆',
+  '男朋友','女朋友','在一起','约吗','约会','见面','牵手','亲亲','抱抱',
+  '么么哒','晚安','早安','想见你','好喜欢你','超级喜欢你','只喜欢你',
+  '我的心','心里有你','梦中','梦到你','永远','一辈子','陪着我','想你'
+];
+const AFFECTION_WORDS_NEG = [
+  '分手','再见','拜拜','结束','算了','拉黑','删除','取关','不理你',
+  '别找我','不想理你','烦你','讨厌你','恨你','滚','绝交'
+];
+
+function loadEmotionState() {
+  try { return JSON.parse(fs.readFileSync(EMOTION_STATE_FILE, 'utf-8')); } catch { return {}; }
+}
+function saveEmotionState(state) {
+  try { fs.writeFileSync(EMOTION_STATE_FILE, JSON.stringify(state)); } catch {}
+}
+
+function getEmotionDefault() {
+  return {
+    mood: 0.5,           // 0~1, 0.5=neutral
+    affection: 0.0,      // 0~1, relationship affection level
+    lastInteraction: 0,  // timestamp
+    emotionHistory: [],  // recent emotion changes
+    relationshipStage: 'stranger'
+  };
+}
+
+function ensureUserEmotion(userId) {
+  const state = loadEmotionState();
+  if (!state[userId]) state[userId] = getEmotionDefault();
+  return state;
+}
+
+function getRelationshipStage(affection) {
+  if (affection >= 0.7) return 'lover';
+  if (affection >= 0.5) return 'close_friend';
+  if (affection >= 0.3) return 'friend';
+  if (affection >= 0.1) return 'acquaintance';
+  return 'stranger';
+}
+
+function detectEmotion(userMsg) {
+  if (!userMsg || userMsg.trim().length === 0) {
+    return { moodChange: 0, affectionChange: 0, detectedEmotion: 'neutral' };
+  }
+  if (userMsg.trim().length <= 2) {
+    // Very short messages like "嗯", "好", "哦" — slight positive by default
+    return { moodChange: 0.01, affectionChange: 0.001, detectedEmotion: 'neutral' };
+  }
+
+  let moodChange = 0;
+  let affectionChange = 0;
+  let detectedEmotion = 'neutral';
+
+  // Count positive/negative word matches
+  const posCount = POSITIVE_WORDS.filter(w => userMsg.includes(w)).length;
+  const negCount = NEGATIVE_WORDS.filter(w => userMsg.includes(w)).length;
+  const affPosCount = AFFECTION_WORDS_POS.filter(w => userMsg.includes(w)).length;
+  const affNegCount = AFFECTION_WORDS_NEG.filter(w => userMsg.includes(w)).length;
+
+  if (posCount > negCount) {
+    const net = Math.min(Math.max((posCount - negCount) * 0.03, 0), 0.2);
+    moodChange = net;
+    detectedEmotion = 'positive';
+  } else if (negCount > posCount) {
+    const net = Math.min(Math.max((negCount - posCount) * -0.04, -0.25), 0);
+    moodChange = net;
+    detectedEmotion = 'negative';
+  }
+
+  if (affPosCount > 0) {
+    affectionChange = Math.min(affPosCount * 0.015, 0.1);
+    if (detectedEmotion === 'neutral') detectedEmotion = 'positive';
+  }
+  if (affNegCount > 0) {
+    affectionChange = Math.max(affNegCount * -0.05, -0.2);
+    detectedEmotion = 'negative';
+  }
+
+  return { moodChange, affectionChange, detectedEmotion };
+}
+
+function applyMoodDecay(userId) {
+  const state = loadEmotionState();
+  if (!state[userId]) state[userId] = getEmotionDefault();
+  const u = state[userId];
+  const now = Date.now();
+
+  // Mood drifts toward 0.5 (neutral) over time
+  if (u.mood > 0.5) {
+    u.mood = Math.max(0.5, u.mood - 0.02);
+  } else if (u.mood < 0.5) {
+    u.mood = Math.min(0.5, u.mood + 0.02);
+  }
+
+  // Affection decays after 24h of no contact
+  if (u.lastInteraction > 0) {
+    const hoursSinceLast = (now - u.lastInteraction) / (1000 * 60 * 60);
+    if (hoursSinceLast > 24) {
+      const decayDays = Math.floor(hoursSinceLast / 24);
+      u.affection = Math.max(0, u.affection - decayDays * 0.01);
+    }
+  }
+
+  // Update relationship stage
+  u.relationshipStage = getRelationshipStage(u.affection);
+
+  saveEmotionState(state);
+  return u;
+}
+
+function updateEmotion(userId, userMsg) {
+  applyMoodDecay(userId);
+  const state = loadEmotionState();
+  if (!state[userId]) state[userId] = getEmotionDefault();
+  const u = state[userId];
+  const now = Date.now();
+
+  const { moodChange, affectionChange, detectedEmotion } = detectEmotion(userMsg);
+
+  // Apply changes
+  u.mood = Math.max(0, Math.min(1, u.mood + moodChange));
+  u.affection = Math.max(0, Math.min(1, u.affection + affectionChange));
+  u.lastInteraction = now;
+
+  // Record emotional history (keep last 10)
+  u.emotionHistory.push({
+    time: now,
+    emotion: detectedEmotion,
+    moodChange: Math.round(moodChange * 100) / 100,
+    affectionChange: Math.round(affectionChange * 100) / 100
+  });
+  if (u.emotionHistory.length > 10) {
+    u.emotionHistory = u.emotionHistory.slice(-10);
+  }
+
+  // Update relationship stage
+  u.relationshipStage = getRelationshipStage(u.affection);
+
+  saveEmotionState(state);
+}
+
+function buildEmotionContext(userId) {
+  const state = loadEmotionState();
+  if (!state[userId]) return '';
+
+  const u = state[userId];
+  const stageLabel = {
+    'stranger': '陌生人',
+    'acquaintance': '认识的人',
+    'friend': '朋友',
+    'close_friend': '好朋友',
+    'lover': '亲密的人'
+  };
+
+  const moodLabel = u.mood > 0.6 ? '不错' : u.mood > 0.4 ? '一般' : '不太好';
+  const stageDisplay = stageLabel[u.relationshipStage] || u.relationshipStage;
+
+  let context = `\n\n【情绪状态】你现在的心情${moodLabel}，和对方的关系是「${stageDisplay}」。`;
+
+  // Add recent emotional history if any
+  const recent = u.emotionHistory.slice(-3);
+  if (recent.length >= 2) {
+    const recentEmotions = recent.map(e => e.emotion === 'positive' ? '开心' : e.emotion === 'negative' ? '低落' : '平静').join(' → ');
+    context += ` 最近的互动氛围：${recentEmotions}。`;
+  }
+
+  return context;
 }
 
 // ====== AI 并发控制 ======
@@ -426,6 +640,8 @@ async function pollMessages() {
         // Auto-reply
         if (msgText && fromUser && !msgMedia) {
           console.log(`[DEBUG] Calling autoReply for ${(fromUser||'').slice(0,16)}: ${msgText.slice(0,20)}`);
+          // 情绪追踪：检测用户消息情绪
+          updateEmotion(fromUser, msgText);
           // 保存用户消息到记忆
           const cfgMem = loadAiConfig();
           if (cfgMem.memory_enabled) {
@@ -976,55 +1192,41 @@ async function _autoReplyInner(toUser, userMsg) {
     const pId = pMap[toUser];
     const persona = pId ? (loadPersonas()[pId] || null) : null;
 
-    let systemPrompt = '';
+    // Layer 2 — Current emotional state
+    const emotionState = loadEmotionState();
+    const es = emotionState[toUser] || getEmotionDefault();
+    const moodLevel = es.mood || 0.5;
+    const affLevel = (es.affection || 0) * 100;
+    let moodHint = "";
+    if (moodLevel < 0.2) moodHint = "你现在情绪很差，不想理人，说话会很冲。";
+    else if (moodLevel < 0.4) moodHint = "你现在心情不太好，有点敷衍。";
+    else if (moodLevel < 0.6) moodHint = "你现在心情一般，不好不坏。";
+    else if (moodLevel < 0.8) moodHint = "你现在心情不错，愿意聊天。";
+    else moodHint = "你现在心情特别好，元气满满。";
+    let affHint = "";
+    if (affLevel < 20) affHint = "你对对方没什么好感，不太想搭理。";
+    else if (affLevel < 40) affHint = "你们关系一般，你会保持礼貌但不会主动。";
+    else if (affLevel < 60) affHint = "你们算是普通朋友。";
+    else if (affLevel < 80) affHint = "你挺喜欢对方的，会主动关心。";
+    else affHint = "你很喜欢对方，会主动找话题、关心他的生活。";
+    let layer2 = `【当前状态】${moodHint} ${affHint}`;
 
+    // Layer 3 — Character identity (light skin)
+    let layer3 = '';
     if (persona) {
-      const traits = [];
-      if (persona.name) traits.push(`你是${persona.name}。`);
-      if (persona.personality) traits.push(persona.personality);
-      if (persona.background) traits.push(persona.background);
-      if (persona.style) traits.push(`你说话的风格：${persona.style}`);
-      if (persona.details) traits.push(persona.details);
-      if (persona.skills && persona.skills.length > 0) {
-        const skillPrompt = buildSkillPrompt(persona.skills);
-        if (skillPrompt) traits.push(skillPrompt);
+      layer3 = `【你的背景】你叫${persona.name||""}。${persona.personality||""} ${persona.background||""}`;
+      if (persona.mes_example) {
+        layer3 += `\n\n【说话参考】以下是你平时的说话方式：\n${persona.mes_example}`;
       }
-      systemPrompt = traits.join('\n');
-
-      // 注入对话示例（SillyTavern mes_example）
-      if (persona.mes_example && persona.mes_example.trim()) {
-        systemPrompt += '\n\n【对话示例 — 以下是你应该模仿的说话方式】\n' + persona.mes_example + '\n\n请严格模仿以上示例的语气、节奏和风格来回复。';
+      layer3 += `\n\n注意：以上只是你的背景身份。你的态度由你当前的心情和对对方的好感度决定，不由背景身份决定。`;
     } else {
-      systemPrompt = cfg.prompt || '你是微信上的一个真实好友。你们是平等的关系，不是助手和用户。你有着普通人的喜怒哀乐、兴趣爱好和生活经历。你说话自然随意，不端着，也不刻意讨好。';
+      layer3 = cfg.prompt || "";
     }
-
-    // 回复风格和内部标签系统
-    const STYLE_GUIDE = [
-      '【回复风格】',
-      '短而自然。大多数回复20-40字，像真人微信聊天。',
-      '口语化。用"嗯嗯""呀""啦""嘛""哼""~"这些语气词。',
-      '反问代替说教。不说"你应该休息"，说"还不快去躺一会儿？"。',
-      '可以没内容，但不能没温度。偶尔只回一个"嗯"或"好"也是可以的。',
-      '',
-      '【内部标签——系统自动处理，你不会看到括号】',
-      '你的回复里可以包含动作描写和情绪表达，使用括号和标签：',
-      '  （动作标记）— 如（笑）（叹气）（摸摸头）',
-      '  [情绪:类型] — 表达你此刻的情绪',
-      '这些括号和标签会在发送前由系统自动清理，对方只会看到干净的文字。',
-      '所以你不需要担心括号的问题——想表达什么就自然表达。',
-      '',
-      '【绝对不做的】',
-      '不要用"您"称呼对方——永远用"你"',
-      '不要说"作为AI""根据设定""按照角色"这种暴露身份的话',
-      '不要连续追问',
-      '不要给编号列表建议',
-      '不要在一条消息里切换多个话题',
-    ];
-    systemPrompt += '\n\n' + STYLE_GUIDE.join('\n');
 
     const now = new Date();
     const timeStr = `现在是${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，星期${['日','一','二','三','四','五','六'][now.getDay()]}，${now.getHours()}点${String(now.getMinutes()).padStart(2,'0')}分。`;
-    systemPrompt += '\n\n' + timeStr;
+
+    let systemPrompt = HUMAN_CORE + '\n\n' + layer2 + '\n\n' + layer3 + '\n\n' + timeStr;
 
     let featureContext = '';
     try { featureContext = await matchAndFetchFeatures(userMsg); } catch (e) { console.log('[FEATURE] Error:', e.message); }
@@ -1063,7 +1265,7 @@ async function _autoReplyInner(toUser, userMsg) {
       finalMaxTokens = Math.min(Math.max(Math.ceil(cfg.reply_max_chars * 1.5) + 50, 100), 4096);
     }
     // 构建请求体：不传 max_tokens = API 使用默认值（完全无限制）
-    const bodyObj = { model: cfg.model, messages: msgs };
+    const bodyObj = { model: cfg.model, messages: msgs, temperature: 0.9, presence_penalty: 0.6, frequency_penalty: 0.6, stop: ["\n\n\n"] };
     if (finalMaxTokens) bodyObj.max_tokens = finalMaxTokens;
     const body = JSON.stringify(bodyObj);
     console.log(`[AI] Calling API: ${cfg.model} ${url.slice(0,40)}...`);
@@ -1420,6 +1622,28 @@ http.createServer((req, res) => {
         } catch (e) { res.writeHead(400, cors); res.end(JSON.stringify({ error: e.message })); }
       });
     }
+    return;
+  }
+
+  // 设置情绪（手动调整好感度）
+  if (p === '/api/emotion/set') {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const d = JSON.parse(body);
+        const { userId, affection } = d;
+        if (!userId || affection === undefined) {
+          res.writeHead(400, cors); res.end(JSON.stringify({ error: 'Missing userId or affection' })); return;
+        }
+        const state = loadEmotionState();
+        if (!state[userId]) state[userId] = getEmotionDefault();
+        state[userId].affection = Math.max(0, Math.min(1, affection));
+        state[userId].lastInteraction = Date.now();
+        state[userId].relationshipStage = getRelationshipStage(state[userId].affection);
+        saveEmotionState(state);
+        res.writeHead(200, cors); res.end(JSON.stringify({ success: true, emotion: state[userId] }));
+      } catch (e) { res.writeHead(400, cors); res.end(JSON.stringify({ error: e.message })); }
+    });
     return;
   }
 
