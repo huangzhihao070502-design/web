@@ -36,8 +36,14 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Upload APK as Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: webchat4-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          tag_name: latest
+          name: WebChat4 APK
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
