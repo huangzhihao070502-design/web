@@ -89,7 +89,7 @@ export default function SettingsPage({ onLogout }: Props) {
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [personas, setPersonas] = useState<any[]>([]);
   const [personaMap, setPersonaMap] = useState<Record<string, string>>({});
-  const [editingPersona, setEditingPersona] = useState<any>({ name: "", personality: "", style: "", background: "", details: "" });
+  const [editingPersona, setEditingPersona] = useState<any>({ name: "", personality: "", style: "", background: "", details: "", mes_example: "" });
   const [users, setUsers] = useState<string[]>([]);
   const [expandedPersona, setExpandedPersona] = useState<string | null>(null);
   const [allSkills, setAllSkills] = useState<any[]>([]);
@@ -223,7 +223,7 @@ export default function SettingsPage({ onLogout }: Props) {
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
           <div className="mb-5 flex items-center justify-between sm:mb-6">
             <div className="flex items-center gap-3"><BackButton onClick={() => setPage("main")} /><h1 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">{t("persona.title", lang)} <span className="text-sm font-normal text-[var(--color-text-secondary)]">({personas.length})</span></h1></div>
-            <button onClick={() => { setEditingPersona({ name: "", personality: "", style: "", background: "", details: "" }); setPage("personaEdit"); }} className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-white shadow-md transition-all hover:brightness-105">+</button>
+            <button onClick={() => { setEditingPersona({ name: "", personality: "", style: "", background: "", details: "", mes_example: "" }); setPage("personaEdit"); }} className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-white shadow-md transition-all hover:brightness-105">+</button>
           </div>
           {personas.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center"><BookOpen size={48} strokeWidth={1} className="text-[var(--color-text-secondary)]/25" /><p className="mt-3 text-sm text-[var(--color-text-secondary)]">{t("persona.none", lang)}</p><p className="mt-1 text-xs text-[var(--color-text-secondary)]/60">{t("persona.create_hint", lang)}</p></div>
@@ -273,6 +273,7 @@ export default function SettingsPage({ onLogout }: Props) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[{ key: "name", label: t("persona.name", lang), placeholder: "" }, { key: "personality", label: t("persona.personality", lang), placeholder: "" }, { key: "style", label: t("persona.style", lang), placeholder: "" }, { key: "background", label: t("persona.background", lang), placeholder: "" }].map(f => (<div key={f.key}><label className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{f.label}</label><input value={(editingPersona as any)[f.key] || ""} onChange={e => setEditingPersona((p: any) => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)]/40 focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10 sm:px-4 sm:py-3" /></div>))}
               <div className="sm:col-span-2"><FormTextarea label={t("persona.details", lang)} value={editingPersona.details || ""} onChange={v => setEditingPersona((p: any) => ({ ...p, details: v }))} placeholder="" rows={3} /></div>
+              <div className="sm:col-span-2"><FormTextarea label="对话示例 (mes_example)" value={editingPersona.mes_example || ""} onChange={v => setEditingPersona((p: any) => ({ ...p, mes_example: v }))} placeholder={`示例格式：\n用户：今天好累\n你：抱抱~ 辛苦了，快去休息会儿\n\n用户：晚安\n你：晚安~ 做个好梦\n\n用户：在干嘛\n你：在看书呢，你呢？`} rows={6} /></div>
             </div>
             <div className="mt-5">
               <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{t("persona.skills", lang)}</label>

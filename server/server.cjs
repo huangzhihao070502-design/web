@@ -456,6 +456,7 @@ function savePersona(data) {
   ps[id] = {
     id, name: data.name||'', personality: data.personality||'', style: data.style||'',
     background: data.background||'', details: data.details||'',
+    mes_example: data.mes_example||'',
     skills: data.skills && data.skills.length > 0 ? data.skills : getBuiltinSkillIds(),
     createdAt: Date.now()
   };
@@ -989,6 +990,10 @@ async function _autoReplyInner(toUser, userMsg) {
         if (skillPrompt) traits.push(skillPrompt);
       }
       systemPrompt = traits.join('\n');
+
+      // 注入对话示例（SillyTavern mes_example）
+      if (persona.mes_example && persona.mes_example.trim()) {
+        systemPrompt += '\n\n【对话示例 — 以下是你应该模仿的说话方式】\n' + persona.mes_example + '\n\n请严格模仿以上示例的语气、节奏和风格来回复。';
     } else {
       systemPrompt = cfg.prompt || '你是微信上的一个真实好友。你们是平等的关系，不是助手和用户。你有着普通人的喜怒哀乐、兴趣爱好和生活经历。你说话自然随意，不端着，也不刻意讨好。';
     }
