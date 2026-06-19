@@ -47,11 +47,40 @@ jobs:
         path: android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 90
 
-    - name: Commit APK to repo
+    - name: Upload APK to repo via API
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        cp android/app/build/outputs/apk/debug/app-debug.apk apk-download/app-debug.apk
-        git config user.email "action@github.com"
-        git config user.name "GitHub Action"
-        git add apk-download/app-debug.apk
-        git commit -m "chore: update APK build $(date +%Y%m%d)" || echo "No changes to commit"
-        git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
+        APK="android/app/build/outputs/apk/debug/app-debug.apk"
+        DEST="apk-download/app-debug.apk"
+        REPO="${{ github.repository }}"
+        SHA="${{ github.sha }}"
+
+        echo "Uploading APK to $DEST..."
+
+        # Check if file already exists
+        FILE_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$REPO/contents/$DEST?ref=main" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+
+        # Base64 encode the APK
+        CONTENT=$(base64 -w 0 "$APK")
+
+        # Create/update file via API
+        PAYLOAD=$(python3 -c "
+import sys, json
+sha = '$FILE_SHA'
+content = '$CONTENT'
+payload = {'message': 'chore: update APK', 'content': content, 'branch': 'main', 'sha': sha}
+print(json.dumps(payload))
+")
+
+        RESP=$(curl -s -w "\n%{http_code}" -X PUT \
+          "https://api.github.com/repos/$REPO/contents/$DEST" \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD")
+
+        HTTP_CODE=$(echo "$RESP" | tail -1)
+        echo "Upload HTTP: $HTTP_CODE"
+        echo "Done!"
