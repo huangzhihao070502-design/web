@@ -40,14 +40,24 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleDebug
 
-    - name: Upload APK as Release
-      uses: softprops/action-gh-release@v2
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
       with:
-        tag_name: latest
-        name: WebChat4 APK
-        files: android/app/build/outputs/apk/debug/app-debug.apk
+        tag_name: v1
+        release_name: WebChat4 APK v1
+        body: Automated APK build from latest code
         draft: false
         prerelease: false
-        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload APK to Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_name: app-debug.apk
+        asset_path: android/app/build/outputs/apk/debug/app-debug.apk
+        asset_content_type: application/vnd.android.package-archive
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
