@@ -5,8 +5,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.webkit.*
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -14,10 +16,12 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
     private var serverManager: ServerManager? = null
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var floatingServiceRunning = false
 
     companion object {
         private const val REQUEST_FILE_CHOOSER = 1001
         private const val REQUEST_PERMISSIONS = 1002
+        private const val REQUEST_OVERLAY_PERMISSION = 1003
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +39,6 @@ class MainActivity : AppCompatActivity() {
             setSupportZoom(true)
             builtInZoomControls = true
             displayZoomControls = false
-            // 允许文件访问
             allowFileAccess = true
             allowContentAccess = true
         }
@@ -48,7 +51,6 @@ class MainActivity : AppCompatActivity() {
 
         // ── 文件选择 + 定位 + 媒体权限（WebChromeClient） ──
         webView.webChromeClient = object : WebChromeClient() {
-            // 文件上传：图片、文件选择
             override fun onShowFileChooser(
                 webView: WebView?,
                 filePath: ValueCallback<Array<Uri>>?,
@@ -56,7 +58,6 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 filePathCallback = filePath
                 val intent = fileChooserParams?.createIntent() ?: return false
-                // 检查并请求存储权限
                 val perms = mutableListOf<String>()
                 if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.READ_MEDIA_IMAGES)
                     != PackageManager.PERMISSION_GRANTED) perms.add(Manifest.permission.READ_MEDIA_IMAGES)
@@ -70,7 +71,6 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            // 地理定位
             override fun onGeolocationPermissionsShowPrompt(
                 origin: String?,
                 callback: GeolocationPermissions.Callback?
@@ -84,7 +84,6 @@ class MainActivity : AppCompatActivity() {
                 callback?.invoke(origin, true, true)
             }
 
-            // 麦克风/摄像头权限
             override fun onPermissionRequest(request: PermissionRequest?) {
                 request?.let { req ->
                     for (r in req.resources) {
@@ -124,6 +123,37 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // 请求悬浮窗权限
+        requestOverlayPermission()
+    }
+
+    // ── 悬浮窗权限 ──
+    private fun requestOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "请授权悬浮窗权限，以便在其他应用上显示看板娘", Toast.LENGTH_LONG).show()
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION)
+        }
+    }
+
+    // ── 启动/停止悬浮窗 Service ──
+    private fun startFloatingService() {
+        if (!Settings.canDrawOverlays(this)) return
+        if (floatingServiceRunning) return
+        val intent = Intent(this, FloatingWindowService::class.java)
+        startForegroundService(intent)
+        floatingServiceRunning = true
+    }
+
+    private fun stopFloatingService() {
+        if (!floatingServiceRunning) return
+        val intent = Intent(this, FloatingWindowService::class.java)
+        stopService(intent)
+        floatingServiceRunning = false
     }
 
     // ── 文件选择结果回调 ──
@@ -140,16 +170,29 @@ class MainActivity : AppCompatActivity() {
             }
             filePathCallback = null
         }
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            if (Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "悬浮窗权限已授权", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onStop() {
         super.onStop()
         findViewById<WebView>(R.id.webview)?.onPause()
+        // App 进入后台 → 启动悬浮窗
+        startFloatingService()
     }
 
     override fun onRestart() {
         super.onRestart()
         findViewById<WebView>(R.id.webview)?.onResume()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // App 回到前台 → 停止悬浮窗
+        stopFloatingService()
     }
 
     override fun onDestroy() {

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live2D Float</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#waifu {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 1000;
+}
+#waifu-tips {
+  animation: waifu-shake 50s ease-in-out 5s infinite;
+  background-color: rgba(236, 217, 188, .5);
+  border: 1px solid rgba(224, 186, 140, .62);
+  border-radius: 12px;
+  box-shadow: 0 3px 15px 2px rgba(191, 158, 118, .2);
+  font-size: 13px;
+  line-height: 20px;
+  margin: -24px -10px;
+  min-height: 60px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 5px 10px;
+  position: absolute;
+  text-overflow: ellipsis;
+  transition: opacity 1s;
+  width: 200px;
+  word-break: break-all;
+}
+#waifu-tips.waifu-tips-active {
+  opacity: 1;
+  transition: opacity .2s;
+}
+#waifu-tips span { color: #0099cc; }
+#live2d {
+  cursor: grab;
+  height: 150px;
+  position: relative;
+  width: 150px;
+}
+#live2d:active { cursor: grabbing; }
+#waifu-tool {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  opacity: 0;
+  position: absolute;
+  right: -10px;
+  top: 60px;
+  transition: opacity 1s;
+}
+#waifu:hover #waifu-tool { opacity: 1; }
+#waifu-tool svg {
+  cursor: pointer;
+  display: block;
+  fill: #7b8c9d;
+  height: 22px;
+  transition: fill .3s;
+}
+#waifu-tool svg:hover { fill: #C89F7E; }
+@keyframes waifu-shake {
+  2% { transform: translate(.5px, -1.5px) rotate(-.5deg); }
+  4% { transform: translate(.5px, 1.5px) rotate(1.5deg); }
+  6% { transform: translate(1.5px, 1.5px) rotate(1.5deg); }
+  8% { transform: translate(2.5px, 1.5px) rotate(.5deg); }
+  10% { transform: translate(.5px, 2.5px) rotate(.5deg); }
+  12% { transform: translate(1.5px, 1.5px) rotate(.5deg); }
+  14% { transform: translate(.5px, .5px) rotate(.5deg); }
+  16% { transform: translate(-1.5px, -.5px) rotate(1.5deg); }
+  18% { transform: translate(.5px, .5px) rotate(1.5deg); }
+  20% { transform: translate(2.5px, 2.5px) rotate(1.5deg); }
+  22% { transform: translate(.5px, -1.5px) rotate(1.5deg); }
+  24% { transform: translate(-1.5px, 1.5px) rotate(-.5deg); }
+  26% { transform: translate(1.5px, .5px) rotate(1.5deg); }
+  28% { transform: translate(-.5px, -.5px) rotate(-.5deg); }
+  30% { transform: translate(1.5px, -.5px) rotate(-.5deg); }
+  32% { transform: translate(2.5px, -1.5px) rotate(1.5deg); }
+  34% { transform: translate(2.5px, 2.5px) rotate(-.5deg); }
+  36% { transform: translate(.5px, -1.5px) rotate(.5deg); }
+  38% { transform: translate(2.5px, -.5px) rotate(-.5deg); }
+  40% { transform: translate(-.5px, 2.5px) rotate(.5deg); }
+  42% { transform: translate(-1.5px, 2.5px) rotate(.5deg); }
+  44% { transform: translate(-1.5px, 1.5px) rotate(.5deg); }
+  46% { transform: translate(1.5px, -.5px) rotate(-.5deg); }
+  48% { transform: translate(2.5px, -.5px) rotate(.5deg); }
+  50% { transform: translate(-1.5px, 1.5px) rotate(.5deg); }
+  52% { transform: translate(-.5px, 1.5px) rotate(.5deg); }
+  54% { transform: translate(-1.5px, 1.5px) rotate(.5deg); }
+  56% { transform: translate(.5px, 2.5px) rotate(1.5deg); }
+  58% { transform: translate(2.5px, -1.5px) rotate(1.5deg); }
+  60% { transform: translate(2.5px, -1.5px) rotate(1.5deg); }
+  62% { transform: translate(-1.5px, .5px) rotate(1.5deg); }
+  64% { transform: translate(-1.5px, 1.5px) rotate(1.5deg); }
+  66% { transform: translate(.5px, 2.5px) rotate(1.5deg); }
+  68% { transform: translate(2.5px, -1.5px) rotate(1.5deg); }
+  70% { transform: translate(2.5px, 2.5px) rotate(.5deg); }
+  72% { transform: translate(-.5px, -1.5px) rotate(1.5deg); }
+  74% { transform: translate(-1.5px, 2.5px) rotate(1.5deg); }
+  76% { transform: translate(-1.5px, 2.5px) rotate(1.5deg); }
+  78% { transform: translate(-1.5px, 2.5px) rotate(.5deg); }
+  80% { transform: translate(-1.5px, .5px) rotate(-.5deg); }
+  82% { transform: translate(-1.5px, .5px) rotate(-.5deg); }
+  84% { transform: translate(-.5px, .5px) rotate(1.5deg); }
+  86% { transform: translate(2.5px, 1.5px) rotate(.5deg); }
+  88% { transform: translate(-1.5px, .5px) rotate(1.5deg); }
+  90% { transform: translate(-1.5px, -.5px) rotate(-.5deg); }
+  92% { transform: translate(-1.5px, -1.5px) rotate(1.5deg); }
+  94% { transform: translate(.5px, .5px) rotate(-.5deg); }
+  96% { transform: translate(2.5px, -.5px) rotate(-.5deg); }
+  98% { transform: translate(-1.5px, -1.5px) rotate(-.5deg); }
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+}
+</style>
+</head>
+<body>
+
+<div id="waifu">
+  <div id="waifu-tips"></div>
+  <div id="waifu-canvas">
+    <canvas id="live2d" width="800" height="800"></canvas>
+  </div>
+  <div id="waifu-tool"></div>
+</div>
+
+<!-- Cubism 2 核心库 -->
+<script src="live2d.min.js"></script>
+
+<script>
+/* === 阻塞加载器（与 autoload.js 一致） === */
+function loadWrapped(url) {
+  return fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(code) {
+      return new Promise(function(resolve) {
+        var script = document.createElement('script');
+        script.textContent = '(function(){' + code + '\n})();';
+        script.onload = resolve;
+        document.body.appendChild(script);
+        resolve();
+      });
+    });
+}
+
+/* === 台词显示引擎 === */
+var _tipTimer = null;
+function showTip(text, duration, priority, force) {
+  duration = duration || 4000;
+  priority = priority || 0;
+  var stored = parseInt(sessionStorage.getItem('waifu-message-priority'), 10);
+  if (isNaN(stored)) stored = 0;
+  if (!text || (!force && stored > priority) || (force && stored >= priority)) return;
+  if (_tipTimer) { clearTimeout(_tipTimer); _tipTimer = null; }
+  if (Array.isArray(text)) text = text[Math.floor(Math.random() * text.length)];
+  sessionStorage.setItem('waifu-message-priority', String(priority));
+  var el = document.getElementById('waifu-tips');
+  if (!el) return;
+  el.innerHTML = text;
+  el.classList.add('waifu-tips-active');
+  _tipTimer = setTimeout(function() {
+    sessionStorage.removeItem('waifu-message-priority');
+    el.classList.remove('waifu-tips-active');
+  }, duration);
+}
+
+function pick(arr) { return Array.isArray(arr) ? arr[Math.floor(Math.random() * arr.length)] : arr; }
+
+/* === 台词系统 === */
+function initTipsSystem(config) {
+  var defaults = config.message['default'];
+  config.seasons.forEach(function(s) {
+    var now = new Date();
+    var parts = s.date.split('-');
+    var from = parts[0].split('/');
+    var to = (parts[1] || parts[0]).split('/');
+    if (Number(from[0]) <= now.getMonth()+1 && now.getMonth()+1 <= Number(to[0]) &&
+        Number(from[1]) <= now.getDate() && now.getDate() <= Number(to[1])) {
+      defaults.push(pick(s.text).replace('{year}', String(now.getFullYear())));
+    }
+  });
+  var idle = false, idleTimer = null;
+  window.addEventListener('mousemove', function() { idle = false; });
+  window.addEventListener('touchstart', function() { idle = false; }, { passive: true });
+  setInterval(function() {
+    if (idle) { if (!idleTimer) idleTimer = setInterval(function() { showTip(defaults, 6000, 9); }, 20000); }
+    else { idle = true; if (idleTimer) { clearInterval(idleTimer); idleTimer = null; } }
+  }, 1000);
+  var lastSel = '';
+  document.addEventListener('mouseover', function(e) {
+    for (var i = 0; i < config.mouseover.length; i++) {
+      var item = config.mouseover[i];
+      if (e.target && e.target.closest && e.target.closest(item.selector)) {
+        if (lastSel === item.selector) return;
+        lastSel = item.selector;
+        showTip(pick(item.text).replace('{text}', e.target.innerText), 4000, 8);
+        return;
+      }
+    }
+  });
+  document.addEventListener('click', function(e) {
+    for (var i = 0; i < config.click.length; i++) {
+      var item = config.click[i];
+      if (e.target && e.target.closest && e.target.closest(item.selector)) {
+        showTip(pick(item.text).replace('{text}', e.target.innerText), 4000, 8);
+        return;
+      }
+    }
+  });
+  window.addEventListener('live2d:hoverbody', function() { showTip(pick(config.message.hoverBody), 4000, 8, false); });
+  window.addEventListener('live2d:tapbody', function() { showTip(pick(config.message.tapBody), 4000, 9); });
+  var now = new Date();
+  config.time.forEach(function(t) {
+    var parts = t.hour.split('-');
+    if (Number(parts[0]) <= now.getHours() && now.getHours() <= Number(parts[1] || parts[0])) showTip(t.text, 7000, 11);
+  });
+  window.addEventListener('copy', function() { showTip(config.message.copy, 6000, 9); });
+  window.addEventListener('visibilitychange', function() { if (!document.hidden) showTip(config.message.visibilitychange, 6000, 9); });
+}
+
+/* === 动画系统（Live2DWidget.tsx 移植） === */
+function initAnimations() {
+  var s = document.createElement('style');
+  s.textContent = '@keyframes live2d-tilt{0%,100%{transform:rotate(0deg)}25%{transform:rotate(1.5deg)}75%{transform:rotate(-1.5deg)}}#waifu-canvas{animation:live2d-tilt 8s ease-in-out infinite}';
+  document.head.appendChild(s);
+  var lastBlink = Date.now();
+  setInterval(function() {
+    try {
+      var m = window.__live2d_model;
+      if (!m) return;
+      var now = Date.now();
+      if (now - lastBlink > 4000 + Math.random() * 2000) {
+        m.setParamFloat && m.setParamFloat('PARAM_EYE_L_OPEN', 0.1);
+        m.setParamFloat && m.setParamFloat('PARAM_EYE_R_OPEN', 0.1);
+        setTimeout(function() {
+          m.setParamFloat && m.setParamFloat('PARAM_EYE_L_OPEN', 1);
+          m.setParamFloat && m.setParamFloat('PARAM_EYE_R_OPEN', 1);
+        }, 150);
+        lastBlink = now;
+      }
+      m.setParamFloat && m.setParamFloat('PARAM_BREATH', 0.5 + Math.sin(Date.now()/2000)*0.15);
+      m.setParamFloat && m.setParamFloat('PARAM_EYE_BALL_X', Math.sin(Date.now()/4000)*3);
+      m.setParamFloat && m.setParamFloat('PARAM_EYE_BALL_Y', Math.cos(Date.now()/5000)*2);
+      m.setParamFloat && m.setParamFloat('PARAM_BODY_ANGLE_X', Math.sin(Date.now()/3000)*1.5);
+      m.setParamFloat && m.setParamFloat('PARAM_ANGLE_Z', Math.sin(Date.now()/4000)*2);
+    } catch(e) {}
+  }, 50);
+}
+
+/* === 身体交互 === */
+function setupBodyInteraction() {
+  var canvas = document.getElementById('live2d');
+  if (!canvas) return;
+  var clickCount = 0, clickTimer = null;
+  canvas.addEventListener('click', function() {
+    clickCount++;
+    if (clickTimer) clearTimeout(clickTimer);
+    clickTimer = setTimeout(function() { clickCount = 0; }, 4000);
+    if (clickCount >= 2) {
+      clickCount = 0;
+      if (window.AndroidFloat && window.AndroidFloat.openMainApp) window.AndroidFloat.openMainApp();
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('live2d:tapbody'));
+  });
+  canvas.addEventListener('mouseover', function() { window.dispatchEvent(new CustomEvent('live2d:hoverbody')); });
+}
+
+/* === 主初始化 === */
+(function() {
+  loadWrapped('chunk/index.js')
+    .then(function() { return loadWrapped('chunk/index2.js'); })
+    .then(function() { return loadWrapped('waifu-tips.js'); })
+    .then(function() { return fetch('waifu-tips.json'); })
+    .then(function(r) { return r.json(); })
+    .then(function(config) {
+      if (window.initWidget) {
+        window.initWidget({
+          waifuPath: 'waifu-tips.json',
+          cubism2Path: 'live2d.min.js',
+          cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+          tools: ['switch-model', 'switch-texture', 'photo', 'quit'],
+          logLevel: 'warn',
+          drag: false
+        });
+      }
+      initTipsSystem(config);
+      setTimeout(initAnimations, 2000);
+      setTimeout(setupBodyInteraction, 2000);
+      setTimeout(function() { showTip('悬浮窗已启动~', 4000, 10); }, 1000);
+    })
+    .catch(function(err) { console.error('[Float] Init failed:', err); });
+})();
+</script>
+</body>
+</html>
