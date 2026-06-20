@@ -29,10 +29,10 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
     try {
       // 获取设备IP
       let myIps: string[] = [];
-      for (const url of ['https://httpbin.org/ip', 'https://api.ipify.org?format=json', 'https://myip.ipip.net/json']) {
+      for (const url of ['https://httpbin.org/ip', 'https://myip.ipip.net/json']) {
         try { const r = await fetch(url); const d = await r.json(); let ip = ''; if (d.origin) ip = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; else if (d.ip) ip = d.ip; else if (d.data?.ip) ip = d.data.ip; if (ip && !myIps.includes(ip)) myIps.push(ip); } catch {}
       }
-      try { const r6 = await fetch('https://api64.ipify.org?format=json'); const d6 = await r6.json(); if (d6.ip && !myIps.includes(d6.ip)) myIps.push(d6.ip); } catch {}
+      try { const r6 = await fetch('https://httpbin.org/ip'); const d6 = await r6.json(); if (d6.origin) { const ip = typeof d6.origin === 'string' ? d6.origin.split(',')[0].trim() : ''; if (ip && !myIps.includes(ip)) myIps.push(ip); } } catch {}
 
       // 获取本地IP
       try {
@@ -83,10 +83,10 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
       // 获取公网IP（同时尝试IPv4和IPv6）
       let publicIpv4 = '';
       let publicIpv6 = '';
-      for (const url of ['https://httpbin.org/ip', 'https://api.ipify.org?format=json', 'https://myip.ipip.net/json']) {
+      for (const url of ['https://httpbin.org/ip', 'https://myip.ipip.net/json']) {
         try { const r = await fetch(url); const d = await r.json(); if (d.origin) { publicIpv4 = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; break; } if (d.ip) { publicIpv4 = d.ip; break; } if (d.data && d.data.ip) { publicIpv4 = d.data.ip; break; } } catch {}
       }
-      try { const r6 = await fetch('https://api64.ipify.org?format=json'); const d6 = await r6.json(); if (d6.ip) publicIpv6 = d6.ip; } catch {}
+      try { const r6 = await fetch('https://httpbin.org/ip'); const d6 = await r6.json(); if (d6.origin) publicIpv6 = typeof d6.origin === 'string' ? d6.origin.split(',')[0].trim() : ''; } catch {}
 
       // 获取地理位置信息
       let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
