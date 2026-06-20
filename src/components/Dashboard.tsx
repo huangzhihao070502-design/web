@@ -327,10 +327,12 @@ function PersonaManagementPage({ onBack }: { onBack: () => void }) {
 function AffectionControlPage({ onBack, users }: { onBack: () => void; users: string[] }) {
   const settingsCtx = useSettings();
   const lang = settingsCtx?.lang || 'zh-CN';
-  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedUser, setSelectedUser] = useState(() => { try { return localStorage.getItem('inkos_affection_user') || ''; } catch { return ''; } });
   const [currentAffection, setCurrentAffection] = useState<number | null>(null);
   const [affectionInput, setAffectionInput] = useState(50);
   const [affectionSaved, setAffectionSaved] = useState(false);
+
+  useEffect(() => { try { if (selectedUser) localStorage.setItem('inkos_affection_user', selectedUser); } catch {} }, [selectedUser]);
 
   useEffect(() => {
     if (!selectedUser) return;

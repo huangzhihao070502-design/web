@@ -288,6 +288,7 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
             path == "/api/ip-blacklist" -> apiIpBlacklist(cors)
             path == "/api/record-scanner-ip" && method == "POST" -> apiRecordScannerIp(body, cors)
             path == "/api/record-scanner-ip" && method == "POST" -> apiRecordScannerIp(body, cors)
+            path == "/api/character/chat" && method == "POST" -> apiCharacterChat(body, cors)
             else -> serveStatic(path, cors)
         }
     }
@@ -681,6 +682,34 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
             "reply" to (r.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content", "") ?: "")?.take(50))))
         else jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "request failed")))
     } catch (_: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "exception"))) }
+    private fun apiCharacterChat(body: String, cors: Map<String, String>): Resp = try {
+        val j = JSONObject(body); val msg = j.optString("message", "")
+        if (msg.isEmpty()) return@try jsonOk(cors, JSONObject(mapOf("reply" to "请输入消息")))
+        val cfg = loadAiConfig()
+        if (cfg.optBoolean("enabled") == false || cfg.optString("api_url").isEmpty() || cfg.optString("api_key").isEmpty()) return@try jsonOk(cors, JSONObject(mapOf("reply" to "请先在 AI 自动回复中配置 API")))
+        val pMap = loadPersonaMap()
+        val pId = pMap.optString("character_boss", "")
+        val persona = if (pId.isNotEmpty()) { val ps = loadPersonas(); if (ps.has(pId)) ps.getJSONObject(pId) else null } else null
+        val prompt = StringBuilder(HUMAN_CORE)
+        if (persona != null) {
+            prompt.append("\n\n【你的身份】你叫").append(persona.optString("name", "老板娘")).append("。")
+            prompt.append(persona.optString("personality", ""))
+            if (persona.has("background")) prompt.append("\n【背景】").append(persona.optString("background", ""))
+            if (persona.has("style")) prompt.append("\n【说话风格】").append(persona.optString("style", ""))
+            if (persona.has("mes_example")) prompt.append("\n\n【说话参考】").append(persona.optString("mes_example", ""))
+        } else { prompt.append("\n\n你是一个温柔贴心的伙伴，用自然友好的方式交流。") }
+        prompt.append("\n\n你现在以悬浮窗形态出现在用户屏幕上，正在和用户聊天。用简短自然的话语回复，像朋友一样。")
+        val url = cfg.optString("api_url", "").trimEnd('/')
+        val model = cfg.optString("model", "gpt-3.5-turbo")
+        val reqBody = JSONObject(mapOf(
+            "model" to model,
+            "messages" to JSONArray(listOf(JSONObject(mapOf("role" to "system", "content" to prompt.toString())), JSONObject(mapOf("role" to "user", "content" to msg)))),
+            "max_tokens" to 500, "temperature" to 0.8
+        )).toString()
+        val resp = httpsPost(if (url.contains("/chat/completions")) url else "$url/chat/completions", cfg.optString("api_key", ""), reqBody)
+        val reply = resp?.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content", "")?.trim()?.take(500) ?: "..."
+        jsonOk(cors, JSONObject(mapOf("reply" to reply)))
+    } catch (_: Exception) { jsonOk(cors, JSONObject(mapOf("reply" to "嗯，我现在有点忙，稍后再聊~"))) }
 
     // ═══════════════════════════════════════════════
     //  API: 内置 Skill（匹配 server.cjs 4个技能）
