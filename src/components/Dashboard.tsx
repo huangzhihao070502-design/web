@@ -7,6 +7,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../lib/i18n';
 import Live2DWidget from './Live2DWidget';
 import { loadChatHistory, clearChatHistory, exportChatHistory, getTotalMessages } from '../lib/chatHistory';
+import CharacterChat from './character/CharacterChat';
 
 const MistScene = lazy(() => import('./ink/MistScene'));
 class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolean}> {
@@ -17,7 +18,7 @@ class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolea
 
 const API = '';
 type Tab = 'home' | 'message' | 'profile' | 'settings';
-type ProfilePage = 'main' | 'personas' | 'affection' | 'chatHistory';
+type ProfilePage = 'main' | 'personas' | 'affection' | 'chatHistory' | 'character';
 interface Props { onLogout: () => void }
 const navItems = [
   { key: 'home' as Tab, icon: MessageCircle, labelKey: 'nav.home' },
@@ -146,6 +147,7 @@ function ProfilePanel({ email, userCount, totalMessages, daysOnline, onLogout, o
           { icon: BookOpen, label: '角色卡', subtitle: t('profile.personas_desc', lang), onClick: () => onOpenPage('personas') },
           { icon: Heart, label: '好感度', subtitle: t('profile.affection_desc', lang), onClick: () => onOpenPage('affection') },
           { icon: Clock, label: '聊天记录', subtitle: t('profile.history_desc', lang), onClick: () => onOpenPage('chatHistory') },
+          { icon: Heart, label: '老板娘', subtitle: 'AI 驱动 · 角色对话', onClick: () => onOpenPage('character') },
         ]} />
         <div className="mt-3"><MenuSection items={[
           { icon: Users, label: t('profile.contacts', lang), subtitle: `${userCount} ${t('profile.friends', lang)}`, onClick: onSwitchTab },
@@ -174,7 +176,7 @@ function PersonaManagementPage({ onBack }: { onBack: () => void }) {
     try { const r = await fetch(`${API}/api/personas`); const d = await r.json(); if (d.personas) setPersonas(d.personas); if (d.user_map) setPersonaMap(d.user_map); } catch {}
   }, []);
   const loadUsers = useCallback(async () => {
-    try { const r = await fetch(`${API}/api/users`); const d = await r.json(); if (d.users) setUsers(d.users); } catch {}
+    try { const r = await fetch(`${API}/api/users`); const d = await r.json(); if (d.users) { const allUsers = [...d.users]; if (!allUsers.includes('character_boss')) allUsers.push('character_boss'); setUsers(allUsers); } } catch { setUsers(['character_boss']); }
   }, []);
   const loadSkills = useCallback(async () => {
     try { const r = await fetch(`${API}/api/skills`); const d = await r.json(); if (d.skills) { setAllSkills(d.skills); } } catch {}
@@ -305,8 +307,8 @@ function PersonaManagementPage({ onBack }: { onBack: () => void }) {
                                 await fetch(`${API}/api/personas/assign`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: uid, persona_id: isAssigned ? '' : p.id }) });
                                 setPersonaMap(newMap);
                               }} className={`flex cursor-pointer items-center gap-2.5 rounded-xl p-2.5 transition-colors ${isAssigned ? 'border border-ink-black/20 bg-ink-black/5' : 'border border-transparent bg-ink-white'}`}>
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-black text-[11px] font-semibold text-white">{uid.slice(0, 2).toUpperCase()}</div>
-                                <div className="min-w-0 flex-1"><div className="truncate text-xs font-medium text-ink-black">{uid.slice(0, 12)}...</div></div>
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-black text-[11px] font-semibold text-white">{uid === 'character_boss' ? '娘' : uid.slice(0, 2).toUpperCase()}</div>
+                                <div className="min-w-0 flex-1"><div className="truncate text-xs font-medium text-ink-black">{uid === 'character_boss' ? '老板娘 · AI驱动' : uid.slice(0, 14) + '...'}</div></div>
                                 {isAssigned && <span className="shrink-0 rounded-full bg-ink-black/10 px-2 py-0.5 text-[10px] font-medium text-ink-gray">已分配</span>}
                               </div>
                             );
@@ -358,7 +360,7 @@ function AffectionControlPage({ onBack, users }: { onBack: () => void; users: st
           <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
             className="w-full appearance-none rounded-xl border border-ink-white/60 bg-paper-white px-3 py-2.5 text-sm text-ink-black outline-none transition-colors focus:border-ink-black/30">
             <option value="">-- 请选择 --</option>
-            {users.map(uid => <option key={uid} value={uid}>{uid.slice(0, 16)}...</option>)}
+            {users.map(uid => <option key={uid} value={uid}>{uid === 'character_boss' ? '老板娘' : uid.slice(0, 16) + '...'}</option>)}
           </select>
         </div>
         {selectedUser && (
@@ -616,9 +618,9 @@ export default function Dashboard({ onLogout }: Props) {
         ) : filteredUsers.map(uid => (
           <div key={uid} onClick={() => { setCurrentUserId(uid); setChatOpen(true); }}
             className="flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-paper-white/50 transition-colors border-b border-ink-white/30">
-            <div className="w-12 h-12 rounded-full bg-ink-white flex items-center justify-center text-ink-black text-sm font-semibold shrink-0">{uid.slice(0, 2).toUpperCase()}</div>
+            <div className="w-12 h-12 rounded-full bg-ink-white flex items-center justify-center text-ink-black text-sm font-semibold shrink-0">{uid === 'character_boss' ? '娘' : uid.slice(0, 2).toUpperCase()}</div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-ink-black">{uid.slice(0, 10)}...</div>
+              <div className="text-sm font-medium text-ink-black">{uid === 'character_boss' ? '老板娘' : uid.slice(0, 10) + '...'}</div>
               <div className="text-xs text-ink-light mt-0.5 truncate">{uid}</div>
             </div>
           </div>
@@ -631,6 +633,7 @@ export default function Dashboard({ onLogout }: Props) {
     if (profilePage === 'personas') return <PersonaManagementPage onBack={() => setProfilePage('main')} />;
     if (profilePage === 'affection') return <AffectionControlPage onBack={() => setProfilePage('main')} users={Array.from(activeChatUsers)} />;
     if (profilePage === 'chatHistory') return <ChatHistoryPage onBack={() => setProfilePage('main')} />;
+    if (profilePage === 'character') return <CharacterChat onBack={() => setProfilePage('main')} />;
     return <ProfilePanel email={email} userCount={activeChatUsers.size} totalMessages={totalMessages} daysOnline={daysOnline}
       onLogout={onLogout} onOpenPage={handleOpenProfilePage} onSwitchTab={() => { setTab('home'); setProfilePage('main'); }} />;
   })();

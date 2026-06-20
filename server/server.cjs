@@ -1884,6 +1884,51 @@ http.createServer((req, res) => {
     return;
   }
 
+  // 角色聊天（老板娘/动漫人物）
+  if (p === '/api/character/chat' && method === 'POST') {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', async () => {
+      try {
+        const { message } = JSON.parse(body);
+        if (!message) { res.writeHead(400, cors); res.end(JSON.stringify({ error: 'Missing message' })); return; }
+        const cfg = loadAiConfig();
+        if (!cfg.enabled || !cfg.api_url || !cfg.api_key || !cfg.model) {
+          res.writeHead(200, cors); res.end(JSON.stringify({ reply: '请先在 AI 自动回复中配置 API' })); return;
+        }
+        const pMap = loadPersonaMap();
+        const pId = pMap['character_boss'];
+        const persona = pId ? (loadPersonas()[pId] || null) : null;
+        let systemPrompt = HUMAN_CORE;
+        if (persona) {
+          systemPrompt += `\n\n【你的身份】你叫${persona.name||'老板娘'}。${persona.personality||''}\n【背景】${persona.background||''}`;
+          if (persona.style) systemPrompt += `\n\n【说话风格】${persona.style}`;
+          if (persona.mes_example) systemPrompt += `\n\n【说话参考】${persona.mes_example}`;
+        } else {
+          systemPrompt += '\n\n你是一个温柔贴心的伙伴，用自然友好的方式交流。';
+        }
+        systemPrompt += '\n\n你现在以悬浮窗形态出现在用户屏幕上，正在和用户聊天。用简短自然的话语回复，像朋友一样。';
+        const url = cfg.api_url.replace(/\/+$/, '') + (cfg.api_url.includes('/chat/completions') ? '' : '/chat/completions');
+        const bodyReq = JSON.stringify({
+          model: cfg.model,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
+          max_tokens: cfg.token_limit > 0 ? cfg.token_limit : 500,
+          temperature: 0.8
+        });
+        const result = await new Promise((resolve, reject) => {
+          const endpoint = new URL(url);
+          const opts = { hostname: endpoint.hostname, path: endpoint.pathname + (endpoint.search || ''), method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.api_key, 'Content-Length': Buffer.byteLength(bodyReq) }, timeout: 30000 };
+          const r = https.request(opts, (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d)); });
+          r.on('error', reject); r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); }); r.write(bodyReq); r.end();
+        });
+        const j = JSON.parse(result || '{}');
+        const reply = j.choices?.[0]?.message?.content || '';
+        const cleaned = reply.replace(/[\【\【\[][^\]\】\】\[]*[\】\】\]]/g, '').replace(/[😀-🙏🐀-🪿✅❌⭐✨❤️🔥💬]/g, '').trim().slice(0, 500);
+        res.writeHead(200, cors); res.end(JSON.stringify({ reply: cleaned || '...' }));
+      } catch (e) { res.writeHead(200, cors); res.end(JSON.stringify({ reply: '嗯，我现在有点忙，稍后再聊~' })); }
+    });
+    return;
+  }
+
   // 获取情绪状态（好感度）
   if (p === '/api/emotion/get' && method === 'GET') {
     const userId = u.searchParams.get('userId');
