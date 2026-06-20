@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Shield, Bell, Lock, Sliders, Info, LogOut, ChevronRight, ArrowLeft, AlertTriangle, MessageSquare, Check, X, Loader, Edit3, Trash2, BookOpen, Volume2, Monitor, Eye, EyeOff, Trash, Download, Upload, Moon, Sun, Type, Globe, Smartphone, ShieldCheck, Clock, FileText, Zap } from "lucide-react";
 import { useSettings } from "../../contexts/SettingsContext";
+import { animate } from 'animejs';
 import { t, Lang } from "../../lib/i18n";
 
 interface Props { onLogout: () => void }
@@ -77,6 +78,14 @@ function SettingRow({ icon: Icon, label, onClick, badge, trailing }: { icon: any
   );
 }
 
+function getRelationshipStage(affection: number): string {
+  if (affection >= 0.7) return 'lover';
+  if (affection >= 0.5) return 'close_friend';
+  if (affection >= 0.3) return 'friend';
+  if (affection >= 0.1) return 'acquaintance';
+  return 'stranger';
+}
+
 export default function SettingsPage({ onLogout }: Props) {
   const [email, setEmail] = useState("");
   const [page, setPage] = useState<"main" | "account" | "ai" | "personas" | "personaEdit" | "logs" | "features" | "notifications" | "privacy" | "general" | "about" | "ip">("main");
@@ -92,6 +101,17 @@ export default function SettingsPage({ onLogout }: Props) {
   const [editingPersona, setEditingPersona] = useState<any>({ name: "", personality: "", style: "", background: "", details: "", mes_example: "" });
   const [affectionValue, setAffectionValue] = useState(50);
   const [currentAffection, setCurrentAffection] = useState<number | null>(null);
+  const [affectionSaved, setAffectionSaved] = useState(false);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const [prevAffection, setPrevAffection] = useState(0);
+  useEffect(() => {
+    if (currentAffection === null) return;
+    const pct = Math.round(currentAffection * 100);
+    if (progressBarRef.current) {
+      animate(progressBarRef.current, { width: `${pct}%`, duration: 600, easing: 'easeOutElastic' });
+    }
+    setPrevAffection(pct);
+  }, [currentAffection]);
   const [users, setUsers] = useState<string[]>([]);
   const [expandedPersona, setExpandedPersona] = useState<string | null>(null);
   const [allSkills, setAllSkills] = useState<any[]>([]);
@@ -112,7 +132,7 @@ export default function SettingsPage({ onLogout }: Props) {
   useEffect(() => { try { const s = localStorage.getItem("aperture_session"); if (s) { const d = JSON.parse(s); if (d.email) setEmail(d.email); } } catch {} }, []);
   const loadPersonas = useCallback(async () => { try { const r = await fetch(`${API}/api/personas`); const d = await r.json(); if (d.personas) setPersonas(d.personas); if (d.user_map) setPersonaMap(d.user_map); } catch {} }, []);
   useEffect(() => { if (page === "personas") { loadPersonas(); fetch(`${API}/api/users`).then(r => r.json()).then(d => { if (d.users) setUsers(d.users); }).catch(() => {}); fetch(`${API}/api/skills`).then(r => r.json()).then(d => { if (d.skills) setAllSkills(d.skills); }).catch(() => {}); } }, [page, loadPersonas]);
-  useEffect(() => { if (page !== "personaEdit") return; fetch(`${API}/api/skills`).then(r => r.json()).then(d => { if (d.skills) { setAllSkills(d.skills); setSelectedSkills(editingPersona.id && editingPersona.skills?.length > 0 ? editingPersona.skills : d.skills.map((s: any) => s.id)); } }).catch(() => {}); }, [page]);
+  useEffect(() => { if (page !== "personaEdit") return; setAffectionSaved(false); fetch(`${API}/api/skills`).then(r => r.json()).then(d => { if (d.skills) { setAllSkills(d.skills); setSelectedSkills(editingPersona.id && editingPersona.skills?.length > 0 ? editingPersona.skills : d.skills.map((s: any) => s.id)); } }).catch(() => {}); const uid = Object.entries(personaMap).find(([, pid]) => pid === editingPersona.id)?.[0] || ""; if (uid) { fetch(`${API}/api/emotion/get?userId=${encodeURIComponent(uid)}`).then(r => r.json()).then(d => { if (d.success && d.emotion) { const aff = Math.round(d.emotion.affection * 100); setAffectionValue(aff); setCurrentAffection(d.emotion.affection); } }).catch(() => {}); } }, [page]);
   useEffect(() => { if (page === "ai") { fetch(`${API}/api/ai-config`).then(r => r.json()).then(d => { if (d && typeof d === "object") setAiCfg({ enabled: d.enabled || false, api_url: d.api_url || "", api_key: d.api_key || "", model: d.model || "", prompt: d.prompt || "", scheduled_reply: d.scheduled_reply || false, active_interval: d.active_interval || 60, max_replies: d.max_replies || 2, reply_min_chars: d.reply_min_chars || 0, reply_max_chars: d.reply_max_chars || 0, token_limit: d.token_limit || 0, memory_enabled: d.memory_enabled || false }); }).catch(() => {}); } }, [page]);
 
   const loadIpData = useCallback(async () => {
@@ -282,18 +302,32 @@ export default function SettingsPage({ onLogout }: Props) {
               {(() => {
                 const uid = Object.entries(personaMap).find(([, pid]) => pid === editingPersona.id)?.[0] || "";
                 if (!uid) return <p className="text-xs text-[var(--color-text-secondary)]">保存角色卡并分配用户后可使用</p>;
+                const stageMap: Record<string, string> = { stranger: '陌生人', acquaintance: '相识', friend: '朋友', close_friend: '密友', lover: '恋人' };
+                const stageColors: Record<string, string> = { stranger: 'text-gray-400', acquaintance: 'text-blue-400', friend: 'text-emerald-400', close_friend: 'text-amber-400', lover: 'text-rose-400' };
                 return (
-                  <div className="space-y-2">
-                    {currentAffection !== null && <p className="text-xs text-[var(--color-text-secondary)]">当前好感度: {Math.round(currentAffection * 100)}%</p>}
+                  <div className="space-y-3">
+                    {currentAffection !== null ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-[var(--color-text-secondary)]">当前好感度: <strong className="text-sm text-[var(--color-text)]">{Math.round(currentAffection * 100)}%</strong></span>
+                          <span className={`text-[11px] font-medium ${stageColors[getRelationshipStage(currentAffection)] || 'text-gray-400'}`}>{stageMap[getRelationshipStage(currentAffection)] || '未知'}</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200/50">
+                          <div ref={progressBarRef} className="h-full rounded-full bg-gradient-to-r from-[#94C1D6] to-[#747CBB]" style={{ width: `${Math.round(currentAffection * 100)}%` }} />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-[var(--color-text-secondary)]/60">加载中...</p>
+                    )}
                     <div className="flex items-center gap-3">
-                      <input type="number" min={0} max={100} value={affectionValue} onChange={e => setAffectionValue(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50" />
+                      <input type="number" min={0} max={100} value={affectionValue} onChange={e => setAffectionValue(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-center text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10" />
                       <span className="text-xs text-[var(--color-text-secondary)]">%</span>
                       <button onClick={async () => {
                         try {
                           const r = await fetch(`${API}/api/emotion/set`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, affection: affectionValue / 100 }) });
-                          if (r.ok) setCurrentAffection(affectionValue / 100);
+                          if (r.ok) { setCurrentAffection(affectionValue / 100); setAffectionSaved(true); setTimeout(() => setAffectionSaved(false), 2000); }
                         } catch {}
-                      }} className="ml-auto rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] px-4 py-2 text-xs font-medium text-white transition-all hover:brightness-105">确定</button>
+                      }} className={`ml-auto flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-medium text-white transition-all ${affectionSaved ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#94C1D6] to-[#747CBB] hover:brightness-105'}`}>{affectionSaved ? <><Check size={14} strokeWidth={2.5} /> 已保存</> : '确定'}</button>
                     </div>
                   </div>
                 );
@@ -467,7 +501,6 @@ export default function SettingsPage({ onLogout }: Props) {
                   const enabled = settings.features?.[f.id] !== false;
                   return (
                     <div key={f.id} className={`flex items-center gap-3 p-3.5 sm:p-4 ${i > 0 ? "border-t border-[var(--color-border)]/30" : ""}`}>
-                      <span className="text-xl">{f.icon}</span>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-[var(--color-text)] sm:text-[15px]">{f.name}</div>
                         <div className="mt-0.5 text-[11px] text-[var(--color-text-secondary)] sm:text-xs">{f.desc}</div>

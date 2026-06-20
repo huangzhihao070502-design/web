@@ -1884,6 +1884,16 @@ http.createServer((req, res) => {
     return;
   }
 
+  // 获取情绪状态（好感度）
+  if (p === '/api/emotion/get' && method === 'GET') {
+    const userId = u.searchParams.get('userId');
+    if (!userId) { res.writeHead(400, cors); res.end(JSON.stringify({ error: 'Missing userId' })); return; }
+    const state = loadEmotionState();
+    const emotion = state[userId] || getEmotionDefault();
+    res.writeHead(200, cors); res.end(JSON.stringify({ success: true, emotion }));
+    return;
+  }
+
   // 设置情绪（手动调整好感度）
   if (p === '/api/emotion/set') {
     let body = ''; req.on('data', c => body += c);
