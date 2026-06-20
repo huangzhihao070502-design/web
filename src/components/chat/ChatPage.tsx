@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, MoreVertical, Play, Pause, File, MapPin, UserPlus, X, Check, MessageCircle, Wifi, WifiOff } from 'lucide-react';
 import InputArea from './InputArea';
 import { useSettings } from '../../contexts/SettingsContext';
+import { saveMessage } from '../../lib/chatHistory';
 
 const API = '';
 
@@ -101,7 +102,10 @@ export default function ChatPage({ userId, onBack }: Props) {
                   isFile: m.media?.type === 'file', mediaCacheKey: m.media?.cache_key || '',
                   is_ai: m.is_ai || false,
                 });
-                if (m.dir === 'in' && m.text) notifyIncoming(m.text, m.from || '');
+                if (m.dir === 'in' && m.text) {
+                  notifyIncoming(m.text, m.from || '');
+                  saveMessage(userId || '', 'ai', m.text);
+                }
               }
             });
             return n;
@@ -139,6 +143,7 @@ export default function ChatPage({ userId, onBack }: Props) {
       const r = await fetch(`${API}/api/send-text`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, to_user_id: userId}) });
       const d = await r.json();
       if (!d.success) setMsgs(p => p.map(m => m.id === localId ? { ...m, text: `✕ 发送失败${d.error ? ': ' + d.error : ''}`, _error: true } : m));
+      else saveMessage(userId || '', 'user', text);
     } catch { setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 发送失败：网络错误', _error: true } : m)); }
   }, [userId, addMsg]);
 
@@ -150,6 +155,7 @@ export default function ChatPage({ userId, onBack }: Props) {
       const r = await fetch(`${API}/api/send-media`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({media_type:'voice', file_data:await toBase64(blob), filename:'voice.webm', to_user_id: userId}) });
       const d = await r.json();
       if (!d.success) setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 语音发送失败', _error: true } : m));
+      else saveMessage(userId || '', 'user', '[语音]');
     } catch { setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 语音发送失败', _error: true } : m)); }
   };
 
@@ -161,6 +167,7 @@ export default function ChatPage({ userId, onBack }: Props) {
       const r = await fetch(`${API}/api/send-media`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({media_type:'image', file_data:await toBase64(file), filename:file.name, to_user_id: userId}) });
       const d = await r.json();
       if (d.success) {
+        saveMessage(userId || '', 'user', '[图片] ' + file.name);
         const reader = new FileReader();
         reader.onload = () => setMsgs(p => p.map(m => m.id === localId ? { ...m, text:'[图片]', isImage:true, imageData:reader.result as string } : m));
         reader.readAsDataURL(file);
@@ -176,6 +183,7 @@ export default function ChatPage({ userId, onBack }: Props) {
       const r = await fetch(`${API}/api/send-media`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({media_type:'file', file_data:await toBase64(file), filename:file.name, to_user_id: userId}) });
       const d = await r.json();
       if (!d.success) setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 文件发送失败', _error: true } : m));
+      else saveMessage(userId || '', 'user', '[文件] ' + file.name);
     } catch { setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 文件发送失败', _error: true } : m)); }
   };
 
@@ -188,6 +196,7 @@ export default function ChatPage({ userId, onBack }: Props) {
       const r = await fetch(`${API}/api/send-text`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, to_user_id: userId}) });
       const d = await r.json();
       if (!d.success) setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 位置发送失败', _error: true } : m));
+      else saveMessage(userId || '', 'user', text);
     } catch { setMsgs(p => p.map(m => m.id === localId ? { ...m, text: '✕ 位置发送失败', _error: true } : m)); }
   };
 
