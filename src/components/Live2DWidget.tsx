@@ -39,13 +39,15 @@ export default function Live2DWidget() {
     document.addEventListener('visibilitychange', handleVisibility);
 
     function setupTriggers(waifu: HTMLElement) {
-      // 5-click trigger
-      waifu.addEventListener('click', () => {
+      // Mobile-friendly tap/click trigger
+      const handleTap = () => {
         clickCount++;
         if (clickTimer) clearTimeout(clickTimer);
-        clickTimer = setTimeout(() => { clickCount = 0; }, 3000);
+        clickTimer = setTimeout(() => { clickCount = 0; }, 4000);
         if (clickCount >= 5) { clickCount = 0; startWalk(waifu); }
-      });
+      };
+      waifu.addEventListener('click', handleTap);
+      waifu.addEventListener('touchstart', handleTap, { passive: true });
       // Random walk every 30-90s
       scheduleNext(waifu);
     }
