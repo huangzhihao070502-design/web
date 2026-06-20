@@ -172,6 +172,9 @@ const translations: Record<string, Record<Lang, string>> = {
   // Dashboard
   "nav.chat": { "zh-CN": "聊天", "en": "Chat" },
   "nav.user": { "zh-CN": "用户", "en": "Users" },
+  "nav.home": { "zh-CN": "首页", "en": "Chats" },
+  "nav.message": { "zh-CN": "消息", "en": "Messages" },
+  "nav.profile": { "zh-CN": "我的", "en": "Profile" },
   "nav.settings": { "zh-CN": "设置", "en": "Settings" },
   "dashboard.no_users": { "zh-CN": "暂无用户，请先连接微信", "en": "No users, connect WeChat first" },
 
