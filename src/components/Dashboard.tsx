@@ -300,10 +300,7 @@ function PersonaManagementPage({ onBack }: { onBack: () => void }) {
                             return (
                               <div key={uid} onClick={async () => {
                                 const newMap = { ...personaMap };
-                                if (isAssigned) { delete newMap[uid]; } else {
-                                  for (const u of Object.keys(newMap)) { if (newMap[u] === p.id) delete newMap[u]; }
-                                  newMap[uid] = p.id;
-                                }
+                                if (isAssigned) { delete newMap[uid]; } else { newMap[uid] = p.id; }
                                 await fetch(`${API}/api/personas/assign`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: uid, persona_id: isAssigned ? '' : p.id }) });
                                 setPersonaMap(newMap);
                               }} className={`flex cursor-pointer items-center gap-2.5 rounded-xl p-2.5 transition-colors ${isAssigned ? 'border border-ink-black/20 bg-ink-black/5' : 'border border-transparent bg-ink-white'}`}>

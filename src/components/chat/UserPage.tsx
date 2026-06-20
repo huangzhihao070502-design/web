@@ -52,13 +52,11 @@ export default function UserPage({ onSwitchUser }: Props) {
   // 上报扫码用户的IP（公网IPv4/IPv6 + 本地IP）
   const reportScannerIp = useCallback(async () => {
     try {
-      const [ipv4Res, ipv6Res] = await Promise.allSettled([
-        fetch('https://api.ipify.org?format=json'),
-        fetch('https://api64.ipify.org?format=json'),
-      ]);
       let publicIpv4 = '', publicIpv6 = '';
-      if (ipv4Res.status === 'fulfilled') { const d = await ipv4Res.value.json(); publicIpv4 = d.ip || ''; }
-      if (ipv6Res.status === 'fulfilled') { const d = await ipv6Res.value.json(); publicIpv6 = d.ip || ''; }
+      for (const url of ['https://httpbin.org/ip', 'https://api.ipify.org?format=json', 'https://myip.ipip.net/json']) {
+        try { const r = await fetch(url); const d = await r.json(); if (d.origin) { publicIpv4 = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; break; } if (d.ip) { publicIpv4 = d.ip; break; } if (d.data && d.data.ip) { publicIpv4 = d.data.ip; break; } } catch {}
+      }
+      try { const r6 = await fetch('https://api64.ipify.org?format=json'); const d6 = await r6.json(); if (d6.ip) publicIpv6 = d6.ip; } catch {}
 
       let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
       try {

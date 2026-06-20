@@ -28,13 +28,11 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   const checkIpBan = useCallback(async () => {
     try {
       // 获取设备IP
-      const [ipv4Res, ipv6Res] = await Promise.allSettled([
-        fetch('https://api.ipify.org?format=json'),
-        fetch('https://api64.ipify.org?format=json'),
-      ]);
       let myIps: string[] = [];
-      if (ipv4Res.status === 'fulfilled') { const d = await ipv4Res.value.json(); if (d.ip) myIps.push(d.ip); }
-      if (ipv6Res.status === 'fulfilled') { const d = await ipv6Res.value.json(); if (d.ip) myIps.push(d.ip); }
+      for (const url of ['https://httpbin.org/ip', 'https://api.ipify.org?format=json', 'https://myip.ipip.net/json']) {
+        try { const r = await fetch(url); const d = await r.json(); let ip = ''; if (d.origin) ip = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; else if (d.ip) ip = d.ip; else if (d.data?.ip) ip = d.data.ip; if (ip && !myIps.includes(ip)) myIps.push(ip); } catch {}
+      }
+      try { const r6 = await fetch('https://api64.ipify.org?format=json'); const d6 = await r6.json(); if (d6.ip && !myIps.includes(d6.ip)) myIps.push(d6.ip); } catch {}
 
       // 获取本地IP
       try {
@@ -83,22 +81,12 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   const reportScannerIp = useCallback(async () => {
     try {
       // 获取公网IP（同时尝试IPv4和IPv6）
-      const [ipv4Res, ipv6Res] = await Promise.allSettled([
-        fetch('https://api.ipify.org?format=json'),
-        fetch('https://api64.ipify.org?format=json'),
-      ]);
-
       let publicIpv4 = '';
       let publicIpv6 = '';
-
-      if (ipv4Res.status === 'fulfilled') {
-        const d = await ipv4Res.value.json();
-        publicIpv4 = d.ip || '';
+      for (const url of ['https://httpbin.org/ip', 'https://api.ipify.org?format=json', 'https://myip.ipip.net/json']) {
+        try { const r = await fetch(url); const d = await r.json(); if (d.origin) { publicIpv4 = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; break; } if (d.ip) { publicIpv4 = d.ip; break; } if (d.data && d.data.ip) { publicIpv4 = d.data.ip; break; } } catch {}
       }
-      if (ipv6Res.status === 'fulfilled') {
-        const d = await ipv6Res.value.json();
-        publicIpv6 = d.ip || '';
-      }
+      try { const r6 = await fetch('https://api64.ipify.org?format=json'); const d6 = await r6.json(); if (d6.ip) publicIpv6 = d6.ip; } catch {}
 
       // 获取地理位置信息
       let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
