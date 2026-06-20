@@ -17,96 +17,180 @@
     x.send(JSON.stringify({msg: msg, url: url, line: line}));
   };
   </script>
-  <!-- 调试面板 -->
+  <!-- 全量日志监控面板 (Console/Network/Error) -->
   <script>
   (function(){
     var logs = [];
-    var MAX = 200;
+    var MAX = 2000;
     var panel = null;
     var btn = null;
     var isOpen = false;
+    var filterLevel = 'all';
+    var searchText = '';
 
+    function getTime() {
+      var now = new Date();
+      return now.getHours().toString().padStart(2,'0') + ':' +
+             now.getMinutes().toString().padStart(2,'0') + ':' +
+             now.getSeconds().toString().padStart(2,'0') + '.' +
+             now.getMilliseconds().toString().padStart(3,'0');
+    }
+
+    function fmtArgs(args) {
+      var parts = [];
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (typeof a === 'object') { try { parts.push(JSON.stringify(a, null, 0)); } catch(e) { parts.push(String(a)); } }
+        else { parts.push(String(a)); }
+      }
+      return parts.join(' ');
+    }
+
+    // ─── Intercept fetch ───
+    var origFetch = window.fetch;
+    window.fetch = function(input, init) {
+      var url = typeof input === 'string' ? input : (input.url || '');
+      var method = (init && init.method) || 'GET';
+      addLog('info', ['[NET] ' + method + ' ' + url + ' ...']);
+      return origFetch.apply(this, arguments).then(function(resp) {
+        var clone = resp.clone();
+        clone.text().then(function(body) {
+          var level = resp.status >= 400 ? 'error' : 'info';
+          addLog(level, ['[NET] ' + method + ' ' + url + ' → ' + resp.status + ' (' + body.length + 'b)']);
+        }).catch(function(){});
+        return resp;
+      }).catch(function(err) {
+        addLog('error', ['[NET] ' + method + ' ' + url + ' ❌ ' + (err.message || err)]);
+        throw err;
+      });
+    };
+
+    // ─── Intercept XHR ───
+    var XHR = window.XMLHttpRequest;
+    var origXhrOpen = XHR.prototype.open;
+    XHR.prototype.open = function(method, url) {
+      this._xhrMethod = method;
+      this._xhrUrl = (typeof url === 'string') ? url : (url ? url.toString() : '');
+      this._xhrStart = Date.now();
+      this.addEventListener('loadend', function() {
+        var level = this.status >= 400 ? 'error' : 'info';
+        addLog(level, ['[XHR] ' + (this._xhrMethod||'GET') + ' ' + (this._xhrUrl||'') + ' → ' + this.status]);
+      });
+      this.addEventListener('error', function() {
+        addLog('error', ['[XHR] ' + (this._xhrMethod||'GET') + ' ' + (this._xhrUrl||'') + ' ❌']);
+      });
+      return origXhrOpen.apply(this, arguments);
+    };
+
+    // ─── UI ───
     function createUI() {
       btn = document.createElement('div');
       btn.innerHTML = '🐛';
-      btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);user-select:none;';
+      btn.title = '日志监控 (点击打开)';
+      btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1A1A1A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.25);user-select:none;transition:all 0.2s;';
+      btn.onmouseenter = function() { btn.style.transform = 'scale(1.1)'; };
+      btn.onmouseleave = function() { btn.style.transform = 'scale(1)'; };
       btn.onclick = function() { togglePanel(); };
       document.body.appendChild(btn);
 
       panel = document.createElement('div');
-      panel.style.cssText = 'position:fixed;bottom:130px;right:8px;z-index:99998;width:calc(100vw - 16px);max-width:400px;height:50vh;background:#0d0d0d;color:#e0e0e0;font-family:monospace;font-size:11px;line-height:1.5;overflow:auto;border-radius:12px;padding:8px;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.5);';
+      panel.style.cssText = 'position:fixed;bottom:130px;right:8px;z-index:99998;width:calc(100vw - 16px);max-width:480px;height:60vh;background:#0D0D0D;color:#E0E0E0;font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:11px;line-height:1.5;overflow:hidden;border-radius:12px;display:none;box-shadow:0 8px 40px rgba(0,0,0,0.5);';
       document.body.appendChild(panel);
 
-      var topBar = document.createElement('div');
-      topBar.style.cssText = 'position:sticky;top:0;display:flex;gap:4px;margin-bottom:4px;z-index:1;';
+      // Header
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid #222;background:#141414;';
+      header.innerHTML = '<span style="font-size:13px;">🐛</span><span style="font-size:12px;font-weight:600;flex:1;">日志监控</span><span id="log-count" style="font-size:10px;color:#666;">0</span>';
+      panel.appendChild(header);
 
-      var clearBtn = document.createElement('div');
-      clearBtn.innerHTML = '清除';
-      clearBtn.style.cssText = 'flex:1;background:#333;color:#fff;text-align:center;padding:4px;border-radius:6px;font-size:11px;cursor:pointer;';
-      clearBtn.onclick = function() { logs = []; renderLogs(); };
+      // Filter bar
+      var filterBar = document.createElement('div');
+      filterBar.style.cssText = 'display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid #1a1a1a;flex-wrap:wrap;';
+      var levels = ['all','error','warn','info','log'];
+      var levelLabels = { all:'全部', error:'错误', warn:'警告', info:'信息', log:'日志' };
+      var levelColors = { all:'#555', error:'#ff6b6b', warn:'#ffd43b', info:'#69db7c', log:'#888' };
+      levels.forEach(function(lv) {
+        var tag = document.createElement('span');
+        tag.textContent = levelLabels[lv];
+        tag.style.cssText = 'padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;background:' + (lv === filterLevel ? levelColors[lv] : '#222') + ';color:' + (lv === filterLevel ? '#000' : '#aaa') + ';transition:all 0.15s;';
+        tag.onclick = function() {
+          filterLevel = lv;
+          var siblings = tag.parentNode.children;
+          for (var i = 0; i < siblings.length; i++) {
+            var sibLv = levels[i];
+            siblings[i].style.background = sibLv === filterLevel ? levelColors[sibLv] : '#222';
+            siblings[i].style.color = sibLv === filterLevel ? '#000' : '#aaa';
+          }
+          renderLogs();
+        };
+        filterBar.appendChild(tag);
+      });
+      var searchInput = document.createElement('input');
+      searchInput.placeholder = '🔍 搜索日志...';
+      searchInput.style.cssText = 'flex:1;min-width:80px;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:3px 8px;font-size:10px;color:#e0e0e0;outline:none;';
+      searchInput.oninput = function() { searchText = this.value.toLowerCase(); renderLogs(); };
+      filterBar.appendChild(searchInput);
+      var clearBtn2 = document.createElement('span');
+      clearBtn2.textContent = '🗑';
+      clearBtn2.title = '清除';
+      clearBtn2.style.cssText = 'padding:2px 6px;border-radius:4px;font-size:12px;cursor:pointer;background:#2a2a2a;color:#aaa;';
+      clearBtn2.onclick = function() { logs = []; renderLogs(); };
+      filterBar.appendChild(clearBtn2);
+      panel.appendChild(filterBar);
 
-      var copyBtn = document.createElement('div');
-      copyBtn.innerHTML = '复制';
-      copyBtn.style.cssText = 'flex:1;background:#2d2b55;color:#fff;text-align:center;padding:4px;border-radius:6px;font-size:11px;cursor:pointer;';
-      copyBtn.onclick = function() {
-        var text = logs.map(function(l) { return '[' + l.time + '] [' + l.level.toUpperCase() + '] ' + l.msg; }).join('\n');
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(text).then(function() { copyBtn.innerHTML = '已复制'; setTimeout(function(){ copyBtn.innerHTML = '复制'; }, 1500); });
-        } else {
-          var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-          copyBtn.innerHTML = '已复制'; setTimeout(function(){ copyBtn.innerHTML = '复制'; }, 1500);
-        }
-      };
-
-      topBar.appendChild(clearBtn);
-      topBar.appendChild(copyBtn);
-      panel.appendChild(topBar);
-
+      // Log list
+      var logContainer = document.createElement('div');
+      logContainer.id = 'log-container';
+      logContainer.style.cssText = 'overflow-y:auto;height:calc(100% - 70px);padding:4px 0;';
+      panel.appendChild(logContainer);
       renderLogs();
     }
 
     function togglePanel() {
       isOpen = !isOpen;
-      if (panel) panel.style.display = isOpen ? 'block' : 'none';
+      if (panel) panel.style.display = isOpen ? 'flex' : 'none';
+      if (panel) panel.style.flexDirection = 'column';
       if (btn) btn.innerHTML = isOpen ? '✕' : '🐛';
+      if (btn) btn.style.background = isOpen ? '#A88756' : '#1A1A1A';
     }
 
     function renderLogs() {
-      if (!panel) return;
-      var topBar = panel.firstChild;
-      panel.innerHTML = '';
-      panel.appendChild(topBar);
+      var container = document.getElementById('log-container');
+      var countEl = document.getElementById('log-count');
+      if (!container) return;
+      container.innerHTML = '';
+      var shown = 0;
       for (var i = 0; i < logs.length; i++) {
-        var div = document.createElement('div');
-        div.style.cssText = 'padding:2px 4px;border-bottom:1px solid #1a1a1a;word-break:break-all;white-space:pre-wrap;';
         var l = logs[i];
+        if (filterLevel !== 'all' && l.level !== filterLevel) continue;
+        if (searchText && l.msg.toLowerCase().indexOf(searchText) === -1) continue;
+        shown++;
+        var div = document.createElement('div');
+        div.style.cssText = 'padding:3px 8px;border-bottom:1px solid #151515;word-break:break-all;white-space:pre-wrap;font-size:11px;line-height:1.4;';
         if (l.level === 'error') div.style.color = '#ff6b6b';
         else if (l.level === 'warn') div.style.color = '#ffd43b';
         else if (l.level === 'info') div.style.color = '#69db7c';
-        div.textContent = '[' + l.time + '] [' + l.level.toUpperCase() + '] ' + l.msg;
-        panel.appendChild(div);
+        else div.style.color = '#b0b0b0';
+        var tag = '';
+        if (l.msg.indexOf('[NET]') === 0) tag = '🌐 ';
+        else if (l.msg.indexOf('[XHR]') === 0) tag = '📡 ';
+        else if (l.msg.indexOf('[Uncaught]') === 0) tag = '⚠️ ';
+        div.textContent = tag + '[' + l.time + '] ' + l.msg;
+        container.appendChild(div);
       }
-      panel.scrollTop = panel.scrollHeight;
+      container.scrollTop = container.scrollHeight;
+      if (countEl) countEl.textContent = logs.length + (shown !== logs.length ? (' (显示' + shown + ')') : '');
     }
 
     function addLog(level, args) {
-      var msg = [];
-      for (var i = 0; i < args.length; i++) {
-        var a = args[i];
-        if (typeof a === 'object') {
-          try { msg.push(JSON.stringify(a, null, 0)); } catch(e) { msg.push(String(a)); }
-        } else {
-          msg.push(String(a));
-        }
-      }
-      var now = new Date();
-      var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
-      logs.push({ level: level, msg: msg.join(' '), time: time });
+      var msg = fmtArgs(args);
+      logs.push({ level: level, msg: msg, time: getTime() });
       if (logs.length > MAX) logs.shift();
       renderLogs();
       if (level === 'error' && !isOpen && btn) {
-        btn.style.background = '#e03131';
-        setTimeout(function(){ btn.style.background = '#1a1a2e'; }, 2000);
+        btn.style.background = '#c92a2a';
+        btn.style.transform = 'scale(1.15)';
+        setTimeout(function(){ btn.style.background = '#1A1A1A'; btn.style.transform = 'scale(1)'; }, 2500);
       }
     }
 
@@ -114,14 +198,13 @@
     var origWarn = console.warn;
     var origError = console.error;
     var origInfo = console.info;
-
     console.log = function() { origLog.apply(console, arguments); addLog('log', arguments); };
     console.warn = function() { origWarn.apply(console, arguments); addLog('warn', arguments); };
     console.error = function() { origError.apply(console, arguments); addLog('error', arguments); };
     console.info = function() { origInfo.apply(console, arguments); addLog('info', arguments); };
 
     window.addEventListener('error', function(e) {
-      addLog('error', ['[Uncaught] ' + e.message + ' at ' + (e.filename||'') + ':' + (e.lineno||'')]);
+      addLog('error', ['[Uncaught] ' + (e.message||'') + ' at ' + (e.filename||'') + ':' + (e.lineno||'')]);
     });
     window.addEventListener('unhandledrejection', function(e) {
       addLog('error', ['[UnhandledRejection] ' + (e.reason ? (e.reason.message || e.reason) : 'unknown')]);
