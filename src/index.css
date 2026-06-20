@@ -3,15 +3,13 @@
 @tailwind utilities;
 
 /* ============================================
-   InkOS — 墨境系统 Design Tokens
-   A Living Oriental AI Experience
+   墨语 Design Tokens
    ============================================ */
 
 /* ─── Google Fonts ─── */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
 
-/* ─── Base Layers ─── */
+/* ─── Base ─── */
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -22,64 +20,29 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
+  background: var(--color-bg, #F5F2ED);
+  color: var(--color-text, #1A1A1A);
+  font-family: 'Noto Serif SC', 'MiSans', -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
+  overflow: hidden;
 }
 
-/* ─── :root — InkOS Light Theme (default) ─── */
 :root {
-  /* InkOS Core Colors */
-  --color-paper: #F8F8F6;
-  --color-warm-white: #FAFAF8;
-  --color-ink: #1A1A1A;
-  --color-deep-ink: #3A3A3A;
-  --color-soft-ink: #7A7A7A;
-  --color-light-gray: #D8D8D8;
-  --color-mist: #ECECEC;
-  --color-copper: #A88756;
-  --color-cinnabar: #8B2E2E;
-  --color-jade: #36463D;
-
-  /* Semantic Tokens (backward-compatible names) */
-  --color-primary: var(--color-copper);
-  --color-secondary: var(--color-soft-ink);
-  --color-accent: var(--color-jade);
-  --color-accent-light: rgba(168, 135, 86, 0.1);
-
-  /* Surface & Text */
-  --color-bg: var(--color-paper);
-  --color-surface: var(--color-warm-white);
-  --color-surface-hover: #F0EFEA;
-  --color-text: var(--color-ink);
-  --color-text-secondary: var(--color-soft-ink);
-  --color-border: var(--color-mist);
-  --color-white: #FFFFFF;
-
-  /* Shadows */
-  --shadow-paper-sm: 0 1px 3px rgba(0, 0, 0, 0.02);
-  --shadow-paper-md: 0 4px 6px rgba(0, 0, 0, 0.04);
-  --shadow-paper-lg: 0 10px 15px rgba(0, 0, 0, 0.06);
-
-  /* Border Radius */
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
-  --radius-2xl: 28px;
-  --radius-3xl: 32px;
-
-  /* Fonts */
-  --font-serif: 'Noto Serif SC', serif;
-  --font-wenkai: 'LXGW WenKai', cursive;
-  --font-sans: 'MiSans', 'HarmonyOS Sans', system-ui, sans-serif;
-  --font-display: 'Cormorant Garamond', serif;
-
-  /* Easing */
-  --ease-smooth: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-ink: cubic-bezier(0.4, 0, 0.2, 1);
+  --ink-black: #1A1A1A;
+  --ink-dark: #3D3D3D;
+  --ink-gray: #6B6B6B;
+  --ink-light: #9E9E9E;
+  --ink-white: #E8E8E8;
+  --paper-white: #F5F2ED;
+  --warm-white: #FAF8F5;
+  --ochre: #C4A574;
+  --cinnabar: #B84A3E;
+  --ink-green: #4A5D4E;
+  --color-bg: var(--paper-white);
+  --color-surface: var(--warm-white);
+  --color-text: var(--ink-black);
+  --color-text-secondary: var(--ink-gray);
+  --color-border: var(--ink-white);
 }
 
 /* ─── Dark Theme ─── */
