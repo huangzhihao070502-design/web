@@ -6,6 +6,7 @@ import QRConnect from './components/QRConnect';
 import Dashboard from './components/Dashboard';
 import SplashScreen from './components/SplashScreen';
 import { SettingsProvider } from './contexts/SettingsContext';
+import PaperTexture from './components/ink/PaperTexture';
 
 type Page = 'login' | 'register' | 'qrcode' | 'dashboard';
 
@@ -68,6 +69,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <PaperTexture />
     <AnimatePresence mode="wait">
       {page === 'login' && (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>

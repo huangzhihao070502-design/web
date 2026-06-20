@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Check, AlertCircle, ShieldBan } from 'lucide-react';
-import MeshBackground from './MeshBackground';
+import { InkSplash } from './ink/InkEffect';
 import InputField from './InputField';
 import { login } from '../lib/auth';
 import { t, Lang } from '../lib/i18n';
@@ -216,17 +216,18 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
   /* ---------- IP banned screen ---------- */
   if (ipBanned) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-[#f5f0eb] font-sans">
-        <MeshBackground />
+      <div className="relative min-h-screen overflow-hidden bg-paper font-sans">
+        <InkSplash x={0.05} y={0.05} />
+        <InkSplash x={0.95} y={0.95} size={300} />
         <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-6">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex w-full max-w-[410px] flex-col items-center text-center">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex w-full max-w-[420px] flex-col items-center text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 120, damping: 14 }}
               className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-3xl border border-red-200/50 bg-red-50/60 shadow-sm">
               <ShieldBan size={40} className="text-red-400" />
             </motion.div>
-            <h1 className="text-[28px] font-light tracking-[-0.02em] text-[#1a1a2e]">{t('ip.banned_message', lang)}</h1>
-            <p className="mt-3 text-[15px] leading-relaxed text-[#8a8a9a]">{t('ip.banned_message', lang)}</p>
-            <p className="mt-2 text-[15px] leading-relaxed text-[#8a8a9a]">{t('ip.contact_admin', lang)}</p>
+            <h1 className="text-[28px] font-serif text-ink">{t('ip.banned_message', lang)}</h1>
+            <p className="mt-3 text-[15px] leading-relaxed text-soft-ink">{t('ip.banned_message', lang)}</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-soft-ink">{t('ip.contact_admin', lang)}</p>
             <div className="mt-8 rounded-2xl border border-red-200/30 bg-red-50/40 px-6 py-4">
               <p className="text-[12px] font-medium text-red-400">{t('ip.error_code', lang)}: IP_BANNED</p>
             </div>
@@ -238,13 +239,14 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
 
   /* ---------- render ---------- */
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f5f0eb] font-sans">
-      <MeshBackground />
+    <div className="relative min-h-screen overflow-hidden bg-paper font-sans">
+      <InkSplash x={0.05} y={0.05} />
+      <InkSplash x={0.95} y={0.95} size={300} />
 
       {/* Main content */}
       <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-6">
         <motion.div
-          className="w-full max-w-[410px]"
+          className="w-full max-w-[420px]"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -252,23 +254,17 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
           {/* ---- Brand / Header ---- */}
           <motion.div variants={itemVariants} className="mb-10 text-center">
             <motion.div
-              className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl"
-              style={{
-                background:
-                  'linear-gradient(135deg, #2d2b55 0%, #4a488a 50%, #625f9a 100%)',
-                boxShadow:
-                  '0 4px 16px rgba(45,43,85,0.25), 0 1px 4px rgba(45,43,85,0.15)',
-              }}
+              className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink shadow-paper-sm"
               whileHover={{ scale: 1.04, y: -1 }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             >
               <LogoIcon />
             </motion.div>
-            <h1 className="text-[26px] font-light tracking-[-0.02em] text-[#1a1a2e]">
+            <h1 className="text-[26px] font-serif text-ink tracking-[-0.02em]">
               {t('login.welcome', lang)}
             </h1>
-            <p className="mt-2 text-[15px] font-normal leading-relaxed text-[#8a8a9a]">
+            <p className="mt-2 text-[15px] font-normal leading-relaxed text-soft-ink">
               {t('login.subtitle', lang)}
             </p>
           </motion.div>
@@ -276,11 +272,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
           {/* ---- Card ---- */}
           <motion.div
             variants={cardVariants}
-            className="rounded-2xl border border-white/70 bg-white/75 p-7 backdrop-blur-2xl sm:p-8"
-            style={{
-              boxShadow:
-                '0 2px 4px rgba(0,0,0,0.02), 0 8px 24px rgba(0,0,0,0.04), 0 32px 64px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.6)',
-            }}
+            className="rounded-2xl bg-warm-white shadow-paper-md p-7 sm:p-8"
           >
             {/* Login error banner */}
             {loginError && (
@@ -354,7 +346,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
                   <span className="checkbox-custom">
                     <Check size={12} strokeWidth={2.5} stroke="white" />
                   </span>
-                  <span className="text-[14px] text-[#6b6b80] transition-colors duration-200 group-hover:text-[#4a4a5e]">
+                  <span className="text-[14px] text-soft-ink transition-colors duration-200 group-hover:text-ink">
                     {t('login.remember', lang)}
                   </span>
                 </label>
@@ -364,10 +356,10 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
                   href="#"
                   onClick={(e) => e.preventDefault()}
                   className="
-                    text-[14px] font-medium text-[#2d2b55]
+                    text-[14px] font-medium text-ink
                     transition-all duration-200
-                    hover:text-[#4a488a]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d2b55]/30 focus-visible:rounded
+                    hover:text-deep-ink
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/30 focus-visible:rounded
                   "
                   tabIndex={0}
                 >
@@ -381,30 +373,22 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
                   type="submit"
                   disabled={loading}
                   className={`
-                    btn-shine relative flex h-12 w-full items-center justify-center
-                    rounded-xl text-[15px] font-medium text-white
+                    relative flex h-12 w-full items-center justify-center
+                    rounded-xl text-[15px] font-medium text-paper
                     transition-all duration-[400ms] cubic-bezier(0.22,1,0.36,1)
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d2b55]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/40 focus-visible:ring-offset-2 focus-visible:ring-offset-warm-white
                     disabled:cursor-not-allowed
                     ${loading
-                      ? 'opacity-85'
-                      : 'hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(45,43,85,0.3)] active:translate-y-0 active:shadow-[0_2px_8px_rgba(45,43,85,0.2)]'
+                      ? 'opacity-85 bg-deep-ink'
+                      : 'bg-ink hover:bg-deep-ink hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(26,26,26,0.2)] active:translate-y-0 active:shadow-[0_2px_8px_rgba(26,26,26,0.15)]'
                     }
                   `}
-                  style={{
-                    background: loading
-                      ? 'linear-gradient(135deg, #2d2b55 0%, #4a488a 100%)'
-                      : 'linear-gradient(135deg, #2d2b55 0%, #4a488a 60%, #625f9a 100%)',
-                    boxShadow: loading
-                      ? '0 2px 8px rgba(45,43,85,0.2)'
-                      : '0 4px 16px rgba(45,43,85,0.25), 0 1px 4px rgba(45,43,85,0.15)',
-                  }}
                   aria-label={loading ? '登录中...' : '登录'}
                 >
                   {loading ? (
                     <span className="flex items-center gap-2.5">
                       <Spinner />
-                      <span className="text-white/90">{t('login.logging_in', lang)}</span>
+                      <span className="text-paper/90">{t('login.logging_in', lang)}</span>
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
@@ -418,17 +402,17 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
               {/* ---- Footer link ---- */}
               <motion.p
                 variants={itemVariants}
-                className="pt-2 text-center text-[14px] text-[#8a8a9a]"
+                className="pt-2 text-center text-[14px] text-soft-ink"
               >
                 {t('login.no_account', lang)}{' '}
                 <a
                   href="#"
                   onClick={(e) => { e.preventDefault(); onRegister?.(); }}
                   className="
-                    font-medium text-[#2d2b55]
+                    font-medium text-ink
                     transition-colors duration-200
-                    hover:text-[#4a488a]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d2b55]/30 focus-visible:rounded
+                    hover:text-deep-ink
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/30 focus-visible:rounded
                   "
                   tabIndex={0}
                 >
@@ -441,7 +425,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
           {/* ---- Footer credit ---- */}
           <motion.p
             variants={itemVariants}
-            className="mt-6 text-center text-[12px] tracking-wide text-[#b0b0ba] uppercase"
+            className="mt-6 text-center text-[12px] tracking-wide text-mist uppercase"
           >
             &copy; {new Date().getFullYear()} Aperture
           </motion.p>

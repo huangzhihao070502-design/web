@@ -1,60 +1,27 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { animate, createTimeline } from 'animejs';
-
-/* ------------------------------------------------------------------ */
-/*  Config                                                            */
-/* ------------------------------------------------------------------ */
-interface SplashConfig {
-  particleCount: number;
-  colors: {
-    bg: string;
-    brand: string;
-    brandL: string;
-    brandH: string;
-    accent: string;
-    text: string;
-    muted: string;
-  };
-}
-
-const DEFAULT_CONFIG: SplashConfig = {
-  particleCount: 14,
-  colors: {
-    bg:      '#0B0B0C',
-    brand:   '#2d2b55',
-    brandL:  '#4a488a',
-    brandH:  '#625f9a',
-    accent:  '#C89F7E',
-    text:    '#F4F4F4',
-    muted:   '#9EA3AF',
-  },
-};
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                             */
 /* ------------------------------------------------------------------ */
 interface SplashScreenProps {
   onComplete: () => void;
-  config?: Partial<SplashConfig>;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
-export default function SplashScreen({ onComplete, config: configOverrides }: SplashScreenProps) {
-  const cfg = { ...DEFAULT_CONFIG, ...configOverrides, colors: { ...DEFAULT_CONFIG.colors, ...configOverrides?.colors } };
-
-  const splashRef      = useRef<HTMLDivElement>(null);
-  const ambientRef     = useRef<HTMLDivElement>(null);
-  const coreRef        = useRef<HTMLDivElement>(null);
-  const ring1Ref       = useRef<HTMLDivElement>(null);
-  const ring2Ref       = useRef<HTMLDivElement>(null);
-  const ring3Ref       = useRef<HTMLDivElement>(null);
-  const logoRef        = useRef<HTMLDivElement>(null);
-  const brandTextRef   = useRef<HTMLSpanElement>(null);
-  const brandSubRef    = useRef<HTMLSpanElement>(null);
-  const particlesRef   = useRef<HTMLDivElement>(null);
-  const completedRef   = useRef(false);
+export default function SplashScreen({ onComplete }: SplashScreenProps) {
+  const splashRef    = useRef<HTMLDivElement>(null);
+  const paperRef     = useRef<HTMLDivElement>(null);
+  const inkDropRef   = useRef<HTMLDivElement>(null);
+  const inkSpreadRef = useRef<HTMLDivElement>(null);
+  const inkCenterRef = useRef<HTMLDivElement>(null);
+  const logoRef      = useRef<HTMLDivElement>(null);
+  const nameRef      = useRef<HTMLSpanElement>(null);
+  const subRef       = useRef<HTMLSpanElement>(null);
+  const completedRef = useRef(false);
 
   const handleComplete = useCallback(() => {
     if (completedRef.current) return;
@@ -63,90 +30,76 @@ export default function SplashScreen({ onComplete, config: configOverrides }: Sp
   }, [onComplete]);
 
   useEffect(() => {
-    const $splash     = splashRef.current;
-    const $ambient    = ambientRef.current;
-    const $core       = coreRef.current;
-    const $ring1      = ring1Ref.current;
-    const $ring2      = ring2Ref.current;
-    const $ring3      = ring3Ref.current;
-    const $logo       = logoRef.current;
-    const $brandText  = brandTextRef.current;
-    const $brandSub   = brandSubRef.current;
-    const $particles  = particlesRef.current;
+    const $splash    = splashRef.current;
+    const $paper     = paperRef.current;
+    const $inkDrop   = inkDropRef.current;
+    const $inkSpread = inkSpreadRef.current;
+    const $inkCenter = inkCenterRef.current;
+    const $logo      = logoRef.current;
+    const $name      = nameRef.current;
+    const $sub       = subRef.current;
 
-    if (!$splash || !$ambient || !$core || !$ring1 || !$ring2 || !$ring3 || !$logo || !$brandText || !$brandSub || !$particles) return;
+    if (!$splash || !$paper || !$inkDrop || !$inkSpread || !$inkCenter || !$logo || !$name || !$sub) return;
 
-    /* ---- Generate particles ---- */
-    const particleEls: HTMLDivElement[] = [];
-    for (let i = 0; i < cfg.particleCount; i++) {
-      const el = document.createElement('div');
-      const size = Math.random() * 2.5 + 1;
-      Object.assign(el.style, {
-        width:        `${size}px`,
-        height:       `${size}px`,
-        borderRadius: '50%',
-        background:   'rgba(255,255,255,0.25)',
-        position:     'absolute',
-        pointerEvents:'none',
-        opacity:      '0',
-        willChange:   'transform, opacity',
-        backfaceVisibility: 'hidden',
-      });
-      const angle  = (i / cfg.particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
-      const radius = 60 + Math.random() * 80;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      el.style.left = `${50 + Math.cos(angle) * (radius / vw * 100)}%`;
-      el.style.top  = `${50 + Math.sin(angle) * (radius / vh * 100)}%`;
-      $particles.appendChild(el);
-      particleEls.push(el);
-    }
-
-    /* ---- Timeline ---- */
+    /* ---- Timeline (total ~4500ms) ---- */
     const tl = createTimeline({ autoplay: true });
 
-    // Phase 1 — Awakening (0–800ms)
-    tl.add($ambient, { opacity: [0, 1], duration: 1200, easing: 'easeOutExpo' }, 0);
-    tl.add($core,    { opacity: [0, 1], scale: [0, 1], duration: 800, easing: 'easeOutExpo' }, 200);
+    // Phase 1 (0–800ms): Paper-white background fades in with subtle texture
+    tl.add($paper, { opacity: [0, 1], duration: 800, easing: 'easeOutExpo' }, 0);
 
-    // Phase 2 — Expansion (800–2000ms)
-    tl.add($ring1, { opacity: [0, 0.12], scale: [0.6, 1], rotate: [0, 15], duration: 1200, easing: 'easeInOutSine' }, 800);
-    tl.add($ring2, { opacity: [0, 0.08], scale: [0.7, 1], rotate: [0, -10], duration: 1400, easing: 'easeInOutSine' }, 1000);
-    tl.add($ring3, { opacity: [0, 0.06], scale: [0.8, 1], rotate: [0, 8], duration: 1600, easing: 'easeInOutSine' }, 1200);
+    // Phase 2 (800–1800ms): Ink drop falls from top center
+    tl.add($inkDrop, {
+      opacity: [0, 1],
+      translateY: ['-40vh', '0'],
+      scaleY: [1.6, 1],
+      duration: 1000,
+      easing: 'cubicBezier(0.25, 0.1, 0.25, 1.0)',
+    }, 800);
 
-    // Slow continuous rotation
-    const r1 = animate($ring1, { rotate: '+=360', duration: 30000, loop: true, easing: 'linear', autoplay: true });
-    const r2 = animate($ring2, { rotate: '-=360', duration: 40000, loop: true, easing: 'linear', autoplay: true });
-    const r3 = animate($ring3, { rotate: '+=360', duration: 50000, loop: true, easing: 'linear', autoplay: true });
+    // Phase 3 (1800–2800ms): Ink hits and spreads radially
+    tl.add($inkCenter, {
+      opacity: [0, 1],
+      scale: [0, 1],
+      duration: 400,
+      easing: 'easeOutExpo',
+    }, 1800);
 
-    // Phase 3 — Logo Formation (2000–3500ms)
-    tl.add($logo, { opacity: [0, 1], translateY: [20, 0], scale: [0.85, 1], rotate: [-3, 0], duration: 1200, easing: 'easeOutExpo' }, 2000);
-    tl.add($brandText, { opacity: [0, 1], translateY: [8, 0], duration: 800, easing: 'easeOutQuart' }, 2600);
-    tl.add($brandSub,  { opacity: [0, 1], translateY: [6, 0], duration: 800, easing: 'easeOutQuart' }, 2900);
+    tl.add($inkSpread, {
+      opacity: [0, 0.6],
+      scale: [0.2, 1.8],
+      duration: 800,
+      easing: 'easeOutQuart',
+    }, 1850);
 
-    // Phase 4 — Stabilization (3500–5000ms)
-    const breathe = animate($logo, { scale: [1, 1.02, 1], opacity: [1, 0.95, 1], duration: 3000, loop: true, easing: 'easeInOutSine', autoplay: true, delay: 3500 });
+    // Phase 4 (2800–3600ms): Logo emerges — ink-wash circle with 墨 character
+    tl.add($logo, {
+      opacity: [0, 1],
+      scale: [0.7, 1],
+      duration: 800,
+      easing: 'easeOutExpo',
+    }, 2800);
 
-    particleEls.forEach((p, i) => {
-      tl.add(p, { opacity: [0, 0.15 + Math.random() * 0.15], duration: 600, easing: 'easeOutQuart' }, 3200 + i * 60);
-    });
+    // Phase 5 (3600–4200ms): "InkOS" + subtitle fade in
+    tl.add($name, {
+      opacity: [0, 1],
+      translateY: [12, 0],
+      duration: 600,
+      easing: 'easeOutQuart',
+    }, 3600);
 
-    const drifts = particleEls.map((p) => {
-      const dx = (Math.random() - 0.5) * 12;
-      const dy = (Math.random() - 0.5) * 12;
-      return animate(p, {
-        translateX: [0, dx, 0],
-        translateY: [0, dy, 0],
-        duration: 4000 + Math.random() * 3000,
-        loop: true,
-        easing: 'easeInOutSine',
-        autoplay: true,
-        delay: 3500,
-      });
-    });
+    tl.add($sub, {
+      opacity: [0, 1],
+      translateY: [8, 0],
+      duration: 600,
+      easing: 'easeOutQuart',
+    }, 3800);
 
-    // Phase 5 — Exit (5000–5800ms)
-    tl.add($splash, { opacity: [1, 0], scale: [1, 1.03], duration: 800, easing: 'easeOutQuart' }, 5000);
+    // Phase 6 (4200–4500ms): Fade out entire splash, then call onComplete
+    tl.add($splash, {
+      opacity: [1, 0],
+      duration: 300,
+      easing: 'easeOutQuad',
+    }, 4200);
 
     tl.then(() => {
       handleComplete();
@@ -154,107 +107,154 @@ export default function SplashScreen({ onComplete, config: configOverrides }: Sp
 
     /* ---- Cleanup ---- */
     return () => {
-      r1.pause();
-      r2.pause();
-      r3.pause();
-      breathe.pause();
-      drifts.forEach(d => d.pause());
-      particleEls.forEach(el => el.remove());
+      tl.seek(tl.totalTime);
     };
-  }, [cfg, handleComplete]);
+  }, [handleComplete]);
 
-  /* ---- Render ---- */
   return (
-    <div
+    <motion.div
       ref={splashRef}
-      className="fixed inset-0 flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center overflow-hidden"
       style={{
-        background: cfg.colors.bg,
+        background: '#F8F8F6',
         zIndex: 9999,
-        willChange: 'opacity, transform',
-        backfaceVisibility: 'hidden',
       }}
     >
-      {/* Noise overlay */}
+      {/* Paper texture overlay */}
       <div
-        className="pointer-events-none fixed"
+        ref={paperRef}
+        className="pointer-events-none absolute inset-0 opacity-0"
         style={{
-          inset: '-50%',
-          width: '200%',
-          height: '200%',
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'repeat',
-          opacity: 0.015,
-          zIndex: 10,
-          animation: 'noiseShift 10s steps(8) infinite',
-        }}
-      />
-
-      {/* Ambient glow */}
-      <div
-        ref={ambientRef}
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle at 50% 50%, rgba(45,43,85,0.08) 0%, transparent 60%)',
-          opacity: 0,
+          backgroundSize: '400px 400px',
           zIndex: 1,
-          willChange: 'opacity',
         }}
       />
 
-      {/* Core light */}
+      {/* Phase 2: Ink drop (teardrop shape falling from top) */}
       <div
-        ref={coreRef}
-        className="absolute"
+        ref={inkDropRef}
+        className="absolute pointer-events-none"
+        style={{
+          width: 8,
+          height: 24,
+          borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
+          background: '#1A1A1A',
+          opacity: 0,
+          zIndex: 2,
+          willChange: 'transform, opacity',
+          filter: 'blur(0.5px)',
+        }}
+      />
+
+      {/* Phase 3: Ink center (point of impact) */}
+      <div
+        ref={inkCenterRef}
+        className="absolute pointer-events-none"
         style={{
           width: 6,
           height: 6,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(200,159,126,0.4) 40%, transparent 70%)',
-          boxShadow: '0 0 20px rgba(255,255,255,0.15), 0 0 60px rgba(200,159,126,0.08)',
+          background: '#1A1A1A',
           opacity: 0,
           transform: 'scale(0)',
-          zIndex: 5,
+          zIndex: 3,
           willChange: 'transform, opacity',
-          backfaceVisibility: 'hidden',
         }}
       />
 
-      {/* Orbital rings */}
-      <div ref={ring1Ref} className="absolute rounded-full" style={{ width: 120, height: 120, border: '1px solid rgba(200,159,126,0.08)', opacity: 0, zIndex: 3, willChange: 'transform, opacity', backfaceVisibility: 'hidden' }} />
-      <div ref={ring2Ref} className="absolute rounded-full" style={{ width: 200, height: 200, border: '1px solid rgba(45,43,85,0.1)',   opacity: 0, zIndex: 3, willChange: 'transform, opacity', backfaceVisibility: 'hidden' }} />
-      <div ref={ring3Ref} className="absolute rounded-full" style={{ width: 300, height: 300, border: '1px solid rgba(158,163,175,0.06)', opacity: 0, zIndex: 3, willChange: 'transform, opacity', backfaceVisibility: 'hidden' }} />
+      {/* Phase 3: Radial ink spread (wash effect) */}
+      <div
+        ref={inkSpreadRef}
+        className="absolute pointer-events-none"
+        style={{
+          width: 240,
+          height: 240,
+          borderRadius: '50%',
+          background:
+            'radial-gradient(circle at 50% 50%, rgba(26,26,26,0.35) 0%, rgba(26,26,26,0.12) 30%, rgba(26,26,26,0.04) 55%, transparent 70%)',
+          opacity: 0,
+          transform: 'scale(0.2)',
+          zIndex: 2,
+          willChange: 'transform, opacity',
+          filter: 'blur(3px)',
+        }}
+      />
 
-      {/* Logo */}
+      {/* Phase 4: Logo — ink-wash circle with 墨 character */}
       <div
         ref={logoRef}
-        className="absolute flex flex-col items-center gap-4"
-        style={{ opacity: 0, transform: 'translateY(20px) scale(0.85) rotate(-3deg)', zIndex: 6, willChange: 'transform, opacity', backfaceVisibility: 'hidden' }}
+        className="absolute flex items-center justify-center pointer-events-none"
+        style={{
+          opacity: 0,
+          transform: 'scale(0.7)',
+          zIndex: 4,
+          willChange: 'transform, opacity',
+        }}
       >
-        {/* Logo mark — layered planes (same as LoginPage) */}
-        <div style={{ width: 56, height: 56 }}>
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinejoin="round" opacity="0.6" />
-            <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinejoin="round" opacity="0.8" />
-          </svg>
-        </div>
-        <span
-          ref={brandTextRef}
-          style={{ fontSize: 18, fontWeight: 400, letterSpacing: '0.12em', color: cfg.colors.text, opacity: 0, textTransform: 'uppercase', willChange: 'opacity' }}
-        >
-          Aperture
-        </span>
-        <span
-          ref={brandSubRef}
-          style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.08em', color: cfg.colors.muted, opacity: 0, marginTop: -8, willChange: 'opacity' }}
-        >
-          Secure Messaging
-        </span>
+        <svg viewBox="0 0 100 100" width="80" height="80" aria-hidden="true">
+          {/* Outer ink-wash ring */}
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#1A1A1A" strokeWidth="0.8" opacity="0.3" />
+          {/* Inner ink pool */}
+          <circle cx="50" cy="50" r="30" fill="#1A1A1A" opacity="0.08" filter="url(#inkBlur)" />
+          {/* Defs */}
+          <defs>
+            <filter id="inkBlur">
+              <feGaussianBlur stdDeviation="2.5" />
+            </filter>
+          </defs>
+          {/* 墨 character — stylized minimal strokes */}
+          <g fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
+            {/* Top stroke */}
+            <path d="M35,28 L65,28" />
+            {/* Left vertical */}
+            <path d="M42,28 L42,70" />
+            {/* Bottom horizontal */}
+            <path d="M35,70 L65,70" />
+            {/* Right vertical */}
+            <path d="M58,28 L58,55" />
+            {/* Inner dot */}
+            <circle cx="58" cy="62" r="2" fill="#1A1A1A" stroke="none" />
+          </g>
+        </svg>
       </div>
 
-      {/* Particles container */}
-      <div ref={particlesRef} className="pointer-events-none absolute inset-0" style={{ zIndex: 4 }} />
-    </div>
+      {/* Phase 5: Brand text */}
+      <div
+        className="absolute flex flex-col items-center gap-1 pointer-events-none"
+        style={{ top: 'calc(50% + 60px)', zIndex: 5 }}
+      >
+        <span
+          ref={nameRef}
+          style={{
+            fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif',
+            fontSize: 22,
+            fontWeight: 500,
+            letterSpacing: '0.16em',
+            color: '#1A1A1A',
+            opacity: 0,
+            willChange: 'transform, opacity',
+          }}
+        >
+          InkOS
+        </span>
+        <span
+          ref={subRef}
+          style={{
+            fontFamily: '"Noto Serif SC", "Source Han Serif SC", serif',
+            fontSize: 12,
+            fontWeight: 300,
+            letterSpacing: '0.12em',
+            color: '#1A1A1A',
+            opacity: 0,
+            marginTop: 2,
+            willChange: 'transform, opacity',
+          }}
+        >
+          墨境系统
+        </span>
+      </div>
+    </motion.div>
   );
 }

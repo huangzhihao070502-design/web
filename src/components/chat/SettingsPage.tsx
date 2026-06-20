@@ -10,7 +10,7 @@ const API = "";
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#B1BQB8] transition-colors hover:bg-[#B1BQB8]/10 active:bg-[#B1BQB8]/20">
+    <button onClick={onClick} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#7A7A7A] transition-colors hover:bg-[#7A7A7A]/10 active:bg-[#7A7A7A]/20">
       <ArrowLeft size={20} strokeWidth={1.5} />
     </button>
   );
@@ -20,7 +20,7 @@ function PageHeader({ title, onBack, children }: { title: string; onBack: () => 
   return (
     <div className="mb-5 flex items-center gap-3 sm:mb-6">
       <BackButton onClick={onBack} />
-      <h1 className="text-lg font-semibold text-[#343030] sm:text-xl">{title}</h1>
+      <h1 className="text-lg font-semibold text-[#1A1A1A] sm:text-xl">{title}</h1>
       {children && <div className="ml-auto flex items-center gap-2">{children}</div>}
     </div>
   );
@@ -41,8 +41,8 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
 function FormInput({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-[#B1BQB8] sm:text-sm">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full rounded-xl border border-[rgba(148,193,214,0.2)]/60 bg-[#F6F6F6] px-3 py-2.5 text-sm text-[#343030] outline-none transition-colors placeholder:text-[#B1BQB8]/40 focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10 sm:px-4 sm:py-3" />
+      <label className="mb-1.5 block text-xs font-medium text-[#7A7A7A] sm:text-sm">{label}</label>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full rounded-xl border border-[rgba(168,135,86,0.2)]/60 bg-[#F8F8F6] px-3 py-2.5 text-sm text-[#1A1A1A] outline-none transition-colors placeholder:text-[#7A7A7A]/40 focus:border-[#A88756]/50 focus:ring-2 focus:ring-[#A88756]/10 sm:px-4 sm:py-3" />
     </div>
   );
 }
@@ -50,8 +50,8 @@ function FormInput({ label, value, onChange, placeholder, type = "text" }: { lab
 function FormTextarea({ label, value, onChange, placeholder, rows = 3 }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-[#B1BQB8] sm:text-sm">{label}</label>
-      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className="w-full resize-y rounded-xl border border-[rgba(148,193,214,0.2)]/60 bg-[#F6F6F6] px-3 py-2.5 text-sm text-[#343030] outline-none transition-colors placeholder:text-[#B1BQB8]/40 focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10 sm:px-4 sm:py-3" />
+      <label className="mb-1.5 block text-xs font-medium text-[#7A7A7A] sm:text-sm">{label}</label>
+      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className="w-full resize-y rounded-xl border border-[rgba(168,135,86,0.2)]/60 bg-[#F8F8F6] px-3 py-2.5 text-sm text-[#1A1A1A] outline-none transition-colors placeholder:text-[#7A7A7A]/40 focus:border-[#A88756]/50 focus:ring-2 focus:ring-[#A88756]/10 sm:px-4 sm:py-3" />
     </div>
   );
 }
@@ -59,8 +59,8 @@ function FormTextarea({ label, value, onChange, placeholder, rows = 3 }: { label
 function SelectInput({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-[#B1BQB8] sm:text-sm">{label}</label>
-      <select value={value} onChange={e => onChange(e.target.value)} className="w-full appearance-none rounded-xl border border-[rgba(148,193,214,0.2)]/60 bg-[#F6F6F6] px-3 py-2.5 text-sm text-[#343030] outline-none transition-colors focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10 sm:px-4 sm:py-3">
+      <label className="mb-1.5 block text-xs font-medium text-[#7A7A7A] sm:text-sm">{label}</label>
+      <select value={value} onChange={e => onChange(e.target.value)} className="w-full appearance-none rounded-xl border border-[rgba(168,135,86,0.2)]/60 bg-[#F8F8F6] px-3 py-2.5 text-sm text-[#1A1A1A] outline-none transition-colors focus:border-[#A88756]/50 focus:ring-2 focus:ring-[#A88756]/10 sm:px-4 sm:py-3">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -69,11 +69,11 @@ function SelectInput({ label, value, onChange, options }: { label: string; value
 
 function SettingRow({ icon: Icon, label, onClick, badge, trailing }: { icon: any; label: string; onClick?: () => void; badge?: string | number; trailing?: React.ReactNode }) {
   return (
-    <div onClick={onClick} className={`flex items-center gap-3 rounded-xl p-3 transition-colors sm:gap-4 sm:p-3.5 ${onClick ? "cursor-pointer hover:bg-[#F6F6F6]" : ""}`}>
-      <Icon size={20} strokeWidth={1.5} className="shrink-0 text-[#B1BQB8]" />
-      <span className="flex-1 text-sm font-medium text-[#343030] sm:text-[15px]">{label}</span>
-      {badge !== undefined && <span className="rounded-full bg-[#94C1D6]/12 px-2 py-0.5 text-[11px] font-medium text-[#94C1D6]">{badge}</span>}
-      {trailing ?? <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-[#B1BQB8]/30" />}
+    <div onClick={onClick} className={`flex items-center gap-3 rounded-xl p-3 transition-colors sm:gap-4 sm:p-3.5 ${onClick ? "cursor-pointer hover:bg-[#F8F8F6]" : ""}`}>
+      <Icon size={20} strokeWidth={1.5} className="shrink-0 text-[#7A7A7A]" />
+      <span className="flex-1 text-sm font-medium text-[#1A1A1A] sm:text-[15px]">{label}</span>
+      {badge !== undefined && <span className="rounded-full bg-[#A88756]/12 px-2 py-0.5 text-[11px] font-medium text-[#A88756]">{badge}</span>}
+      {trailing ?? <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-[#7A7A7A]/30" />}
     </div>
   );
 }
@@ -192,16 +192,16 @@ export default function SettingsPage({ onLogout }: Props) {
             <div className="mt-4">
               <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{t("ai.max_replies", lang)}</label>
               <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map(n => (<button key={n} onClick={() => setAiCfg(p => ({ ...p, max_replies: n }))} className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all sm:h-10 sm:w-10 ${aiCfg.max_replies === n ? "border-2 border-[#94C1D6] bg-[var(--color-accent-light)] text-[#94C1D6]" : "border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-secondary)]"}`}>{n}</button>))}
+                {[1, 2, 3, 4, 5].map(n => (<button key={n} onClick={() => setAiCfg(p => ({ ...p, max_replies: n }))} className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all sm:h-10 sm:w-10 ${aiCfg.max_replies === n ? "border-2 border-[#A88756] bg-[var(--color-accent-light)] text-[#A88756]" : "border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-secondary)]"}`}>{n}</button>))}
                 <span className="ml-1 text-xs text-[var(--color-text-secondary)] sm:text-sm">{t("common.items", lang)}</span>
               </div>
             </div>
             <div className="mt-5">
               <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{t("ai.char_limit", lang)}</label>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <input type="number" min={0} max={10000} value={aiCfg.reply_min_chars} onChange={e => setAiCfg(p => ({ ...p, reply_min_chars: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50 sm:w-24" />
+                <input type="number" min={0} max={10000} value={aiCfg.reply_min_chars} onChange={e => setAiCfg(p => ({ ...p, reply_min_chars: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#A88756]/50 sm:w-24" />
                 <span className="text-sm text-[var(--color-text-secondary)]">~</span>
-                <input type="number" min={0} max={10000} value={aiCfg.reply_max_chars} onChange={e => setAiCfg(p => ({ ...p, reply_max_chars: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50 sm:w-24" />
+                <input type="number" min={0} max={10000} value={aiCfg.reply_max_chars} onChange={e => setAiCfg(p => ({ ...p, reply_max_chars: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#A88756]/50 sm:w-24" />
                 <span className="text-sm text-[var(--color-text-secondary)]">{t("common.chars", lang)}</span>
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function SettingsPage({ onLogout }: Props) {
               <Toggle enabled={aiCfg.scheduled_reply} onToggle={() => setAiCfg(p => ({ ...p, scheduled_reply: !p.scheduled_reply }))} />
               <span className="text-sm font-medium text-[var(--color-text)] sm:text-[15px]">{t("ai.scheduled", lang)}</span>
             </div>
-            {aiCfg.scheduled_reply && (<div className="mt-3 flex items-center gap-2"><span className="whitespace-nowrap text-sm text-[var(--color-text-secondary)]">{t("ai.every", lang)}</span><input type="number" min={1} max={1440} value={aiCfg.active_interval} onChange={e => setAiCfg(p => ({ ...p, active_interval: Math.max(1, parseInt(e.target.value) || 60) }))} className="w-16 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50 sm:w-20" /><span className="text-sm text-[var(--color-text-secondary)]">{t("ai.minutes", lang)}</span></div>)}
+            {aiCfg.scheduled_reply && (<div className="mt-3 flex items-center gap-2"><span className="whitespace-nowrap text-sm text-[var(--color-text-secondary)]">{t("ai.every", lang)}</span><input type="number" min={1} max={1440} value={aiCfg.active_interval} onChange={e => setAiCfg(p => ({ ...p, active_interval: Math.max(1, parseInt(e.target.value) || 60) }))} className="w-16 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-center text-sm text-[var(--color-text)] outline-none focus:border-[#A88756]/50 sm:w-20" /><span className="text-sm text-[var(--color-text-secondary)]">{t("ai.minutes", lang)}</span></div>)}
             {aiCfg.scheduled_reply && <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">{t("ai.scheduled_desc", lang)}</p>}
           </Card>
           <Card className="mb-4">
@@ -230,8 +230,8 @@ export default function SettingsPage({ onLogout }: Props) {
             <p className="mt-1.5 pl-[58px] text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">开启后 AI 会记住每条对话历史，回复时参考上下文，让对话更连贯。每用户最多保存 100 条记录。</p>
           </Card>
           <div className="flex gap-3">
-            <button onClick={handleSaveAi} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] px-4 py-3 text-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95">{aiSaved ? <><Check size={16} strokeWidth={2} /> {t("ai.saved", lang)}</> : t("ai.save", lang)}</button>
-            <button onClick={handleTestAi} disabled={aiTesting || !aiCfg.api_url || !aiCfg.api_key} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#94C1D6]/30 bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[#94C1D6] transition-all hover:bg-[var(--color-accent-light)] disabled:opacity-40">{aiTesting ? <><Loader size={16} strokeWidth={2} className="animate-spin" /> {t("ai.testing", lang)}</> : t("ai.test", lang)}</button>
+            <button onClick={handleSaveAi} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] px-4 py-3 text-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95">{aiSaved ? <><Check size={16} strokeWidth={2} /> {t("ai.saved", lang)}</> : t("ai.save", lang)}</button>
+            <button onClick={handleTestAi} disabled={aiTesting || !aiCfg.api_url || !aiCfg.api_key} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#A88756]/30 bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[#A88756] transition-all hover:bg-[var(--color-accent-light)] disabled:opacity-40">{aiTesting ? <><Loader size={16} strokeWidth={2} className="animate-spin" /> {t("ai.testing", lang)}</> : t("ai.test", lang)}</button>
           </div>
           {aiTestResult && <div className="mt-3 rounded-xl bg-[var(--color-surface)] px-4 py-3 text-sm leading-relaxed text-[var(--color-text)]">{aiTestResult}</div>}
         </div>
@@ -245,7 +245,7 @@ export default function SettingsPage({ onLogout }: Props) {
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
           <div className="mb-5 flex items-center justify-between sm:mb-6">
             <div className="flex items-center gap-3"><BackButton onClick={() => setPage("main")} /><h1 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">{t("persona.title", lang)} <span className="text-sm font-normal text-[var(--color-text-secondary)]">({personas.length})</span></h1></div>
-            <button onClick={() => { setEditingPersona({ name: "", personality: "", style: "", background: "", details: "", mes_example: "" }); setPage("personaEdit"); }} className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-white shadow-md transition-all hover:brightness-105">+</button>
+            <button onClick={() => { setEditingPersona({ name: "", personality: "", style: "", background: "", details: "", mes_example: "" }); setPage("personaEdit"); }} className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-white shadow-md transition-all hover:brightness-105">+</button>
           </div>
           {personas.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center"><BookOpen size={48} strokeWidth={1} className="text-[var(--color-text-secondary)]/25" /><p className="mt-3 text-sm text-[var(--color-text-secondary)]">{t("persona.none", lang)}</p><p className="mt-1 text-xs text-[var(--color-text-secondary)]/60">{t("persona.create_hint", lang)}</p></div>
@@ -257,15 +257,15 @@ export default function SettingsPage({ onLogout }: Props) {
                 return (
                   <div key={p.id}>
                     <div className="flex items-center gap-3 rounded-2xl bg-[var(--color-surface)] p-3.5 shadow-sm sm:p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-sm font-semibold text-white sm:h-11 sm:w-11">{p.name ? p.name[0].toUpperCase() : "?"}</div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-sm font-semibold text-white sm:h-11 sm:w-11">{p.name ? p.name[0].toUpperCase() : "?"}</div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold text-[var(--color-text)] sm:text-[15px]">{p.name || t("persona.unnamed", lang)}</div>
                         <div className="mt-0.5 truncate text-xs text-[var(--color-text-secondary)] sm:text-[13px]">{p.personality || p.background || t("persona.no_desc", lang)}</div>
                         {assignedUserId && <div className="mt-1 text-[11px] text-emerald-500">{t("persona.assigned", lang)}: {assignedUserId.slice(0, 12)}...</div>}
-                        {p.skills && p.skills.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{p.skills.map((sid: string) => { const skill = allSkills.find((s: any) => s.id === sid); return skill ? <span key={sid} className="rounded bg-[#94C1D6]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#94C1D6]">{skill.name}</span> : null; })}</div>}
+                        {p.skills && p.skills.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{p.skills.map((sid: string) => { const skill = allSkills.find((s: any) => s.id === sid); return skill ? <span key={sid} className="rounded bg-[#A88756]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#A88756]">{skill.name}</span> : null; })}</div>}
                       </div>
                       <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:gap-2">
-                        <button onClick={() => { setEditingPersona(p); setPage("personaEdit"); }} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-accent-light)] text-[#94C1D6] transition-colors hover:bg-[var(--color-accent-light)]"><Edit3 size={14} strokeWidth={1.5} /></button>
+                        <button onClick={() => { setEditingPersona(p); setPage("personaEdit"); }} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-accent-light)] text-[#A88756] transition-colors hover:bg-[var(--color-accent-light)]"><Edit3 size={14} strokeWidth={1.5} /></button>
                         <button onClick={async () => { if (confirm(`${t("persona.delete_confirm", lang)}「${p.name}」？`)) { await fetch(`${API}/api/personas/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id }) }); loadPersonas(); } }} className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/8 text-red-500 transition-colors hover:bg-red-500/15"><Trash2 size={14} strokeWidth={1.5} /></button>
                         <button onClick={() => setExpandedPersona(isExpanded ? null : p.id)} className="flex h-8 items-center justify-center rounded-lg bg-[var(--color-accent-light)] px-2 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-accent-light)] sm:w-auto">{t("persona.manage", lang)}</button>
                       </div>
@@ -273,7 +273,7 @@ export default function SettingsPage({ onLogout }: Props) {
                     {isExpanded && (
                       <div className="mt-0 rounded-b-2xl border-t border-[var(--color-border)]/30 bg-[var(--color-bg)]/80 p-3">
                         <div className="mb-2 text-xs font-medium text-[var(--color-text-secondary)]">{t("persona.select_user", lang)}</div>
-                        {users.length === 0 ? <div className="py-3 text-xs text-[var(--color-text-secondary)]">{t("persona.no_users", lang)}</div> : <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">{users.map(uid => { const isAssigned = personaMap[uid] === p.id; return (<div key={uid} onClick={async () => { const newMap = { ...personaMap }; if (isAssigned) { delete newMap[uid]; } else { for (const u of Object.keys(newMap)) { if (newMap[u] === p.id) delete newMap[u]; } newMap[uid] = p.id; } await fetch(`${API}/api/personas/assign`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: uid, persona_id: isAssigned ? "" : p.id }) }); setPersonaMap(newMap); }} className={`flex cursor-pointer items-center gap-2.5 rounded-xl p-2.5 transition-colors ${isAssigned ? "border border-[#94C1D6]/25 bg-[var(--color-accent-light)]" : "border border-transparent bg-[var(--color-surface)]"}`}><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-[11px] font-semibold text-white">{uid.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-[12px] font-medium text-[var(--color-text)]">{uid.slice(0, 12)}...</div></div>{isAssigned && <span className="shrink-0 rounded-full bg-[#94C1D6]/15 px-2 py-0.5 text-[10px] font-medium text-[#94C1D6]">{t("persona.assigned", lang)}</span>}</div>); })}</div>}
+                        {users.length === 0 ? <div className="py-3 text-xs text-[var(--color-text-secondary)]">{t("persona.no_users", lang)}</div> : <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">{users.map(uid => { const isAssigned = personaMap[uid] === p.id; return (<div key={uid} onClick={async () => { const newMap = { ...personaMap }; if (isAssigned) { delete newMap[uid]; } else { for (const u of Object.keys(newMap)) { if (newMap[u] === p.id) delete newMap[u]; } newMap[uid] = p.id; } await fetch(`${API}/api/personas/assign`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: uid, persona_id: isAssigned ? "" : p.id }) }); setPersonaMap(newMap); }} className={`flex cursor-pointer items-center gap-2.5 rounded-xl p-2.5 transition-colors ${isAssigned ? "border border-[#A88756]/25 bg-[var(--color-accent-light)]" : "border border-transparent bg-[var(--color-surface)]"}`}><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-[11px] font-semibold text-white">{uid.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-[12px] font-medium text-[var(--color-text)]">{uid.slice(0, 12)}...</div></div>{isAssigned && <span className="shrink-0 rounded-full bg-[#A88756]/15 px-2 py-0.5 text-[10px] font-medium text-[#A88756]">{t("persona.assigned", lang)}</span>}</div>); })}</div>}
                       </div>
                     )}
                   </div>
@@ -293,7 +293,7 @@ export default function SettingsPage({ onLogout }: Props) {
           <PageHeader title={editingPersona.id ? t("persona.edit", lang) : t("persona.create", lang)} onBack={() => setPage("personas")} />
           <Card className="mb-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {[{ key: "name", label: t("persona.name", lang), placeholder: "" }, { key: "personality", label: t("persona.personality", lang), placeholder: "" }, { key: "style", label: t("persona.style", lang), placeholder: "" }, { key: "background", label: t("persona.background", lang), placeholder: "" }].map(f => (<div key={f.key}><label className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{f.label}</label><input value={(editingPersona as any)[f.key] || ""} onChange={e => setEditingPersona((p: any) => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)]/40 focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10 sm:px-4 sm:py-3" /></div>))}
+              {[{ key: "name", label: t("persona.name", lang), placeholder: "" }, { key: "personality", label: t("persona.personality", lang), placeholder: "" }, { key: "style", label: t("persona.style", lang), placeholder: "" }, { key: "background", label: t("persona.background", lang), placeholder: "" }].map(f => (<div key={f.key}><label className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{f.label}</label><input value={(editingPersona as any)[f.key] || ""} onChange={e => setEditingPersona((p: any) => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)]/40 focus:border-[#A88756]/50 focus:ring-2 focus:ring-[#A88756]/10 sm:px-4 sm:py-3" /></div>))}
               <div className="sm:col-span-2"><FormTextarea label={t("persona.details", lang)} value={editingPersona.details || ""} onChange={v => setEditingPersona((p: any) => ({ ...p, details: v }))} placeholder="" rows={3} /></div>
               <div className="sm:col-span-2"><FormTextarea label="对话示例 (mes_example)" value={editingPersona.mes_example || ""} onChange={v => setEditingPersona((p: any) => ({ ...p, mes_example: v }))} placeholder={`示例格式：\n用户：今天好累\n你：抱抱~ 辛苦了，快去休息会儿\n\n用户：晚安\n你：晚安~ 做个好梦\n\n用户：在干嘛\n你：在看书呢，你呢？`} rows={6} /></div>
             </div>
@@ -313,21 +313,21 @@ export default function SettingsPage({ onLogout }: Props) {
                           <span className={`text-[11px] font-medium ${stageColors[getRelationshipStage(currentAffection)] || 'text-gray-400'}`}>{stageMap[getRelationshipStage(currentAffection)] || '未知'}</span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200/50">
-                          <div ref={progressBarRef} className="h-full rounded-full bg-gradient-to-r from-[#94C1D6] to-[#747CBB]" style={{ width: `${Math.round(currentAffection * 100)}%` }} />
+                          <div ref={progressBarRef} className="h-full rounded-full bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A]" style={{ width: `${Math.round(currentAffection * 100)}%` }} />
                         </div>
                       </>
                     ) : (
                       <p className="text-xs text-[var(--color-text-secondary)]/60">加载中...</p>
                     )}
                     <div className="flex items-center gap-3">
-                      <input type="number" min={0} max={100} value={affectionValue} onChange={e => setAffectionValue(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-center text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[#94C1D6]/50 focus:ring-2 focus:ring-[#94C1D6]/10" />
+                      <input type="number" min={0} max={100} value={affectionValue} onChange={e => setAffectionValue(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))} className="w-20 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-center text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[#A88756]/50 focus:ring-2 focus:ring-[#A88756]/10" />
                       <span className="text-xs text-[var(--color-text-secondary)]">%</span>
                       <button onClick={async () => {
                         try {
                           const r = await fetch(`${API}/api/emotion/set`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: uid, affection: affectionValue / 100 }) });
                           if (r.ok) { setCurrentAffection(affectionValue / 100); setAffectionSaved(true); setTimeout(() => setAffectionSaved(false), 2000); }
                         } catch {}
-                      }} className={`ml-auto flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-medium text-white transition-all ${affectionSaved ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#94C1D6] to-[#747CBB] hover:brightness-105'}`}>{affectionSaved ? <><Check size={14} strokeWidth={2.5} /> 已保存</> : '确定'}</button>
+                      }} className={`ml-auto flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-medium text-white transition-all ${affectionSaved ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] hover:brightness-105'}`}>{affectionSaved ? <><Check size={14} strokeWidth={2.5} /> 已保存</> : '确定'}</button>
                     </div>
                   </div>
                 );
@@ -335,11 +335,11 @@ export default function SettingsPage({ onLogout }: Props) {
             </div>
             <div className="mt-5">
               <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)] sm:text-sm">{t("persona.skills", lang)}</label>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{allSkills.map(s => { const isSelected = selectedSkills.includes(s.id); return (<div key={s.id} onClick={() => setSelectedSkills(prev => prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id])} className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${isSelected ? "border border-[#94C1D6]/30 bg-[var(--color-accent-light)]" : "border border-transparent bg-[var(--color-bg)]/50"}`}><div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold ${isSelected ? "bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-white" : "border-2 border-gray-300 text-transparent"}`}>{isSelected ? "✓" : ""}</div><div className="min-w-0 flex-1"><div className="text-[13px] font-medium text-[var(--color-text)]">{s.name}</div><div className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">{s.description}</div></div><span className="shrink-0 rounded bg-[var(--color-accent-light)] px-1.5 py-0.5 text-[10px] font-medium text-[#94C1D6]">{s.type === "thinking" ? "思维" : s.type === "conversation" ? "话术" : "感知"}</span></div>); })}</div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{allSkills.map(s => { const isSelected = selectedSkills.includes(s.id); return (<div key={s.id} onClick={() => setSelectedSkills(prev => prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id])} className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${isSelected ? "border border-[#A88756]/30 bg-[var(--color-accent-light)]" : "border border-transparent bg-[var(--color-bg)]/50"}`}><div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold ${isSelected ? "bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-white" : "border-2 border-gray-300 text-transparent"}`}>{isSelected ? "✓" : ""}</div><div className="min-w-0 flex-1"><div className="text-[13px] font-medium text-[var(--color-text)]">{s.name}</div><div className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">{s.description}</div></div><span className="shrink-0 rounded bg-[var(--color-accent-light)] px-1.5 py-0.5 text-[10px] font-medium text-[#A88756]">{s.type === "thinking" ? "思维" : s.type === "conversation" ? "话术" : "感知"}</span></div>); })}</div>
               {allSkills.length === 0 && <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{t("common.loading", lang)}</p>}
             </div>
           </Card>
-          <button onClick={async () => { if (!editingPersona.name) { alert(t("persona.name", lang)); return; } await fetch(`${API}/api/personas`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editingPersona, skills: selectedSkills }) }); setPage("personas"); loadPersonas(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] px-4 py-3 text-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95"><Check size={16} strokeWidth={2} /> {t("persona.save", lang)}</button>
+          <button onClick={async () => { if (!editingPersona.name) { alert(t("persona.name", lang)); return; } await fetch(`${API}/api/personas`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editingPersona, skills: selectedSkills }) }); setPage("personas"); loadPersonas(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] px-4 py-3 text-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95"><Check size={16} strokeWidth={2} /> {t("persona.save", lang)}</button>
         </div>
       </div>
     );
@@ -350,7 +350,7 @@ export default function SettingsPage({ onLogout }: Props) {
       <div className="flex h-full flex-col overflow-auto bg-[var(--color-bg)]">
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
           <PageHeader title={t("account.title", lang)} onBack={() => setPage("main")} />
-          <div className="mb-6 flex flex-col items-center rounded-2xl bg-[var(--color-surface)] p-6 shadow-sm sm:p-8"><div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-2xl font-semibold text-white sm:h-[72px] sm:w-[72px]">{email ? email[0].toUpperCase() : "?"}</div><div className="mt-3 text-base font-semibold text-[var(--color-text)] sm:text-lg">{email || t("settings.not_logged_in", lang)}</div><div className="mt-1 text-xs text-[var(--color-text-secondary)] sm:text-sm">{t("account.current", lang)}</div></div>
+          <div className="mb-6 flex flex-col items-center rounded-2xl bg-[var(--color-surface)] p-6 shadow-sm sm:p-8"><div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-2xl font-semibold text-white sm:h-[72px] sm:w-[72px]">{email ? email[0].toUpperCase() : "?"}</div><div className="mt-3 text-base font-semibold text-[var(--color-text)] sm:text-lg">{email || t("settings.not_logged_in", lang)}</div><div className="mt-1 text-xs text-[var(--color-text-secondary)] sm:text-sm">{t("account.current", lang)}</div></div>
           <Card className="mb-6"><div className="flex items-center gap-3"><Shield size={20} strokeWidth={1.5} className="shrink-0 text-[var(--color-text-secondary)]" /><div><div className="text-sm font-medium text-[var(--color-text)]">{t("account.registered", lang)}</div><div className="mt-0.5 text-xs text-[var(--color-text-secondary)]">{new Date().toLocaleDateString(lang === "en" ? "en-US" : "zh-CN")}</div></div></div></Card>
           <div className="flex flex-col gap-3">
             <button onClick={async () => { if (!confirm(t("account.logout_scan", lang) + "?")) return; try { await fetch(`${API}/api/logout`, { method: "POST" }); alert(t("account.logout_scan", lang)); } catch {} }} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent-light)] px-4 py-3.5 text-sm font-medium text-[var(--color-accent)] transition-all hover:bg-[var(--color-accent-light)]"><LogOut size={16} strokeWidth={1.5} /> {t("account.logout_scan", lang)}</button>
@@ -370,8 +370,8 @@ export default function SettingsPage({ onLogout }: Props) {
     return (
       <div className="flex h-full flex-col overflow-auto bg-[var(--color-bg)]">
         <div className="flex w-full flex-1 flex-col px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
-          <div className="mb-4 flex items-center gap-3 sm:mb-5"><BackButton onClick={() => setPage("main")} /><h1 className="flex-1 text-lg font-semibold text-[var(--color-text)] sm:text-xl">{t("logs.title", lang)}</h1><button onClick={() => { fetch("/api/logs/clear", { method: "POST" }); setLogs([]); }} className="rounded-lg bg-red-500/8 px-2.5 py-1.5 text-xs text-red-500">{t("logs.clear", lang)}</button><button onClick={() => setLogFilter(f => f === "all" ? "ERROR" : "all")} className="rounded-lg bg-[var(--color-accent-light)] px-2.5 py-1.5 text-xs text-[#94C1D6]">{logFilter === "all" ? t("logs.error_only", lang) : t("logs.all", lang)}</button><button onClick={() => { const text = filtered.map((l: any) => `[${l.time}][${l.level}][${l.tag}] ${l.msg}`).join("\n"); navigator.clipboard.writeText(text).catch(() => {}); }} className="rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-500">{t("logs.copy", lang)}</button></div>
-          <div className="flex-1 overflow-auto font-mono text-[11px] leading-relaxed sm:text-xs">{filtered.length === 0 ? <div className="flex items-center justify-center py-24 text-sm text-[var(--color-text-secondary)]">{t("logs.empty", lang)}</div> : filtered.map((l: any, i: number) => (<div key={i} className={`mb-1 rounded-lg border-l-[3px] px-3 py-2 ${l.level === "ERROR" ? "border-red-500 bg-red-500/5" : l.level === "WARN" ? "border-amber-500 bg-amber-500/5" : "border-transparent bg-[var(--color-surface)]"}`}><span className="text-[var(--color-text-secondary)]">[{l.time}]</span>{l.level !== "INFO" && <span className={`ml-1 font-semibold ${l.level === "ERROR" ? "text-red-500" : "text-amber-500"}`}>[{l.level}]</span>}<span className="ml-1 text-[#94C1D6]">[{l.tag}]</span><span className="ml-1 text-[var(--color-text)]">{l.msg}</span></div>))}</div>
+          <div className="mb-4 flex items-center gap-3 sm:mb-5"><BackButton onClick={() => setPage("main")} /><h1 className="flex-1 text-lg font-semibold text-[var(--color-text)] sm:text-xl">{t("logs.title", lang)}</h1><button onClick={() => { fetch("/api/logs/clear", { method: "POST" }); setLogs([]); }} className="rounded-lg bg-red-500/8 px-2.5 py-1.5 text-xs text-red-500">{t("logs.clear", lang)}</button><button onClick={() => setLogFilter(f => f === "all" ? "ERROR" : "all")} className="rounded-lg bg-[var(--color-accent-light)] px-2.5 py-1.5 text-xs text-[#A88756]">{logFilter === "all" ? t("logs.error_only", lang) : t("logs.all", lang)}</button><button onClick={() => { const text = filtered.map((l: any) => `[${l.time}][${l.level}][${l.tag}] ${l.msg}`).join("\n"); navigator.clipboard.writeText(text).catch(() => {}); }} className="rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-500">{t("logs.copy", lang)}</button></div>
+          <div className="flex-1 overflow-auto font-mono text-[11px] leading-relaxed sm:text-xs">{filtered.length === 0 ? <div className="flex items-center justify-center py-24 text-sm text-[var(--color-text-secondary)]">{t("logs.empty", lang)}</div> : filtered.map((l: any, i: number) => (<div key={i} className={`mb-1 rounded-lg border-l-[3px] px-3 py-2 ${l.level === "ERROR" ? "border-red-500 bg-red-500/5" : l.level === "WARN" ? "border-amber-500 bg-amber-500/5" : "border-transparent bg-[var(--color-surface)]"}`}><span className="text-[var(--color-text-secondary)]">[{l.time}]</span>{l.level !== "INFO" && <span className={`ml-1 font-semibold ${l.level === "ERROR" ? "text-red-500" : "text-amber-500"}`}>[{l.level}]</span>}<span className="ml-1 text-[#A88756]">[{l.tag}]</span><span className="ml-1 text-[var(--color-text)]">{l.msg}</span></div>))}</div>
         </div>
       </div>
     );
@@ -387,7 +387,7 @@ export default function SettingsPage({ onLogout }: Props) {
       <div className="flex h-full flex-col overflow-auto bg-[var(--color-bg)]">
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
           <PageHeader title={t("ip.title", lang)} onBack={() => setPage("account")}>
-            <button onClick={loadIpData} className="rounded-lg bg-[var(--color-accent-light)] px-2.5 py-1.5 text-xs text-[#94C1D6]">{t("common.refresh", lang)}</button>
+            <button onClick={loadIpData} className="rounded-lg bg-[var(--color-accent-light)] px-2.5 py-1.5 text-xs text-[#A88756]">{t("common.refresh", lang)}</button>
           </PageHeader>
 
           {/* Stats */}
@@ -395,7 +395,7 @@ export default function SettingsPage({ onLogout }: Props) {
             {[{ label: t("ip.total", lang), value: ipStats.total, color: "text-[var(--color-text)]" },
               { label: t("ip.online", lang), value: ipStats.online, color: "text-emerald-500" },
               { label: t("ip.banned", lang), value: ipStats.banned, color: "text-red-500" },
-              { label: t("ip.recent", lang), value: ipStats.recent, color: "text-[#94C1D6]" }
+              { label: t("ip.recent", lang), value: ipStats.recent, color: "text-[#A88756]" }
             ].map(s => (
               <div key={s.label} className="rounded-xl bg-[var(--color-surface)] p-3 text-center shadow-sm">
                 <div className={`text-lg font-bold ${s.color}`}>{s.value}</div>
@@ -406,7 +406,7 @@ export default function SettingsPage({ onLogout }: Props) {
 
           {/* Search & Filter */}
           <div className="mb-4 flex gap-2">
-            <input value={ipSearch} onChange={e => setIpSearch(e.target.value)} placeholder={t("ip.search_ip", lang)} className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50" />
+            <input value={ipSearch} onChange={e => setIpSearch(e.target.value)} placeholder={t("ip.search_ip", lang)} className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[#A88756]/50" />
             <select value={ipFilter} onChange={e => setIpFilter(e.target.value as any)} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none">
               <option value="all">{t("common.all", lang)}</option>
               <option value="normal">{t("ip.normal", lang)}</option>
@@ -495,7 +495,7 @@ export default function SettingsPage({ onLogout }: Props) {
           <p className="mb-4 text-xs text-[var(--color-text-secondary)] sm:text-sm">{t("features.desc", lang)}</p>
           {featureCategories.map(cat => (
             <div key={cat.cat} className="mb-4">
-              <div className="mb-2 px-1 text-xs font-medium text-[#B1BQB8]/60">{cat.cat}</div>
+              <div className="mb-2 px-1 text-xs font-medium text-[#7A7A7A]/60">{cat.cat}</div>
               <div className="overflow-hidden rounded-2xl bg-[var(--color-surface)] shadow-sm">
                 {cat.items.map((f, i) => {
                   const enabled = settings.features?.[f.id] !== false;
@@ -538,9 +538,9 @@ export default function SettingsPage({ onLogout }: Props) {
             <div className="flex items-center gap-3"><Toggle enabled={settings.notify_quiet_enabled} onToggle={() => handleSaveSettings({ notify_quiet_enabled: !settings.notify_quiet_enabled })} /><Bell size={18} strokeWidth={1.5} className="text-[var(--color-text-secondary)]" /><span className="text-sm font-medium text-[var(--color-text)] sm:text-[15px]">{t("notify.quiet", lang)}</span></div>
             {settings.notify_quiet_enabled && (
               <div className="mt-3 flex items-center gap-2 pl-[58px]">
-                <input type="time" value={settings.notify_quiet_start} onChange={e => handleSaveSettings({ notify_quiet_start: e.target.value })} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50" />
+                <input type="time" value={settings.notify_quiet_start} onChange={e => handleSaveSettings({ notify_quiet_start: e.target.value })} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[#A88756]/50" />
                 <span className="text-sm text-[var(--color-text-secondary)]">{t("notify.quiet_to", lang)}</span>
-                <input type="time" value={settings.notify_quiet_end} onChange={e => handleSaveSettings({ notify_quiet_end: e.target.value })} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[#94C1D6]/50" />
+                <input type="time" value={settings.notify_quiet_end} onChange={e => handleSaveSettings({ notify_quiet_end: e.target.value })} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[#A88756]/50" />
               </div>
             )}
             <p className="mt-1.5 pl-[58px] text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">{t("notify.quiet_desc", lang)}</p>
@@ -564,7 +564,7 @@ export default function SettingsPage({ onLogout }: Props) {
             <div className="flex items-center gap-3"><Clock size={18} strokeWidth={1.5} className="shrink-0 text-[var(--color-text-secondary)]" /><div className="flex-1"><span className="text-sm font-medium text-[var(--color-text)] sm:text-[15px]">{t("privacy.auto_delete", lang)}</span></div></div>
             <div className="mt-3 grid grid-cols-4 gap-2">
               {[{ v: "0", l: t("privacy.never", lang) }, { v: "7", l: `7${t("common.days", lang)}` }, { v: "30", l: `30${t("common.days", lang)}` }, { v: "90", l: `90${t("common.days", lang)}` }].map(o => (
-                <button key={o.v} onClick={() => handleSaveSettings({ privacy_auto_delete: parseInt(o.v) })} className={`rounded-xl py-2.5 text-xs font-medium transition-all sm:text-sm ${settings.privacy_auto_delete === parseInt(o.v) ? "border-2 border-[#94C1D6] bg-[var(--color-accent-light)] text-[#94C1D6]" : "border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-secondary)]"}`}>{o.l}</button>
+                <button key={o.v} onClick={() => handleSaveSettings({ privacy_auto_delete: parseInt(o.v) })} className={`rounded-xl py-2.5 text-xs font-medium transition-all sm:text-sm ${settings.privacy_auto_delete === parseInt(o.v) ? "border-2 border-[#A88756] bg-[var(--color-accent-light)] text-[#A88756]" : "border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-secondary)]"}`}>{o.l}</button>
               ))}
             </div>
             <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-secondary)]/50">{t("privacy.auto_delete_desc", lang)}</p>
@@ -617,10 +617,10 @@ export default function SettingsPage({ onLogout }: Props) {
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
           <PageHeader title={t("settings.about", lang)} onBack={() => setPage("main")} />
           <div className="mb-6 flex flex-col items-center rounded-2xl bg-[var(--color-surface)] p-6 shadow-sm sm:p-8">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-2xl font-bold text-white sm:h-[72px] sm:w-[72px]">W</div>
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-2xl font-bold text-white sm:h-[72px] sm:w-[72px]">W</div>
             <div className="mt-3 text-base font-semibold text-[var(--color-text)] sm:text-lg">WebChat</div>
             <div className="mt-1 text-xs text-[var(--color-text-secondary)] sm:text-sm">{t("about.desc", lang)}</div>
-            <div className="mt-2 rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-xs font-medium text-[#94C1D6]">v1.0.0</div>
+            <div className="mt-2 rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-xs font-medium text-[#A88756]">v1.0.0</div>
           </div>
           <Card className="mb-4">
             <div className="mb-3 text-sm font-medium text-[var(--color-text)]">{t("about.tech", lang)}</div>
@@ -647,7 +647,7 @@ export default function SettingsPage({ onLogout }: Props) {
     <div className="flex h-full flex-col overflow-auto bg-[var(--color-bg)]">
       <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
         <h1 className="mb-1 text-xl font-semibold text-[var(--color-text)] sm:text-2xl">{t("settings.title", lang)}</h1>
-        <div className="mb-6 flex items-center gap-3.5 rounded-2xl bg-[var(--color-surface)] p-4 shadow-sm sm:gap-4 sm:p-5"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#94C1D6] to-[#747CBB] text-lg font-semibold text-white sm:h-14 sm:w-14 sm:text-xl">{email ? email[0].toUpperCase() : "?"}</div><div className="min-w-0 flex-1"><div className="text-sm font-semibold text-[var(--color-text)] sm:text-[15px]">{email || t("settings.not_logged_in", lang)}</div><div className="mt-0.5 text-xs text-[var(--color-text-secondary)] sm:text-[13px]">{t("settings.wechat_bot", lang)}</div></div><ChevronRight size={18} strokeWidth={1.5} className="shrink-0 text-[var(--color-text-secondary)]/30" /></div>
+        <div className="mb-6 flex items-center gap-3.5 rounded-2xl bg-[var(--color-surface)] p-4 shadow-sm sm:gap-4 sm:p-5"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#1A1A1A] to-[#3A3A3A] text-lg font-semibold text-white sm:h-14 sm:w-14 sm:text-xl">{email ? email[0].toUpperCase() : "?"}</div><div className="min-w-0 flex-1"><div className="text-sm font-semibold text-[var(--color-text)] sm:text-[15px]">{email || t("settings.not_logged_in", lang)}</div><div className="mt-0.5 text-xs text-[var(--color-text-secondary)] sm:text-[13px]">{t("settings.wechat_bot", lang)}</div></div><ChevronRight size={18} strokeWidth={1.5} className="shrink-0 text-[var(--color-text-secondary)]/30" /></div>
         <div className="overflow-hidden rounded-2xl bg-[var(--color-surface-hover)]/30">
           <SettingRow icon={Shield} label={t("settings.account", lang)} onClick={() => setPage("account")} />
           <SettingRow icon={BookOpen} label={t("settings.personas", lang)} onClick={() => setPage("personas")} badge={personas.length} />

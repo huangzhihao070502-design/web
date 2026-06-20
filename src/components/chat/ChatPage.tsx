@@ -10,17 +10,6 @@ interface Msg { id: number; text: string; isMine: boolean; time: string; isVoice
 
 function fmt(t: number) { return new Date(t).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
 
-// Generate a unique gradient color from a user ID string
-const AVATAR_COLORS = [
-  ['#94C1D6', '#747CBB'], ['#BBA2CA', '#747CBB'], ['#94C1D6', '#BBA2CA'],
-  ['#747CBB', '#94C1D6'], ['#A78BFA', '#747CBB'], ['#94C1D6', '#A78BFA'],
-];
-function getAvatarGradient(uid: string): [string, string] {
-  let hash = 0;
-  for (let i = 0; i < uid.length; i++) hash = uid.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
 interface Props { userId?: string | null; onBack?: () => void }
 
 export default function ChatPage({ userId, onBack }: Props) {
@@ -218,52 +207,44 @@ export default function ChatPage({ userId, onBack }: Props) {
     return () => clearInterval(t);
   }, [showAddQr, addQrStatus]);
 
-  // Spec colors
-  const HEADER_BG = '#94C1D6';
-  const CHAT_BG = '#F6F6F6';
-  const BUBBLE_MINE = '#747CBB';
-  const BUBBLE_OTHER = '#BBA2CA';
-  const TEXT_COLOR = '#343030';
-  const TIME_COLOR = '#B1BQB8';
-
   return (
-    <div style={{display:'flex',flexDirection:'column' as const,height:'100%',minHeight:0,background:CHAT_BG,fontFamily:'"Noto Sans SC", system-ui, sans-serif'}}>
-      {/* Header — 56px, bg #94C1D6 */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:56,flexShrink:0,padding:'0 12px',background:HEADER_BG}}>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          {onBack && <button onClick={onBack} style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'transparent',cursor:'pointer'}}>
-            <ArrowLeft size={20} strokeWidth={2} color="white"/>
+    <div className="flex flex-col bg-warm-white font-sans" style={{height:'100%', minHeight:0, fontFamily:'"Noto Sans SC", system-ui, sans-serif'}}>
+      {/* Header — InkOS paper bg, subtle mist border */}
+      <div className="flex items-center justify-between bg-paper flex-shrink-0" style={{height:56, padding:'0 12px', borderBottom:'1px solid var(--color-mist)'}}>
+        <div className="flex items-center gap-2">
+          {onBack && <button onClick={onBack} className="flex items-center justify-center rounded-full border-none bg-transparent cursor-pointer" style={{width:36,height:36}}>
+            <ArrowLeft size={20} strokeWidth={2} style={{color:'var(--color-ink)'}}/>
           </button>}
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-full overflow-hidden" style={{width:36,height:36,boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
               <img src="/avatar.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
             </div>
             <div>
-              <div style={{fontSize:18,fontWeight:500,color:'white'}}>{userId ? userId.slice(0,8)+'...' : '微信 Bot'}</div>
-              <div style={{fontSize:12,color:'rgba(255,255,255,0.75)'}}>{!connected?'未连接':userId?'在线':'等待消息'}</div>
+              <div style={{fontSize:18,fontWeight:500,color:'var(--color-ink)'}}>{userId ? userId.slice(0,8)+'...' : '微信 Bot'}</div>
+              <div style={{fontSize:12,color:'var(--color-soft-ink)'}}>{!connected?'未连接':userId?'在线':'等待消息'}</div>
             </div>
           </div>
         </div>
-        <button style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'none',background:'transparent',cursor:'pointer'}}>
-          <MoreVertical size={20} strokeWidth={2} color="white"/>
+        <button className="flex items-center justify-center rounded-full border-none bg-transparent cursor-pointer" style={{width:36,height:36}}>
+          <MoreVertical size={20} strokeWidth={2} style={{color:'var(--color-ink)'}}/>
         </button>
       </div>
 
-      {/* Message list — bg #F6F6F6 */}
-      <div ref={chatRef} className="chat-scroll" style={{flex:1,minHeight:0,overflowY:'auto' as const,padding:'12px 16px'}}>
+      {/* Message list — warm-white bg */}
+      <div ref={chatRef} className="chat-scroll" style={{flex:1,minHeight:0,overflowY:'auto',padding:'12px 16px',backgroundColor:'var(--color-warm-white)'}}>
         {msgs.length === 0 && (
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',textAlign:'center',padding:'0 32px'}}>
-            <div style={{width:56,height:56,borderRadius:'50%',background:'rgba(148,193,214,0.15)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16,fontSize:28}}>💬</div>
+          <div className="flex flex-col items-center justify-center" style={{height:'100%',textAlign:'center',padding:'0 32px'}}>
+            <div className="flex items-center justify-center rounded-full" style={{width:56,height:56,background:'rgba(168,135,86,0.12)',marginBottom:16,fontSize:28}}>💬</div>
             {!connected ? (
-              <><p style={{fontSize:16,fontWeight:500,color:TEXT_COLOR}}>未连接到微信</p><p style={{marginTop:6,fontSize:12,color:TIME_COLOR,lineHeight:1.5}}>请先退出到登录页<br/>扫码连接微信后再使用</p></>
+              <><p style={{fontSize:16,fontWeight:500,color:'var(--color-deep-ink)'}}>未连接到微信</p><p style={{marginTop:6,fontSize:12,color:'var(--color-soft-ink)',lineHeight:1.5}}>请先退出到登录页<br/>扫码连接微信后再使用</p></>
             ) : userId ? (
-              <p style={{fontSize:14,color:TIME_COLOR}}>暂无消息</p>
+              <p style={{fontSize:14,color:'var(--color-soft-ink)'}}>暂无消息</p>
             ) : (
-              <><p style={{fontSize:16,fontWeight:500,color:TEXT_COLOR,marginBottom:8}}>已连接到微信</p><p style={{fontSize:12,color:TIME_COLOR,lineHeight:1.8}}>
+              <><p style={{fontSize:16,fontWeight:500,color:'var(--color-deep-ink)',marginBottom:8}}>已连接到微信</p><p style={{fontSize:12,color:'var(--color-soft-ink)',lineHeight:1.8}}>
                 Bot 已连接，等待消息中...<br/><br/>
-                <span style={{color:'#747CBB',fontWeight:500}}>方式一：</span>用好友给你的微信号发一条消息<br/>消息会自动出现在这里<br/><br/>
-                <span style={{color:'#747CBB',fontWeight:500}}>方式二：</span>点击下方按钮生成二维码<br/>用微信扫描后即可建立会话</p>
-                <button onClick={handleAddFriend} style={{marginTop:20,display:'flex',alignItems:'center',gap:8,padding:'12px 24px',borderRadius:12,border:'none',background:'#747CBB',color:'white',fontSize:14,fontWeight:500,cursor:'pointer',boxShadow:'0 4px 16px rgba(116,124,187,0.3)'}}>
+                <span style={{color:'var(--color-copper)',fontWeight:500}}>方式一：</span>用好友给你的微信号发一条消息<br/>消息会自动出现在这里<br/><br/>
+                <span style={{color:'var(--color-copper)',fontWeight:500}}>方式二：</span>点击下方按钮生成二维码<br/>用微信扫描后即可建立会话</p>
+                <button onClick={handleAddFriend} className="flex items-center gap-2 rounded-xl border-none text-white cursor-pointer" style={{marginTop:20,padding:'12px 24px',background:'var(--color-copper)',fontSize:14,fontWeight:500,boxShadow:'0 4px 16px rgba(168,135,86,0.3)'}}>
                   <UserPlus size={18} strokeWidth={1.5}/> 生成添加好友二维码</button></>
             )}
           </div>
@@ -278,55 +259,64 @@ export default function ChatPage({ userId, onBack }: Props) {
           const sameSenderPrev = prev && prev.isMine === mine;
           const isFirst = !sameSenderPrev;
           const isLast = !sameSenderNext;
-          const bubbleBg = mine ? BUBBLE_MINE : BUBBLE_OTHER;
-          const bubbleTextColor = mine ? '#FFFFFF' : TEXT_COLOR;
-          const bubbleTimeColor = mine ? 'rgba(255,255,255,0.7)' : TIME_COLOR;
-          const br = isFirst && isLast ? '20px' : isFirst ? (mine ? '20px 20px 4px 20px' : '20px 20px 20px 4px') : isLast ? (mine ? '4px 20px 20px 20px' : '20px 4px 20px 20px') : (mine ? '4px 20px 4px 20px' : '20px 4px 20px 4px');
+          // InkOS: user messages get mist bg, AI/other messages get paper bg
+          const bubbleBg = mine ? 'var(--color-mist)' : 'var(--color-paper)';
+          const bubbleTextColor = 'var(--color-ink)';
+          const bubbleTimeColor = 'var(--color-soft-ink)';
+          const bubbleShadow = mine ? 'none' : 'var(--shadow-paper-sm, 0 1px 3px rgba(0,0,0,0.04))';
+          // Rounded-2xl (28px) with contextual pointed corners for message groups
+          const br = isFirst && isLast ? '28px' : isFirst ? (mine ? '28px 28px 4px 28px' : '28px 28px 28px 4px') : isLast ? (mine ? '4px 28px 28px 28px' : '28px 4px 28px 28px') : (mine ? '4px 28px 4px 28px' : '28px 4px 28px 4px');
 
           return (
             <div key={msg.id}>
-              {showDate && <div style={{display:'flex',alignItems:'center',gap:12,margin:'16px 0 12px'}}><div style={{flex:1,height:'1px',background:'rgba(0,0,0,0.06)'}}/><span style={{fontSize:12,color:TIME_COLOR,whiteSpace:'nowrap'}}>{msg.time}</span><div style={{flex:1,height:'1px',background:'rgba(0,0,0,0.06)'}}/></div>}
-              <motion.div initial={{opacity:0, y:8}} animate={{opacity:1, y:0}} transition={{duration:0.25, ease:'easeOut'}}
-                style={{display:'flex',flexDirection:mine?'row-reverse':'row',alignItems:'flex-end',marginBottom:sameSenderNext?4:8,gap:8}}>
+              {/* Date divider — centered, soft-ink at 50% opacity */}
+              {showDate && (
+                <div className="flex items-center justify-center" style={{margin:'16px 0 12px'}}>
+                  <span style={{fontSize:11,color:'var(--color-soft-ink)',opacity:0.5,whiteSpace:'nowrap'}}>{msg.time}</span>
+                </div>
+              )}
+              <motion.div initial={{opacity:0, y:12}} animate={{opacity:1, y:0}} transition={{duration:0.3, ease:'easeOut'}}
+                className="flex items-end" style={{flexDirection:mine?'row-reverse':'row',marginBottom:sameSenderNext?4:8,gap:8}}>
                 {!mine && isLast ? (
-                  <div style={{width:32,height:32,borderRadius:'50%',flexShrink:0,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.1)'}}>
+                  <div className="rounded-full flex-shrink-0 overflow-hidden" style={{width:32,height:32,boxShadow:'0 1px 4px rgba(0,0,0,0.1)'}}>
                     <img src="/avatar.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                  </div>) : (!mine && <div style={{width:32,flexShrink:0}}/>)}
-                <div style={{display:'flex',flexDirection:'column',alignItems:mine?'flex-end':'flex-start',maxWidth:'68%'}}>
-                  <div style={{borderRadius:br,padding:'10px 14px',fontSize:14,fontWeight:400,lineHeight:1.5,wordBreak:'break-word',whiteSpace:'pre-wrap',color:bubbleTextColor,background:bubbleBg,boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                  </div>) : (!mine && <div className="flex-shrink-0" style={{width:32}}/>)}
+                <div className="flex flex-col" style={{alignItems:mine?'flex-end':'flex-start',maxWidth:'75%'}}>
+                  <div className="rounded-2xl" style={{borderRadius:br,padding:'10px 14px',fontSize:14,fontWeight:400,lineHeight:1.5,wordBreak:'break-word',whiteSpace:'pre-wrap',color:bubbleTextColor,background:bubbleBg,boxShadow:bubbleShadow}}>
                     {msg.isImage && (msg.imageData || msg.mediaCacheKey) && <img src={msg.imageData || `/api/media/${msg.mediaCacheKey}`} alt="" style={{maxWidth:'100%',borderRadius:12,marginBottom:4,display:'block'}} loading="lazy"/>}
                     {msg.isVoice ? (
-                      <button onClick={()=>playVoice(msg)} disabled={!msg.voiceUrl} style={{display:'flex',alignItems:'center',gap:8,border:'none',background:'none',cursor:msg.voiceUrl?'pointer':'default',padding:0,color:bubbleTextColor,width:'100%',fontSize:14}}>
+                      <button onClick={()=>playVoice(msg)} disabled={!msg.voiceUrl} className="flex items-center gap-2 border-none cursor-pointer" style={{background:'none',padding:0,color:bubbleTextColor,width:'100%',fontSize:14}}>
                         {isPlaying?<Pause size={16} strokeWidth={1.8}/>:<Play size={16} strokeWidth={1.8}/>}<span style={{fontSize:12,color:bubbleTimeColor}}>{msg.voiceDuration||3}"</span></button>
                     ) : msg.isLocation ? (
-                      <div style={{display:'flex',alignItems:'center',gap:6}}><MapPin size={15} strokeWidth={1.8}/><span style={{fontSize:14}}>{msg.text}</span></div>
+                      <div className="flex items-center gap-1.5"><MapPin size={15} strokeWidth={1.8}/><span style={{fontSize:14}}>{msg.text}</span></div>
                     ) : msg.isFile ? (
-                      <div style={{display:'flex',alignItems:'center',gap:6}}><File size={15} strokeWidth={1.8}/>{msg.mediaCacheKey ? <a href={`/api/media/${msg.mediaCacheKey}`} download style={{color:bubbleTextColor,textDecoration:'underline',textUnderlineOffset:3,fontSize:14}}>{msg.text}</a> : <span style={{fontSize:14}}>{msg.text}</span>}</div>
+                      <div className="flex items-center gap-1.5"><File size={15} strokeWidth={1.8}/>{msg.mediaCacheKey ? <a href={`/api/media/${msg.mediaCacheKey}`} download style={{color:bubbleTextColor,textDecoration:'underline',textUnderlineOffset:3,fontSize:14}}>{msg.text}</a> : <span style={{fontSize:14}}>{msg.text}</span>}</div>
                     ) : (<span style={{fontSize:14}}>{msg.text}</span>)}
                   </div>
-                  {isLast && <div style={{marginTop:4,marginRight:mine?4:0,marginLeft:mine?0:4}}><span style={{fontSize:12,color:TIME_COLOR}}>{msg.time}{mine && ' · ✓ 已读'}</span></div>}
+                  {isLast && <div style={{marginTop:4,marginRight:mine?4:0,marginLeft:mine?0:4}}><span style={{fontSize:12,color:'var(--color-soft-ink)'}}>{msg.time}{mine && ' · ✓ 已读'}</span></div>}
                 </div>
               </motion.div>
             </div>);
         })}
+        {/* Typing indicator — three bouncing ink-colored dots */}
         {isTyping && (
-          <div style={{display:'flex',gap:8,marginBottom:8}}><div style={{width:28,flexShrink:0}}/>
-            <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{display:'flex',alignItems:'center',gap:5,padding:'12px 16px',borderRadius:'20px 20px 20px 4px',background:BUBBLE_OTHER,boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
-              {[0,1,2].map(j=><motion.div key={j} animate={{y:[0,-4,0]}} transition={{repeat:Infinity,duration:1.2,delay:j*0.2,ease:'easeInOut'}} style={{width:7,height:7,borderRadius:'50%',background:'rgba(255,255,255,0.6)'}}/>)}</motion.div></div>)}
+          <div className="flex gap-2" style={{marginBottom:8}}><div className="flex-shrink-0" style={{width:28}}/>
+            <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="flex items-center gap-1.5" style={{padding:'12px 16px',borderRadius:'28px 28px 28px 4px',background:'var(--color-paper)',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+              {[0,1,2].map(j=><motion.div key={j} animate={{y:[0,-4,0]}} transition={{repeat:Infinity,duration:1.2,delay:j*0.2,ease:'easeInOut'}} className="rounded-full" style={{width:7,height:7,background:'var(--color-ink)'}}/>)}</motion.div></div>)}
         <div style={{height:1}}/>
       </div>
 
       {userId && <InputArea onSendText={handleSendText} onSendVoice={handleSendVoice} onSendImage={handleSendImage} onSendFile={handleSendFile} onSendLocation={handleSendLocation} isDark={isDark}/>}
 
-      {/* Add friend QR overlay */}
-      {showAddQr && <div style={{position:'fixed',inset:0,zIndex:999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.3)',backdropFilter:'blur(4px)'}} onClick={()=>setShowAddQr(false)}>
-        <div style={{background:'white',borderRadius:24,padding:'32px 28px',textAlign:'center',boxShadow:'0 20px 60px rgba(0,0,0,0.15)',maxWidth:320}} onClick={e=>e.stopPropagation()}>
-          <button onClick={()=>setShowAddQr(false)} style={{position:'absolute',top:12,right:12,border:'none',background:'none',cursor:'pointer',padding:4}}><X size={18} color='#747CBB'/></button>
-          <h3 style={{fontSize:16,fontWeight:600,color:'#343030',marginBottom:4}}>{addQrStatus==='confirmed'?'已添加':'添加好友'}</h3>
-          <p style={{fontSize:12,color:'#B1BQB8',marginBottom:20}}>{addQrStatus==='confirmed'?'好友已添加，可以开始聊天了':'用微信扫描此二维码添加好友'}</p>
-          {addQrStatus==='confirmed' ? <div style={{width:200,height:200,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(116,124,187,0.1)',borderRadius:16}}><span style={{fontSize:48}}>✅</span></div>
-          : <img src={addQrImg} alt="添加好友" style={{width:200,height:200,margin:'0 auto',display:'block'}}/>}
-          <button onClick={()=>setShowAddQr(false)} style={{marginTop:16,padding:'8px 24px',borderRadius:12,border:'none',background:'#F6F6F6',color:'#343030',fontSize:13,cursor:'pointer'}}>关闭</button>
+      {/* Add friend QR overlay — InkOS styled */}
+      {showAddQr && <div className="fixed inset-0 z-[999] flex items-center justify-center" style={{background:'rgba(0,0,0,0.3)',backdropFilter:'blur(4px)'}} onClick={()=>setShowAddQr(false)}>
+        <div className="relative text-center" style={{background:'var(--color-warm-white)',borderRadius:24,padding:'32px 28px',boxShadow:'0 20px 60px rgba(0,0,0,0.15)',maxWidth:320}} onClick={e=>e.stopPropagation()}>
+          <button onClick={()=>setShowAddQr(false)} className="absolute border-none bg-transparent cursor-pointer" style={{top:12,right:12,padding:4}}><X size={18} style={{color:'var(--color-soft-ink)'}}/></button>
+          <h3 style={{fontSize:16,fontWeight:600,color:'var(--color-ink)',marginBottom:4}}>{addQrStatus==='confirmed'?'已添加':'添加好友'}</h3>
+          <p style={{fontSize:12,color:'var(--color-soft-ink)',marginBottom:20}}>{addQrStatus==='confirmed'?'好友已添加，可以开始聊天了':'用微信扫描此二维码添加好友'}</p>
+          {addQrStatus==='confirmed' ? <div className="mx-auto flex items-center justify-center rounded-2xl" style={{width:200,height:200,background:'rgba(168,135,86,0.1)'}}><span style={{fontSize:48}}>✅</span></div>
+          : <img src={addQrImg} alt="添加好友" className="mx-auto block" style={{width:200,height:200}}/>}
+          <button onClick={()=>setShowAddQr(false)} className="rounded-xl border-none cursor-pointer" style={{marginTop:16,padding:'8px 24px',background:'var(--color-mist)',color:'var(--color-ink)',fontSize:13}}>关闭</button>
         </div>
       </div>}
     </div>
