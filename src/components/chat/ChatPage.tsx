@@ -298,7 +298,7 @@ export default function ChatPage({ userId, onBack }: Props) {
               </motion.div>
             </div>);
         })}
-        {/* Typing indicator — three bouncing ink-colored dots */}
+        {/* Typing indicator — three bouncing ink-colored dots on paper bg */}
         {isTyping && (
           <div className="flex gap-2" style={{marginBottom:8}}><div className="flex-shrink-0" style={{width:28}}/>
             <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="flex items-center gap-1.5" style={{padding:'12px 16px',borderRadius:'28px 28px 28px 4px',background:'var(--color-paper)',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>

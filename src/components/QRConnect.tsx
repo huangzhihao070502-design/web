@@ -173,7 +173,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-paper font-sans">
 
-      {/* InkOS — subtle atmospheric wash */}
+      {/* InkOS — subtle atmospheric wash blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full opacity-[0.03] bg-ink" style={{ filter: 'blur(120px)' }} />
         <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full opacity-[0.02] bg-copper" style={{ filter: 'blur(120px)' }} />
@@ -216,7 +216,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
               <motion.div animate={{ opacity: [0.15, 0.35, 0.15], scale: [1, 1.05, 1] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute -inset-4 rounded-[40px] bg-copper/10" style={{ filter: 'blur(20px)' }} />
-              {/* Logo container */}
+              {/* Logo container — warm-white card, border-mist, shadow-paper-md */}
               <div className="relative flex h-[120px] w-[120px] items-center justify-center rounded-[36px] border border-mist bg-warm-white shadow-paper-md">
                 <motion.div animate={{ opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
@@ -227,7 +227,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
               <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-copper/30" />
             </motion.div>
 
-            {/* ---- Title ---- */}
+            {/* ---- Title (font-serif text-ink) ---- */}
             <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="font-serif text-[48px] tracking-[-0.03em] text-ink">
@@ -241,7 +241,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
               {t('qr.bot_running', lang)}
             </motion.p>
 
-            {/* ---- Bot info card ---- */}
+            {/* ---- Bot info card (warm-white, shadow-paper-md, border-mist) ---- */}
             <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="mt-10 w-full max-w-[340px] rounded-2xl border border-mist bg-warm-white p-6 shadow-paper-md">
@@ -267,12 +267,12 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
               </div>
             </motion.div>
 
-            {/* ---- Enter chat button ---- */}
+            {/* ---- Enter chat button (ink bg, hover:deep-ink, rounded-sm is default) ---- */}
             <motion.button onClick={onConnected}
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.65, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.98 }}
-              className="relative mt-10 flex h-[64px] w-full max-w-[320px] items-center justify-center gap-3 overflow-hidden rounded-xl bg-ink text-body font-semibold text-paper shadow-paper-lg transition-shadow hover:shadow-ink-lg active:shadow-paper-sm">
+              className="relative mt-10 flex h-[64px] w-full max-w-[320px] items-center justify-center gap-3 overflow-hidden rounded-xl bg-ink text-body font-semibold text-paper shadow-paper-lg transition-shadow hover:bg-deep-ink hover:shadow-ink-lg active:shadow-paper-sm">
               <span className="flex items-center gap-3">
                 {t('qr.enter_chat', lang)}
                 <ArrowRight size={18} strokeWidth={2} />
@@ -310,7 +310,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
               <p className="mt-2 text-body text-soft-ink">{t('qr.scan_hint', lang)}</p>
             </div>
 
-            {/* QR card */}
+            {/* QR card (warm-white, rounded-md via rounded-2xl, shadow-paper-md, border-mist) */}
             <div className="mx-auto mt-8 w-[260px]">
               <div className="rounded-2xl border border-mist bg-warm-white p-4 shadow-paper-md">
                 <img src={qrImgUrl} alt="微信二维码" className="block h-full w-full" />
@@ -335,7 +335,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
           </motion.div>
         )}
 
-        {/* ====== SCANED ====== */}
+        {/* ====== SCANED (copper accents) ====== */}
         {status === 'scaned' && (
           <motion.div key="scaned" {...scaleIn} className="text-center">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-xl border border-copper/20 bg-copper/10 shadow-paper-sm">
@@ -356,7 +356,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
           </motion.div>
         )}
 
-        {/* ====== CONNECTED ====== */}
+        {/* ====== CONNECTED (jade green accents) ====== */}
         {status === 'connected' && (
           <motion.div key="connected" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-[400px] text-center">
             <motion.div initial={{ scale: 0, rotate: -15 }} animate={{ scale: 1, rotate: 0 }}

@@ -1,7 +1,6 @@
 import { useState, useCallback, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, Check } from 'lucide-react';
-import { InkSplash } from './ink/InkEffect';
 import InputField from './InputField';
 import { register, isRegistered } from '../lib/auth';
 import { t, Lang } from '../lib/i18n';
@@ -17,6 +16,24 @@ interface FormErrors {
   email?: string;
   password?: string;
   confirm?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Ink splash decorations (CSS radial gradients at corners)          */
+/* ------------------------------------------------------------------ */
+function InkSplashes() {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+      <div
+        className="absolute -left-32 -top-32 h-64 w-64 opacity-[0.07]"
+        style={{ background: 'radial-gradient(circle at 30% 30%, #1A1A1A 0%, transparent 70%)' }}
+      />
+      <div
+        className="absolute -bottom-40 -right-40 h-80 w-80 opacity-[0.05]"
+        style={{ background: 'radial-gradient(circle at 70% 70%, #1A1A1A 0%, transparent 70%)' }}
+      />
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -88,8 +105,7 @@ export default function RegisterPage({ onLogin }: Props) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-paper font-sans">
-      <InkSplash x={0.05} y={0.05} />
-      <InkSplash x={0.95} y={0.95} size={300} />
+      <InkSplashes />
       <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-6">
         <motion.div className="w-full max-w-[420px]" variants={containerVariants} initial="hidden" animate="visible">
           <motion.div variants={itemVariants} className="mb-10 text-center">
@@ -102,7 +118,7 @@ export default function RegisterPage({ onLogin }: Props) {
             <p className="mt-2 text-[15px] font-normal leading-relaxed text-soft-ink">{t('register.subtitle', lang)}</p>
           </motion.div>
 
-          <motion.div variants={cardVariants} className="rounded-2xl border border-mist/50 bg-warm-white p-7 shadow-paper-md sm:p-8">
+          <motion.div variants={cardVariants} className="rounded-md border border-mist/50 bg-warm-white p-7 shadow-paper-md sm:p-8">
             {successMsg && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
                 className="mb-5 flex items-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-[14px] text-green-700">
@@ -124,7 +140,7 @@ export default function RegisterPage({ onLogin }: Props) {
               </motion.div>
               <motion.div variants={itemVariants} className="pt-1">
                 <button type="submit" disabled={loading}
-                  className={`relative flex h-12 w-full items-center justify-center rounded-xl text-[15px] font-medium text-paper transition-all duration-[400ms] cubic-bezier(0.22,1,0.36,1) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:ring-offset-warm-white disabled:cursor-not-allowed ${loading ? 'bg-deep-ink opacity-85' : 'bg-ink hover:bg-deep-ink hover:-translate-y-0.5 hover:shadow-paper-lg active:translate-y-0 active:shadow-paper-sm'}`}
+                  className={`relative flex h-12 w-full items-center justify-center rounded-sm text-[15px] font-medium text-paper transition-all duration-[400ms] cubic-bezier(0.22,1,0.36,1) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:ring-offset-warm-white disabled:cursor-not-allowed ${loading ? 'bg-deep-ink opacity-85' : 'bg-ink hover:bg-deep-ink hover:-translate-y-0.5 hover:shadow-paper-lg active:translate-y-0 active:shadow-paper-sm'}`}
                   aria-label={loading ? '注册中...' : '注册'}>
                   {loading ? (
                     <span className="flex items-center gap-2.5"><Spinner /><span className="text-paper/90">{t('register.registering', lang)}</span></span>
@@ -136,7 +152,7 @@ export default function RegisterPage({ onLogin }: Props) {
               <motion.p variants={itemVariants} className="pt-2 text-center text-[14px] text-soft-ink">
                 {t('register.has_account', lang)}{' '}
                 <a href="#" onClick={(e) => { e.preventDefault(); onLogin(); }}
-                  className="font-medium text-copper transition-colors duration-200 hover:text-copper/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/30 focus-visible:rounded" tabIndex={0}>
+                  className="font-medium text-ink transition-colors duration-200 hover:text-deep-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/30 focus-visible:rounded" tabIndex={0}>
                   {t('register.go_login', lang)}
                 </a>
               </motion.p>

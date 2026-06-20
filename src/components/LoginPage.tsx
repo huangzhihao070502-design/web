@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Check, AlertCircle, ShieldBan } from 'lucide-react';
-import { InkSplash } from './ink/InkEffect';
 import InputField from './InputField';
 import { login } from '../lib/auth';
 import { t, Lang } from '../lib/i18n';
@@ -16,6 +15,24 @@ function useLocalLang(): Lang {
 interface FormErrors {
   email?: string;
   password?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Ink splash decorations (CSS radial gradients at corners)          */
+/* ------------------------------------------------------------------ */
+function InkSplashes() {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+      <div
+        className="absolute -left-32 -top-32 h-64 w-64 opacity-[0.07]"
+        style={{ background: 'radial-gradient(circle at 30% 30%, #1A1A1A 0%, transparent 70%)' }}
+      />
+      <div
+        className="absolute -bottom-40 -right-40 h-80 w-80 opacity-[0.05]"
+        style={{ background: 'radial-gradient(circle at 70% 70%, #1A1A1A 0%, transparent 70%)' }}
+      />
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -217,8 +234,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
   if (ipBanned) {
     return (
       <div className="relative min-h-screen overflow-hidden bg-paper font-sans">
-        <InkSplash x={0.05} y={0.05} />
-        <InkSplash x={0.95} y={0.95} size={300} />
+        <InkSplashes />
         <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-6">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex w-full max-w-[420px] flex-col items-center text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 120, damping: 14 }}
@@ -240,8 +256,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
   /* ---------- render ---------- */
   return (
     <div className="relative min-h-screen overflow-hidden bg-paper font-sans">
-      <InkSplash x={0.05} y={0.05} />
-      <InkSplash x={0.95} y={0.95} size={300} />
+      <InkSplashes />
 
       {/* Main content */}
       <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-6">
@@ -272,7 +287,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
           {/* ---- Card ---- */}
           <motion.div
             variants={cardVariants}
-            className="rounded-2xl bg-warm-white shadow-paper-md p-7 sm:p-8"
+            className="rounded-md bg-warm-white shadow-paper-md p-7 sm:p-8"
           >
             {/* Login error banner */}
             {loginError && (
@@ -374,7 +389,7 @@ export default function LoginPage({ onRegister, onLoginSuccess }: Props) {
                   disabled={loading}
                   className={`
                     relative flex h-12 w-full items-center justify-center
-                    rounded-xl text-[15px] font-medium text-paper
+                    rounded-sm text-[15px] font-medium text-paper
                     transition-all duration-[400ms] cubic-bezier(0.22,1,0.36,1)
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/40 focus-visible:ring-offset-2 focus-visible:ring-offset-warm-white
                     disabled:cursor-not-allowed

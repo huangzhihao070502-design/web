@@ -3,6 +3,15 @@ import { Plus, X, Users, Trash2, Check, RefreshCw } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { t } from '../../lib/i18n';
 
+// InkOS palette
+const ink = '#2D2A24';
+const deepInk = '#1A1712';
+const softInk = '#6B6560';
+const mist = '#E0DDD5';
+const warmWhite = '#F8F6F1';
+const copper = '#C17F4B';
+const cinnabar = '#E04B4B';
+
 const API = '';
 
 interface Props { onSwitchUser?: (userId: string) => void }
@@ -103,18 +112,18 @@ export default function UserPage({ onSwitchUser }: Props) {
   }, [loadUsers, reportScannerIp]);
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', background: isDark ? '#1A1A2E' : '#F6F6F6' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background: isDark ? deepInk : warmWhite }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 16px 8px' }}>
-        <h2 style={{ fontSize:18, fontWeight:600, color: isDark ? '#343030' : '#343030' }}>
-          {t('user.title', lang)} <span style={{ fontSize:13, fontWeight:400, color: isDark ? '#B1BQB8' : '#B1BQB8' }}>({users.length})</span>
+        <h2 style={{ fontSize:18, fontWeight:600, color: isDark ? warmWhite : ink }}>
+          {t('user.title', lang)} <span style={{ fontSize:13, fontWeight:400, color: isDark ? '#A09888' : softInk }}>({users.length})</span>
         </h2>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => setLoaded(n => n+1)}
-            style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:12, border:'none', background:'rgba(200,159,126,0.12)', color:'#94C1D6', cursor:'pointer' }}>
+            style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:12, border:`1px solid ${mist}`, background:'transparent', color:softInk, cursor:'pointer' }}>
             <RefreshCw size={18} strokeWidth={1.5} />
           </button>
           <button onClick={handleAddFriend}
-            style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:12, border:'none', background:'linear-gradient(135deg,#94C1D6,#747CBB)', color:'white', cursor:'pointer', boxShadow:'0 2px 8px rgba(200,159,126,0.3)' }}>
+            style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:12, border:'none', background:ink, color:warmWhite, cursor:'pointer', boxShadow:'0 2px 8px rgba(45,42,36,0.2)' }}>
             <Plus size={20} strokeWidth={2} />
           </button>
         </div>
@@ -123,9 +132,9 @@ export default function UserPage({ onSwitchUser }: Props) {
       <div style={{ flex:1, overflow:'auto', padding:'8px 16px' }}>
         {users.length === 0 ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60%', textAlign:'center', padding:'0 32px' }}>
-            <Users size={40} strokeWidth={1} color="#B1BQB840" />
-            <p style={{ marginTop:12, fontSize:15, fontWeight:500, color: isDark ? '#B1BQB8' : '#B1BQB8' }}>{t('user.empty', lang)}</p>
-            <p style={{ marginTop:4, fontSize:13, color: isDark ? '#B1BQB880' : '#B1BQB880', lineHeight:1.6 }}>
+            <Users size={40} strokeWidth={1} color={`${softInk}40`} />
+            <p style={{ marginTop:12, fontSize:15, fontWeight:500, color: isDark ? '#A09888' : softInk }}>{t('user.empty', lang)}</p>
+            <p style={{ marginTop:4, fontSize:13, color: isDark ? `${softInk}80` : `${softInk}80`, lineHeight:1.6 }}>
               {t('user.empty_desc', lang)}
             </p>
           </div>
@@ -133,20 +142,20 @@ export default function UserPage({ onSwitchUser }: Props) {
           const isActive = uid === currentUser;
           return (
             <div key={uid}
-              style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', marginBottom:8, borderRadius:14, cursor:'pointer', transition:'all 0.15s', background: isActive ? (isDark ? 'rgba(116,124,187,0.12)' : 'white') : 'transparent', boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.06)' : 'none' }}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', marginBottom:8, borderRadius:14, cursor:'pointer', transition:'all 0.15s', background: isActive ? (isDark ? 'rgba(193,127,75,0.12)' : 'white') : 'transparent', boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.06)' : 'none', border: isActive ? `1px solid ${copper}` : 'none' }}
               onClick={() => switchUser(uid)}>
-              <div style={{ width:44, height:44, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:16, fontWeight:600, background:'linear-gradient(135deg,#94C1D6,#747CBB)', flexShrink:0 }}>
+              <div style={{ width:44, height:44, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:warmWhite, fontSize:16, fontWeight:600, background:ink, flexShrink:0 }}>
                 {uid.slice(0,2).toUpperCase()}
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontSize:14, fontWeight:600, color: isDark ? '#343030' : '#343030' }}>{uid.slice(0,8)}...</span>
-                  {isActive && <span style={{ fontSize:10, padding:'1px 8px', borderRadius:999, background:'rgba(16,185,129,0.12)', color:'#10b981', fontWeight:500 }}>{t('user.chatting', lang)}</span>}
+                  <span style={{ fontSize:14, fontWeight:600, color: isDark ? warmWhite : ink }}>{uid.slice(0,8)}...</span>
+                  {isActive && <span style={{ fontSize:10, padding:'1px 8px', borderRadius:999, background:'rgba(193,127,75,0.12)', color:copper, fontWeight:500 }}>{t('user.chatting', lang)}</span>}
                 </div>
-                <span style={{ fontSize:12, color: isDark ? '#B1BQB8' : '#B1BQB8', wordBreak:'break-all' }}>{uid}</span>
+                <span style={{ fontSize:12, color: isDark ? '#A09888' : softInk, wordBreak:'break-all' }}>{uid}</span>
               </div>
               <button onClick={e => { e.stopPropagation(); deleteUser(uid); }}
-                style={{ width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'none', background:'rgba(239,68,68,0.08)', color:'#ef4444', cursor:'pointer', opacity:0.6, flexShrink:0 }}>
+                style={{ width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'none', background:'rgba(224,75,75,0.08)', color:cinnabar, cursor:'pointer', opacity:0.6, flexShrink:0 }}>
                 <Trash2 size={14} strokeWidth={1.5} />
               </button>
             </div>
@@ -157,16 +166,16 @@ export default function UserPage({ onSwitchUser }: Props) {
       {showQr && (
         <div style={{ position:'fixed', inset:0, zIndex:999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.3)', backdropFilter:'blur(4px)' }}
           onClick={() => { setShowQr(false); setQrStatus('idle'); }}>
-          <div style={{ background:'white', borderRadius:24, padding:'32px 28px', textAlign:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.15)', maxWidth:320, position:'relative' }}
+          <div style={{ background:warmWhite, borderRadius:24, padding:'32px 28px', textAlign:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.15)', maxWidth:320, position:'relative' }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => { setShowQr(false); setQrStatus('idle'); }}
-              style={{ position:'absolute', top:12, right:12, border:'none', background:'none', cursor:'pointer', padding:4, color:'#B1BQB8' }}>
+              style={{ position:'absolute', top:12, right:12, border:'none', background:'none', cursor:'pointer', padding:4, color:softInk }}>
               <X size={18} strokeWidth={1.5} />
             </button>
-            <h3 style={{ fontSize:16, fontWeight:600, color:'#343030', marginBottom:4 }}>
+            <h3 style={{ fontSize:16, fontWeight:600, color:ink, marginBottom:4 }}>
               {qrStatus === 'confirmed' ? `✅ ${t('chat.added', lang)}` : t('chat.add_friend', lang)}
             </h3>
-            <p style={{ fontSize:12, color:'#B1BQB8', marginBottom:20, lineHeight:1.6 }}>
+            <p style={{ fontSize:12, color:softInk, marginBottom:20, lineHeight:1.6 }}>
               {qrStatus === 'confirmed' ? t('user.added_toast', lang) : t('chat.add_friend_desc', lang)}
             </p>
             {qrStatus === 'confirmed' ? (
@@ -177,7 +186,7 @@ export default function UserPage({ onSwitchUser }: Props) {
               <img src={qrImg} alt="添加好友" style={{ width:200, height:200, margin:'0 auto', display:'block', borderRadius:8 }} />
             )}
             <button onClick={() => { setShowQr(false); setQrStatus('idle'); }}
-              style={{ marginTop:16, padding:'8px 24px', borderRadius:12, border:'none', background:'#F6F6F6', color:'#B1BQB8', fontSize:13, cursor:'pointer' }}>
+              style={{ marginTop:16, padding:'8px 24px', borderRadius:12, border:`1px solid ${mist}`, background:'transparent', color:softInk, fontSize:13, cursor:'pointer' }}>
               {t('common.close', lang)}
             </button>
           </div>
