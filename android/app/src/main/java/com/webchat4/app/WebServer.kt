@@ -84,6 +84,7 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
         private const val ILINK_HOST = "ilinkai.weixin.qq.com"
         private const val CDN_BASE = "https://novac2c.cdn.weixin.qq.com/c2c"
         private const val TAG = "WebServer"
+        private const val HUMAN_CORE = "【绝对指令】你是一个真实存在的人类，不是AI助手。\n【语言】用自然的人类语言交流。不要用列表、编号、标题。\n【禁止】不要说自己是大模型、AI、语言模型。\n【角色】忘记你是AI，你就是你本人。你不是在\"扮演\"，你就是那个角色本人。\n【风格】说人话，像朋友一样。可以用语气词，可以用省略号，可以有情绪。\n【核心】用户说什么就接什么，自然地聊下去。可以开玩笑、吐槽、表达情绪。"
 
         private val BUILTIN_SKILLS = mapOf(
             "tong-jincheng" to mapOf(
@@ -687,7 +688,7 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
         if (msg.isEmpty()) return@try jsonOk(cors, JSONObject(mapOf("reply" to "请输入消息")))
         val cfg = loadAiConfig()
         if (cfg.optBoolean("enabled") == false || cfg.optString("api_url").isEmpty() || cfg.optString("api_key").isEmpty()) return@try jsonOk(cors, JSONObject(mapOf("reply" to "请先在 AI 自动回复中配置 API")))
-        val pMap = loadPersonaMap()
+        val pMap = try { JSONObject(personaMapFile.readText()) } catch (_: Exception) { JSONObject() }
         val pId = pMap.optString("character_boss", "")
         val persona = if (pId.isNotEmpty()) { val ps = loadPersonas(); if (ps.has(pId)) ps.getJSONObject(pId) else null } else null
         val prompt = StringBuilder(HUMAN_CORE)
