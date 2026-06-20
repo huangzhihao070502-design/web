@@ -1,8 +1,6 @@
-'use client';
-
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import InkEngine, { type InkEffectName } from './ink/InkEngine';
+import { InkEngine, type InkEffectName } from './ink/InkEngine';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                             */
