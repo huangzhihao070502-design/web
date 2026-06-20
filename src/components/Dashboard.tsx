@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, type ReactNode } from 'react';
 import { MessageCircle, User, Settings, Brain, Heart, Clock, BookOpen } from 'lucide-react';
 import Lenis from 'lenis';
 import ChatPage from './chat/ChatPage';
@@ -7,7 +7,14 @@ import SettingsPage from './chat/SettingsPage';
 import { useSettings } from '../contexts/SettingsContext';
 import { t } from '../lib/i18n';
 import Live2DWidget from './Live2DWidget';
-import MistScene from './ink/MistScene';
+
+// Lazy-load Three.js mist with error boundary (Android WebView may not support WebGL)
+const MistScene = lazy(() => import('./ink/MistScene'));
+class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolean}> {
+  state = { error: false };
+  static getDerivedStateFromError() { return { error: true }; }
+  render() { return this.state.error ? null : this.props.children; }
+}
 
 const API = '';
 
@@ -230,7 +237,7 @@ export default function Dashboard({ onLogout }: Props) {
 
   return (
     <>
-      <MistScene />
+      <ThreeErrorBoundary><Suspense fallback={null}><MistScene /></Suspense></ThreeErrorBoundary>
       <div className="relative z-10 flex h-screen w-screen overflow-hidden bg-paper font-sans text-body-sm text-ink">
         {desktopView}
         {mobileView}
