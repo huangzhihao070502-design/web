@@ -1,8 +1,9 @@
-// ipDetect.ts — 统一 IP 检测，不再依赖 httpbin.org
+// ipDetect.ts — 统一 IP 检测
+// 优先使用国内可达的服务，逐级降级
 
 export async function detectPublicIp(): Promise<string> {
   const sources = [
-    { url: 'https://api.ipify.org?format=json', parse: (d: any) => d.ip },
+    { url: 'https://httpbin.org/ip', parse: (d: any) => d.origin?.split(',')[0]?.trim() },
     { url: 'https://myip.ipip.net/json', parse: (d: any) => d.data?.ip || d.ip },
     { url: 'https://ipapi.co/json/', parse: (d: any) => d.ip },
   ]

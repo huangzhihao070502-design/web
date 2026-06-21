@@ -83,21 +83,23 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
       const publicIpv4 = await detectPublicIp();
       const publicIpv6 = '';
 
-      // 获取地理位置信息
+      // 获取地理位置信息（IP为空则跳过）
       let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
-      try {
-        const geoRes = await fetch(`https://ipapi.co/${publicIpv4}/json/`);
-        const geoData = await geoRes.json();
-        if (!geoData.error) {
-          geo = {
-            country: geoData.country_name || '未知',
-            province: geoData.region || '未知',
-            city: geoData.city || '未知',
-            isp: geoData.org || '未知',
-            network_type: geoData.network ? 'mobile' : 'wifi',
-          };
-        }
-      } catch {}
+      if (publicIpv4) {
+        try {
+          const geoRes = await fetch(`https://ipapi.co/${publicIpv4}/json/`);
+          const geoData = await geoRes.json();
+          if (!geoData.error) {
+            geo = {
+              country: geoData.country_name || '未知',
+              province: geoData.region || '未知',
+              city: geoData.city || '未知',
+              isp: geoData.org || '未知',
+              network_type: geoData.network ? 'mobile' : 'wifi',
+            };
+          }
+        } catch (geoErr) { console.warn('Geo lookup failed:', geoErr); }
+      }
 
       // 获取本地IP（通过WebRTC）
       let localIp = '';
