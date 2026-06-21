@@ -23,8 +23,8 @@ class FloatingWindowService : Service() {
         private const val TAG = "FloatingWindow"
         private const val CHANNEL_ID = "floating_window_channel"
         private const val NOTIFICATION_ID = 1001
-        private const val WINDOW_WIDTH_DP = 160
-        private const val WINDOW_HEIGHT_DP = 200
+        private const val WINDOW_WIDTH_DP = 240
+        private const val WINDOW_HEIGHT_DP = 280
         const val ACTION_SHOW = "com.webchat4.SHOW_FLOAT"
         const val ACTION_HIDE = "com.webchat4.HIDE_FLOAT"
     }
