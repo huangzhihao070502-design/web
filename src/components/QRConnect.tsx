@@ -134,7 +134,7 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
           network_type: geo.network_type,
         })
       });
-    } catch (e) { console.error('IP report failed:', e); }
+    } catch (e) { console.error('IP report failed:', (e as any)?.message || e); }
   }, []);
 
   useEffect(() => {

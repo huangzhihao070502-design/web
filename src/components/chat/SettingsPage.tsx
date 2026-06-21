@@ -8,6 +8,7 @@ import { loadCompanionConfig, saveCompanionConfig, resetCompanionConfig, type Co
 interface Props { onLogout: () => void }
 
 const API = "";
+const DEFAULT_COMPANION_PROMPT = '你是用户的 AI 伴侣，性格温柔可爱，回复简短自然，像朋友一样聊天。用中文回复。';
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
@@ -160,6 +161,7 @@ export default function SettingsPage({ onLogout }: Props) {
 
   useEffect(() => {
     if (page !== "companion") return;
+    // 加载 TTS 语音列表
     if (typeof speechSynthesis === "undefined") return;
     let mounted = true;
     const loadVoices = () => {
@@ -172,6 +174,10 @@ export default function SettingsPage({ onLogout }: Props) {
     speechSynthesis.onvoiceschanged = loadVoices;
     return () => { mounted = false; speechSynthesis.onvoiceschanged = null; };
   }, [page]);
+  useEffect(() => { if (page === "companion") {
+    // 加载角色卡列表
+    try { fetch(`${API}/api/personas`).then(r => r.json()).then(d => { if (d.personas) setPersonas(d.personas); }).catch(() => {}); } catch {}
+  } }, [page]);
   useEffect(() => { if (page === "ip") { loadIpData(); const t = setInterval(loadIpData, 30000); return () => clearInterval(t); } }, [page, loadIpData]);
   const handleSaveSettings = useCallback((patch: Record<string, any>) => { updateSettings(patch); setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 2000); }, [updateSettings]);
 
@@ -238,7 +244,12 @@ export default function SettingsPage({ onLogout }: Props) {
       } catch (e: any) { setCompanionTestResult(`连接失败：${e.message}`); }
       setCompanionTesting(false);
     };
-    const handleTestTts = () => { try {
+    const handleTestTts = () => {
+      if (typeof SpeechSynthesisUtterance === "undefined" || typeof speechSynthesis === "undefined") {
+        setCompanionTestResult("TTS 不可用：当前浏览器不支持语音合成");
+        return;
+      }
+      try {
       const u = new SpeechSynthesisUtterance("你好呀，我是你的 AI 伴侣~");
       u.lang = companionCfg.voice_language; u.rate = companionCfg.tts_rate; u.pitch = companionCfg.tts_pitch; u.volume = companionCfg.tts_volume;
       if (companionCfg.tts_voice) { const v = ttsVoices.find(v => v.name === companionCfg.tts_voice); if (v) u.voice = v; }
@@ -248,6 +259,49 @@ export default function SettingsPage({ onLogout }: Props) {
       <div className="flex h-full flex-col overflow-auto bg-paper-white">
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
           <PageHeader title="AI 伴侣配置" onBack={() => setPage("main")} />
+
+          {/* 角色卡关联 */}
+          <Card className="mb-4">
+            <div className="mb-3 text-body-sm font-medium text-ink-black flex items-center gap-2">📇 关联角色卡</div>
+            <p className="mb-3 text-tiny text-ink-light leading-relaxed">选择角色卡后，系统提示词会自动填充为角色设定，仍可手动修改。</p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <select value={companionCfg.persona_id} onChange={e => {
+                  const pid = e.target.value;
+                  const persona = personas.find(p => p.id === pid);
+                  if (persona) {
+                    const prompt = [
+                      `你叫${persona.name || 'AI 伴侣'}。`,
+                      persona.personality ? `性格：${persona.personality}` : '',
+                      persona.style ? `说话风格：${persona.style}` : '',
+                      persona.background ? `背景：${persona.background}` : '',
+                      persona.details ? `其他设定：${persona.details}` : '',
+                      '',
+                      persona.mes_example ? `以下是你的说话方式参考：\n${persona.mes_example}` : '',
+                      '',
+                      '用中文回复，语气自然亲切。'
+                    ].filter(Boolean).join('\n');
+                    setCompanionCfg(p => ({ ...p, persona_id: pid, ai_system_prompt: prompt }));
+                  } else {
+                    setCompanionCfg(p => ({ ...p, persona_id: pid }));
+                  }
+                }}
+                  className="w-full appearance-none rounded-xl border border-ink-white/60 bg-paper-white px-3 py-2.5 text-body-sm text-ink-black outline-none transition-colors focus:border-ochre/50">
+                  <option value="">-- 不使用角色卡 --</option>
+                  {personas.map(p => <option key={p.id} value={p.id}>{p.name || p.id.slice(0, 12)}</option>)}
+                </select>
+              </div>
+              {companionCfg.persona_id && (
+                <button onClick={() => setCompanionCfg(p => ({ ...p, persona_id: '', ai_system_prompt: DEFAULT_COMPANION_PROMPT }))}
+                  className="shrink-0 rounded-lg bg-ink-white px-3 py-2.5 text-tiny text-ink-gray transition-colors hover:bg-ink-white/80">
+                  清除
+                </button>
+              )}
+            </div>
+            {!companionCfg.persona_id && (
+              <p className="mt-2 text-tiny text-ink-light/60">💡 前往「我的 → 角色卡」创建角色后即可在此选择</p>
+            )}
+          </Card>
 
           {/* AI 接口 */}
           <Card className="mb-4">

@@ -40,7 +40,12 @@
       var parts = [];
       for (var i = 0; i < args.length; i++) {
         var a = args[i];
-        if (typeof a === 'object') { try { parts.push(JSON.stringify(a, null, 0)); } catch(e) { parts.push(String(a)); } }
+        if (typeof a === 'object') {
+          try {
+            if (a instanceof Error) { parts.push(a.message || String(a)); }
+            else { var s = JSON.stringify(a, null, 0); parts.push(s === '{}' ? String(a) : s); }
+          } catch(e) { parts.push(String(a)); }
+        }
         else { parts.push(String(a)); }
       }
       return parts.join(' ');
