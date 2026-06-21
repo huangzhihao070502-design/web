@@ -15,21 +15,22 @@ html, body {
 #live2d, canvas, [id^="waifu"] {
   background: transparent !important; box-shadow: none !important;
 }
-#waifu { pointer-events: none; position: fixed; bottom: 0; right: 0; z-index: 1000; }
-#waifu-tips { pointer-events: none; }
-#waifu-canvas { pointer-events: auto; display: inline-block; }
-#live2d { pointer-events: auto; cursor: pointer; height: 150px; width: 150px; position: relative; }
+/* 不用 pointer-events:none，用 fit-content 让容器只包裹 canvas */
+#waifu { position: fixed; bottom: 0; right: 0; z-index: 1000; width: fit-content; height: fit-content; }
+#waifu-canvas { display: inline-block; }
+#live2d { cursor: pointer; height: 150px; width: 150px; position: relative; }
 #live2d:active { cursor: grabbing; }
-#waifu-tool { pointer-events: auto; }
 #waifu-toggle { display: none !important; }
 #waifu-tips {
   animation: waifu-shake 50s ease-in-out 5s infinite;
   background-color: rgba(236, 217, 188, .5) !important;
   border: 1px solid rgba(224, 186, 140, .62); border-radius: 12px;
   box-shadow: 0 3px 15px 2px rgba(191, 158, 118, .2);
-  font-size: 13px; line-height: 20px; margin: -24px -10px; min-height: 60px;
-  opacity: 0; overflow: hidden; padding: 5px 10px; position: absolute;
+  font-size: 13px; line-height: 20px; min-height: 60px;
+  opacity: 0; overflow: hidden; padding: 5px 10px;
+  position: absolute; bottom: 160px; right: 0;
   text-overflow: ellipsis; transition: opacity 1s; width: 200px; word-break: break-all;
+  pointer-events: none;
 }
 #waifu-tips.waifu-tips-active { opacity: 1; transition: opacity .2s; }
 #waifu-tips span { color: #0099cc; }
@@ -40,14 +41,12 @@ html, body {
 #waifu:hover #waifu-tool { opacity: 1; }
 #waifu-tool svg { cursor: pointer; display: block; fill: #7b8c9d; height: 22px; transition: fill .3s; }
 #waifu-tool svg:hover { fill: #C89F7E; }
-/* 气泡消息 */
 .float-bubble {
   position: fixed; bottom: 170px; right: 10px;
   background: rgba(236, 217, 188, .95); border: 1px solid rgba(224, 186, 140, .6);
   border-radius: 12px; padding: 8px 14px; font-size: 13px; color: #333;
   z-index: 10001; max-width: 180px; pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15); opacity: 0;
-  transition: opacity 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15); opacity: 0; transition: opacity 0.3s ease;
 }
 .float-bubble.show { opacity: 1; }
 @keyframes waifu-shake {
@@ -137,7 +136,6 @@ function showTip(text,duration,priority,force){
   _tipTimer=setTimeout(function(){sessionStorage.removeItem('waifu-message-priority');el.classList.remove('waifu-tips-active')},duration);
 }
 function pick(arr){return Array.isArray(arr)?arr[Math.floor(Math.random()*arr.length)]:arr}
-
 function initTipsSystem(config){
   var defaults=config.message['default'];
   config.seasons.forEach(function(s){var now=new Date();var parts=s.date.split('-');var from=parts[0].split('/');var to=(parts[1]||parts[0]).split('/');if(Number(from[0])<=now.getMonth()+1&&now.getMonth()+1<=Number(to[0])&&Number(from[1])<=now.getDate()&&now.getDate()<=Number(to[1]))defaults.push(pick(s.text).replace('{year}',String(now.getFullYear())))});
@@ -149,7 +147,6 @@ function initTipsSystem(config){
   window.addEventListener('live2d:tapbody',function(){showTip(pick(config.message.tapBody),4000,9)});
   var now=new Date();config.time.forEach(function(t){var parts=t.hour.split('-');if(Number(parts[0])<=now.getHours()&&now.getHours()<=Number(parts[1]||parts[0]))showTip(t.text,7000,11)});
 }
-
 function initAnimations(){
   var s=document.createElement('style');
   s.textContent='@keyframes live2d-tilt{0%,100%{transform:rotate(0deg)}25%{transform:rotate(1.5deg)}75%{transform:rotate(-1.5deg)}}#waifu-canvas{animation:live2d-tilt 8s ease-in-out infinite}';
@@ -157,79 +154,57 @@ function initAnimations(){
   var lastBlink=Date.now();
   setInterval(function(){try{var m=window.__live2d_model;if(!m)return;var now=Date.now();if(now-lastBlink>4000+Math.random()*2000){m.setParamFloat&&m.setParamFloat('PARAM_EYE_L_OPEN',0.1);m.setParamFloat&&m.setParamFloat('PARAM_EYE_R_OPEN',0.1);setTimeout(function(){m.setParamFloat&&m.setParamFloat('PARAM_EYE_L_OPEN',1);m.setParamFloat&&m.setParamFloat('PARAM_EYE_R_OPEN',1)},150);lastBlink=now}m.setParamFloat&&m.setParamFloat('PARAM_BREATH',0.5+Math.sin(Date.now()/2000)*0.15);m.setParamFloat&&m.setParamFloat('PARAM_EYE_BALL_X',Math.sin(Date.now()/4000)*3);m.setParamFloat&&m.setParamFloat('PARAM_EYE_BALL_Y',Math.cos(Date.now()/5000)*2);m.setParamFloat&&m.setParamFloat('PARAM_BODY_ANGLE_X',Math.sin(Date.now()/3000)*1.5);m.setParamFloat&&m.setParamFloat('PARAM_ANGLE_Z',Math.sin(Date.now()/4000)*2)}catch(e){}},50);
 }
-
-/* ★ 角色互动系统 ★ */
 function setupCharacterInteraction(){
   var canvas=document.getElementById('live2d');if(!canvas)return;
   var headReactions=['嗯？怎么了~','别摸人家的头啦~','呜呜，发型要乱了！','嘿嘿，好舒服~','你在摸我头吗？'];
   var bodyReactions=['呀！别碰那里！','好痒好痒~','你在做什么呀！','哼，不理你了！','讨厌啦~'];
   var generalReactions=['有什么事吗？','我在听哦~','嗯嗯，然后呢？','你好呀！','今天过得怎么样？','想聊点什么吗？','嘻嘻~'];
   var specialReactions=['要抱抱~','最喜欢你了！','今天也要加油哦！','你是来找我玩的吗？','嘿嘿，被你发现了~'];
-
   function showReaction(text){
-    var bubble=document.createElement('div');bubble.className='float-bubble';bubble.textContent=text;
-    document.body.appendChild(bubble);
-    requestAnimationFrame(function(){bubble.classList.add('show')});
-    setTimeout(function(){bubble.classList.remove('show');setTimeout(function(){bubble.remove()},300)},3000);
+    var el=document.getElementById('waifu-tips');
+    if(el){el.innerHTML=text;el.classList.add('waifu-tips-active');setTimeout(function(){el.classList.remove('waifu-tips-active')},3000);return}
+    var b=document.createElement('div');b.className='float-bubble';b.textContent=text;document.body.appendChild(b);
+    requestAnimationFrame(function(){b.classList.add('show')});
+    setTimeout(function(){b.classList.remove('show');setTimeout(function(){b.remove()},300)},3000);
   }
-
-  function getTapZone(e){
-    var rect=canvas.getBoundingClientRect();
-    var y=(e.clientY-rect.top)/rect.height;
-    if(y<0.4)return 'head';
-    if(y<0.8)return 'body';
-    return 'other';
-  }
-
+  function getTapZone(e){var rect=canvas.getBoundingClientRect();var y=(e.clientY-rect.top)/rect.height;if(y<0.4)return 'head';if(y<0.8)return 'body';return 'other'}
   var lastTapTime=0;
   canvas.addEventListener('click',function(e){
     var now=Date.now();if(now-lastTapTime<200)return;lastTapTime=now;
-    var zone=getTapZone(e);
-    var pool=zone==='head'?headReactions:zone==='body'?bodyReactions:generalReactions;
+    var zone=getTapZone(e);var pool=zone==='head'?headReactions:zone==='body'?bodyReactions:generalReactions;
     showReaction(pick(pool));
-    if(zone==='head'){try{var m=window.__live2d_model;if(m?.setParamFloat){m.setParamFloat('PARAM_ANGLE_Z',15);setTimeout(function(){m.setParamFloat('PARAM_ANGLE_Z',-15)},150);setTimeout(function(){m.setParamFloat('PARAM_ANGLE_Z',10)},300);setTimeout(function(){m.setParamFloat('PARAM_ANGLE_Z',0)},450)}}catch(e){}}
-    else if(zone==='body'){try{var m=window.__live2d_model;if(m?.setParamFloat){m.setParamFloat('PARAM_BODY_ANGLE_Z',5);setTimeout(function(){m.setParamFloat('PARAM_BODY_ANGLE_Z',-3)},200);setTimeout(function(){m.setParamFloat('PARAM_BODY_ANGLE_Z',0)},400)}}catch(e){}}
+    if(zone==='head'){try{var m=window.__live2d_model;if(m&&m.setParamFloat){m.setParamFloat('PARAM_ANGLE_Z',15);setTimeout(function(){m.setParamFloat('PARAM_ANGLE_Z',-15)},150);setTimeout(function(){m.setParamFloat('PARAM_ANGLE_Z',10)},300);setTimeout(function(){m.setParamFloat('PARAM_ANGLE_Z',0)},450)}}catch(e){}}
+    else if(zone==='body'){try{var m=window.__live2d_model;if(m&&m.setParamFloat){m.setParamFloat('PARAM_BODY_ANGLE_Z',5);setTimeout(function(){m.setParamFloat('PARAM_BODY_ANGLE_Z',-3)},200);setTimeout(function(){m.setParamFloat('PARAM_BODY_ANGLE_Z',0)},400)}}catch(e){}}
     window.dispatchEvent(new CustomEvent('live2d:tapbody'));
   });
-
   canvas.addEventListener('mousemove',function(e){
-    try{var m=window.__live2d_model;if(!m?.setParamFloat)return;var rect=canvas.getBoundingClientRect();
+    try{var m=window.__live2d_model;if(!m||!m.setParamFloat)return;var rect=canvas.getBoundingClientRect();
     var x=((e.clientX-rect.left)/rect.width-0.5)*6;var y=((e.clientY-rect.top)/rect.height-0.5)*4;
     m.setParamFloat('PARAM_EYE_BALL_X',x);m.setParamFloat('PARAM_EYE_BALL_Y',y);
     m.setParamFloat('PARAM_ANGLE_X',y*0.5);m.setParamFloat('PARAM_ANGLE_Y',x*0.3)}catch(e){}
   });
   canvas.addEventListener('mouseleave',function(){
-    try{var m=window.__live2d_model;if(!m?.setParamFloat)return;
+    try{var m=window.__live2d_model;if(!m||!m.setParamFloat)return;
     m.setParamFloat('PARAM_EYE_BALL_X',0);m.setParamFloat('PARAM_EYE_BALL_Y',0);
     m.setParamFloat('PARAM_ANGLE_X',0);m.setParamFloat('PARAM_ANGLE_Y',0)}catch(e){}
   });
-
   var longPressTimer=null;
   canvas.addEventListener('touchstart',function(){
     longPressTimer=setTimeout(function(){showReaction(pick(specialReactions));
-      try{var m=window.__live2d_model;if(m?.setParamFloat){m.setParamFloat('PARAM_EYE_L_OPEN',0.1);m.setParamFloat('PARAM_EYE_R_OPEN',0.1);setTimeout(function(){m.setParamFloat('PARAM_EYE_L_OPEN',1);m.setParamFloat('PARAM_EYE_R_OPEN',1)},300)}}catch(e){}
+      try{var m=window.__live2d_model;if(m&&m.setParamFloat){m.setParamFloat('PARAM_EYE_L_OPEN',0.1);m.setParamFloat('PARAM_EYE_R_OPEN',0.1);setTimeout(function(){m.setParamFloat('PARAM_EYE_L_OPEN',1);m.setParamFloat('PARAM_EYE_R_OPEN',1)},300)}}catch(e){}
     },800);
   },{passive:true});
   canvas.addEventListener('touchend',function(){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}});
   canvas.addEventListener('touchmove',function(){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}});
 }
-
 (function(){
-  loadWrapped('chunk/index.js')
-    .then(function(){return loadWrapped('chunk/index2.js')})
-    .then(function(){return loadWrapped('waifu-tips.js')})
-    .then(function(){
-      if(window.initWidget){window.initWidget({waifuPath:'waifu-tips.json',cubism2Path:'live2d.min.js',cubism5Path:'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',tools:['switch-model','switch-texture','photo','quit'],logLevel:'warn',drag:false})}
-      return fetch('waifu-tips.json');
-    })
-    .then(function(r){return r.json()})
-    .then(function(config){
-      initTipsSystem(config);
-      setTimeout(initAnimations,2000);
-      setTimeout(setupCharacterInteraction,2000);
-      setTimeout(function(){showTip('悬浮窗已启动~',4000,10)},1000);
-    })
-    .catch(function(err){console.error('[Float] Init failed:',err)});
+  loadWrapped('chunk/index.js').then(function(){return loadWrapped('chunk/index2.js')}).then(function(){return loadWrapped('waifu-tips.js')}).then(function(){
+    if(window.initWidget){window.initWidget({waifuPath:'waifu-tips.json',cubism2Path:'live2d.min.js',cubism5Path:'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',tools:['switch-model','switch-texture','photo','quit'],logLevel:'warn',drag:false})}
+    return fetch('waifu-tips.json');
+  }).then(function(r){return r.json()}).then(function(config){
+    initTipsSystem(config);setTimeout(initAnimations,2000);setTimeout(setupCharacterInteraction,2000);
+    setTimeout(function(){showTip('悬浮窗已启动~',4000,10)},1000);
+  }).catch(function(err){console.error('[Float] Init failed:',err)});
 })();
 </script>
 </body>
