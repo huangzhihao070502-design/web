@@ -24,13 +24,10 @@
   transform: translateY(25px);
   transition: transform .3s ease-in-out;
   z-index: 1000;
-  /* ★ 核心：容器不拦截点击，让点击穿透到下层元素 ★ */
   pointer-events: none;
 }
-
 #waifu.waifu-active { }
 #waifu.waifu-hidden { display: none; }
-
 #waifu.waifu-dragging {
   cursor: grabbing !important;
   opacity: 0.85;
@@ -40,7 +37,6 @@
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
   z-index: 1001;
 }
-
 #waifu:hover { transform: translateY(20px); }
 
 #waifu-tips {
@@ -61,23 +57,28 @@
   transition: opacity 1s;
   width: 200px;
   word-break: break-all;
-  /* 台词框也不拦截点击 */
   pointer-events: none;
 }
 #waifu-tips.waifu-tips-active { opacity: 1; transition: opacity .2s; }
 #waifu-tips span { color: #0099cc; }
 
+/* ★ canvas 区域接收点击 → 角色互动 ★ */
+#waifu-canvas {
+  pointer-events: auto;
+  display: inline-block;
+}
 #live2d {
-  cursor: grab;
+  cursor: pointer;
   height: 150px;
   position: relative;
   width: 150px;
-  /* ★ 只有 canvas 本身接收点击（用于角色交互） ★ */
   pointer-events: auto;
 }
 #live2d:active { cursor: grabbing; }
 
+/* 工具栏接收点击 */
 #waifu-tool {
+  pointer-events: auto;
   align-items: center;
   display: flex;
   flex-direction: column;
@@ -87,8 +88,6 @@
   right: -10px;
   top: 60px;
   transition: opacity 1s;
-  /* 工具栏需要接收点击 */
-  pointer-events: auto;
 }
 #waifu:hover #waifu-tool { opacity: 1; }
 #waifu-tool svg {
