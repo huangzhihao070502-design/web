@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from "react";
 
 const API = "";
 
@@ -156,8 +156,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const contextValue = useMemo(() => ({
+    settings, loaded, lang, resolvedTheme, updateSettings, toggleFeature
+  }), [settings, loaded, lang, resolvedTheme, updateSettings, toggleFeature]);
+
   return (
-    <SettingsContext.Provider value={{ settings, loaded, lang, resolvedTheme, updateSettings, toggleFeature }}>
+    <SettingsContext.Provider value={contextValue}>
       {children}
     </SettingsContext.Provider>
   );

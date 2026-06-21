@@ -136,6 +136,26 @@
       clearBtn2.style.cssText = 'padding:2px 6px;border-radius:4px;font-size:12px;cursor:pointer;background:#2a2a2a;color:#aaa;';
       clearBtn2.onclick = function() { logs = []; renderLogs(); };
       filterBar.appendChild(clearBtn2);
+      var copyBtn = document.createElement('span');
+      copyBtn.textContent = '📋';
+      copyBtn.title = '复制全部日志';
+      copyBtn.style.cssText = 'padding:2px 6px;border-radius:4px;font-size:12px;cursor:pointer;background:#2a2a2a;color:#aaa;';
+      copyBtn.onclick = function() {
+        var text = '';
+        for (var ci = 0; ci < logs.length; ci++) {
+          var cl = logs[ci];
+          if (filterLevel !== 'all' && cl.level !== filterLevel) continue;
+          if (searchText && cl.msg.toLowerCase().indexOf(searchText) === -1) continue;
+          text += '[' + cl.time + '] [' + cl.level.toUpperCase() + '] ' + cl.msg + '\n';
+        }
+        if (navigator.clipboard && text) {
+          navigator.clipboard.writeText(text).then(function() {
+            copyBtn.textContent = '✅';
+            setTimeout(function() { copyBtn.textContent = '📋'; }, 1500);
+          });
+        }
+      };
+      filterBar.appendChild(copyBtn);
       panel.appendChild(filterBar);
 
       // Log list
