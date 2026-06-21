@@ -92,7 +92,7 @@ function getRelationshipStage(affection: number): string {
 
 export default function SettingsPage({ onLogout }: Props) {
   const [email, setEmail] = useState("");
-  const [page, setPage] = useState<"main" | "account" | "ai" | "personas" | "personaEdit" | "logs" | "features" | "notifications" | "privacy" | "general" | "about" | "ip">("main");
+  const [page, setPage] = useState<"main" | "account" | "ai" | "personas" | "personaEdit" | "logs" | "features" | "notifications" | "privacy" | "general" | "about" | "ip" | "companion">("main");
   const settingsCtx = useSettings();
   const settings = settingsCtx?.settings || { general_language: 'zh-CN', general_theme: 'auto', general_font_size: 'normal', features: {} };
   const lang = settingsCtx?.lang || 'zh-CN';
