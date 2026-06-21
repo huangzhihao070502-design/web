@@ -164,11 +164,11 @@ export default function SettingsPage({ onLogout }: Props) {
       } catch (e: any) { setCompanionTestResult(`连接失败：${e.message}`); }
       setCompanionTesting(false);
     };
-    const handleTestTts = () => {
+    const handleTestTts = () => { try {
       const u = new SpeechSynthesisUtterance("你好呀，我是你的 AI 伴侣~");
       u.lang = companionCfg.voice_language; u.rate = companionCfg.tts_rate; u.pitch = companionCfg.tts_pitch; u.volume = companionCfg.tts_volume;
       if (companionCfg.tts_voice) { const v = ttsVoices.find(v => v.name === companionCfg.tts_voice); if (v) u.voice = v; }
-      speechSynthesis.speak(u);
+      speechSynthesis.speak(u); } catch(e) { setCompanionTestResult("TTS 不可用: " + (e.message || e)); }
     };
     return (
       <div className="flex h-full flex-col overflow-auto bg-paper-white">
@@ -304,7 +304,7 @@ export default function SettingsPage({ onLogout }: Props) {
     } catch {}
   }, [ipSearch, ipFilter]);
 
-  useEffect(() => { if (page === "companion") { const loadVoices = () => { const v = speechSynthesis.getVoices(); if (v.length > 0) setTtsVoices(v); }; loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; } }, [page]);
+  useEffect(() => { if (page === "companion" && typeof speechSynthesis !== "undefined") { const loadVoices = () => { try { const v = speechSynthesis.getVoices(); if (v.length > 0) setTtsVoices(v); } catch {} }; loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch {} } }, [page]);
   useEffect(() => { if (page === "ip") { loadIpData(); const t = setInterval(loadIpData, 30000); return () => clearInterval(t); } }, [page, loadIpData]);
   const handleSaveSettings = useCallback((patch: Record<string, any>) => { updateSettings(patch); setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 2000); }, [updateSettings]);
 
@@ -371,11 +371,11 @@ export default function SettingsPage({ onLogout }: Props) {
       } catch (e: any) { setCompanionTestResult(`连接失败：${e.message}`); }
       setCompanionTesting(false);
     };
-    const handleTestTts = () => {
+    const handleTestTts = () => { try {
       const u = new SpeechSynthesisUtterance("你好呀，我是你的 AI 伴侣~");
       u.lang = companionCfg.voice_language; u.rate = companionCfg.tts_rate; u.pitch = companionCfg.tts_pitch; u.volume = companionCfg.tts_volume;
       if (companionCfg.tts_voice) { const v = ttsVoices.find(v => v.name === companionCfg.tts_voice); if (v) u.voice = v; }
-      speechSynthesis.speak(u);
+      speechSynthesis.speak(u); } catch(e) { setCompanionTestResult("TTS 不可用: " + (e.message || e)); }
     };
     return (
       <div className="flex h-full flex-col overflow-auto bg-paper-white">
