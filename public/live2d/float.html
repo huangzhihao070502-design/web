@@ -10,12 +10,14 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: transparent;
+  background: transparent !important;
   -webkit-user-select: none;
   user-select: none;
 }
-#waifu, #waifu-canvas, #waifu-tool { background: transparent !important; box-shadow: none !important; }
-#waifu, canvas { background: transparent !important; }
+#waifu, #waifu-canvas, #waifu-tool, #live2d, canvas {
+  background: transparent !important;
+  box-shadow: none !important;
+}
 #waifu {
   position: fixed;
   bottom: 0;
@@ -41,10 +43,7 @@ html, body {
   width: 200px;
   word-break: break-all;
 }
-#waifu-tips.waifu-tips-active {
-  opacity: 1;
-  transition: opacity .2s;
-}
+#waifu-tips.waifu-tips-active { opacity: 1; transition: opacity .2s; }
 #waifu-tips span { color: #0099cc; }
 #live2d {
   cursor: grab;
@@ -74,6 +73,7 @@ html, body {
 }
 #waifu-tool svg:hover { fill: #C89F7E; }
 @keyframes waifu-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
   2% { transform: translate(.5px, -1.5px) rotate(-.5deg); }
   4% { transform: translate(.5px, 1.5px) rotate(1.5deg); }
   6% { transform: translate(1.5px, 1.5px) rotate(1.5deg); }
@@ -123,9 +123,35 @@ html, body {
   94% { transform: translate(.5px, .5px) rotate(-.5deg); }
   96% { transform: translate(2.5px, -.5px) rotate(-.5deg); }
   98% { transform: translate(-1.5px, -1.5px) rotate(-.5deg); }
-  0%, 100% { transform: translate(0, 0) rotate(0); }
 }
 </style>
+
+<script>
+/* ★ 关键：在 Live2D 脚本加载前，强制 WebGL context 开启 alpha 通道 ★ */
+(function() {
+  var origGetContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function(type, attrs) {
+    if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
+      attrs = attrs || {};
+      attrs.alpha = true;
+      attrs.premultipliedAlpha = false;
+      attrs.antialias = true;
+    }
+    return origGetContext.call(this, type, attrs);
+  };
+  /* 定时清除 canvas 背景 */
+  setInterval(function() {
+    var c = document.getElementById('live2d');
+    if (c) {
+      var gl = c.getContext('webgl') || c.getContext('webgl2') || c.getContext('experimental-webgl');
+      if (gl) {
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
+    }
+  }, 500);
+})();
+</script>
 </head>
 <body>
 
@@ -137,30 +163,23 @@ html, body {
   <div id="waifu-tool"></div>
 </div>
 
-<!-- Cubism 2 核心库 -->
 <script src="live2d.min.js"></script>
 
 <script>
-/* === 阻塞加载器（与 autoload.js 一致） === */
 function loadWrapped(url) {
-  return fetch(url)
-    .then(function(r) { return r.text(); })
-    .then(function(code) {
-      return new Promise(function(resolve) {
-        var script = document.createElement('script');
-        script.textContent = '(function(){' + code + '\n})();';
-        script.onload = resolve;
-        document.body.appendChild(script);
-        resolve();
-      });
+  return fetch(url).then(function(r) { return r.text(); }).then(function(code) {
+    return new Promise(function(resolve) {
+      var s = document.createElement('script');
+      s.textContent = '(function(){' + code + '\n})();';
+      document.body.appendChild(s);
+      resolve();
     });
+  });
 }
 
-/* === 台词显示引擎 === */
 var _tipTimer = null;
 function showTip(text, duration, priority, force) {
-  duration = duration || 4000;
-  priority = priority || 0;
+  duration = duration || 4000; priority = priority || 0;
   var stored = parseInt(sessionStorage.getItem('waifu-message-priority'), 10);
   if (isNaN(stored)) stored = 0;
   if (!text || (!force && stored > priority) || (force && stored >= priority)) return;
@@ -169,130 +188,63 @@ function showTip(text, duration, priority, force) {
   sessionStorage.setItem('waifu-message-priority', String(priority));
   var el = document.getElementById('waifu-tips');
   if (!el) return;
-  el.innerHTML = text;
-  el.classList.add('waifu-tips-active');
+  el.innerHTML = text; el.classList.add('waifu-tips-active');
   _tipTimer = setTimeout(function() {
     sessionStorage.removeItem('waifu-message-priority');
     el.classList.remove('waifu-tips-active');
   }, duration);
 }
-
 function pick(arr) { return Array.isArray(arr) ? arr[Math.floor(Math.random() * arr.length)] : arr; }
 
-/* === 台词系统 === */
 function initTipsSystem(config) {
   var defaults = config.message['default'];
   config.seasons.forEach(function(s) {
-    var now = new Date();
-    var parts = s.date.split('-');
-    var from = parts[0].split('/');
-    var to = (parts[1] || parts[0]).split('/');
-    if (Number(from[0]) <= now.getMonth()+1 && now.getMonth()+1 <= Number(to[0]) &&
-        Number(from[1]) <= now.getDate() && now.getDate() <= Number(to[1])) {
+    var now = new Date(); var parts = s.date.split('-'); var from = parts[0].split('/'); var to = (parts[1]||parts[0]).split('/');
+    if (Number(from[0])<=now.getMonth()+1 && now.getMonth()+1<=Number(to[0]) && Number(from[1])<=now.getDate() && now.getDate()<=Number(to[1]))
       defaults.push(pick(s.text).replace('{year}', String(now.getFullYear())));
-    }
   });
-  var idle = false, idleTimer = null;
-  window.addEventListener('mousemove', function() { idle = false; });
-  window.addEventListener('touchstart', function() { idle = false; }, { passive: true });
-  setInterval(function() {
-    if (idle) { if (!idleTimer) idleTimer = setInterval(function() { showTip(defaults, 6000, 9); }, 20000); }
-    else { idle = true; if (idleTimer) { clearInterval(idleTimer); idleTimer = null; } }
-  }, 1000);
-  var lastSel = '';
-  document.addEventListener('mouseover', function(e) {
-    for (var i = 0; i < config.mouseover.length; i++) {
-      var item = config.mouseover[i];
-      if (e.target && e.target.closest && e.target.closest(item.selector)) {
-        if (lastSel === item.selector) return;
-        lastSel = item.selector;
-        showTip(pick(item.text).replace('{text}', e.target.innerText), 4000, 8);
-        return;
-      }
-    }
-  });
-  document.addEventListener('click', function(e) {
-    for (var i = 0; i < config.click.length; i++) {
-      var item = config.click[i];
-      if (e.target && e.target.closest && e.target.closest(item.selector)) {
-        showTip(pick(item.text).replace('{text}', e.target.innerText), 4000, 8);
-        return;
-      }
-    }
-  });
-  window.addEventListener('live2d:hoverbody', function() { showTip(pick(config.message.hoverBody), 4000, 8, false); });
-  window.addEventListener('live2d:tapbody', function() { showTip(pick(config.message.tapBody), 4000, 9); });
-  var now = new Date();
-  config.time.forEach(function(t) {
-    var parts = t.hour.split('-');
-    if (Number(parts[0]) <= now.getHours() && now.getHours() <= Number(parts[1] || parts[0])) showTip(t.text, 7000, 11);
-  });
-  window.addEventListener('copy', function() { showTip(config.message.copy, 6000, 9); });
-  window.addEventListener('visibilitychange', function() { if (!document.hidden) showTip(config.message.visibilitychange, 6000, 9); });
+  var idle=false, idleTimer=null;
+  window.addEventListener('mousemove',function(){idle=false});
+  window.addEventListener('touchstart',function(){idle=false},{passive:true});
+  setInterval(function(){if(idle){if(!idleTimer)idleTimer=setInterval(function(){showTip(defaults,6000,9)},20000)}else{idle=true;if(idleTimer){clearInterval(idleTimer);idleTimer=null}}},1000);
+  var lastSel='';
+  document.addEventListener('mouseover',function(e){for(var i=0;i<config.mouseover.length;i++){var item=config.mouseover[i];if(e.target&&e.target.closest&&e.target.closest(item.selector)){if(lastSel===item.selector)return;lastSel=item.selector;showTip(pick(item.text).replace('{text}',e.target.innerText),4000,8);return}}});
+  document.addEventListener('click',function(e){for(var i=0;i<config.click.length;i++){var item=config.click[i];if(e.target&&e.target.closest&&e.target.closest(item.selector)){showTip(pick(item.text).replace('{text}',e.target.innerText),4000,8);return}}});
+  window.addEventListener('live2d:hoverbody',function(){showTip(pick(config.message.hoverBody),4000,8,false)});
+  window.addEventListener('live2d:tapbody',function(){showTip(pick(config.message.tapBody),4000,9)});
+  var now=new Date();config.time.forEach(function(t){var parts=t.hour.split('-');if(Number(parts[0])<=now.getHours()&&now.getHours()<=Number(parts[1]||parts[0]))showTip(t.text,7000,11)});
+  window.addEventListener('copy',function(){showTip(config.message.copy,6000,9)});
+  window.addEventListener('visibilitychange',function(){if(!document.hidden)showTip(config.message.visibilitychange,6000,9)});
 }
 
-/* === 动画系统（Live2DWidget.tsx 移植） === */
 function initAnimations() {
-  var s = document.createElement('style');
-  s.textContent = '@keyframes live2d-tilt{0%,100%{transform:rotate(0deg)}25%{transform:rotate(1.5deg)}75%{transform:rotate(-1.5deg)}}#waifu-canvas{animation:live2d-tilt 8s ease-in-out infinite}';
+  var s=document.createElement('style');
+  s.textContent='@keyframes live2d-tilt{0%,100%{transform:rotate(0deg)}25%{transform:rotate(1.5deg)}75%{transform:rotate(-1.5deg)}}#waifu-canvas{animation:live2d-tilt 8s ease-in-out infinite}';
   document.head.appendChild(s);
-  var lastBlink = Date.now();
-  setInterval(function() {
-    try {
-      var m = window.__live2d_model;
-      if (!m) return;
-      var now = Date.now();
-      if (now - lastBlink > 4000 + Math.random() * 2000) {
-        m.setParamFloat && m.setParamFloat('PARAM_EYE_L_OPEN', 0.1);
-        m.setParamFloat && m.setParamFloat('PARAM_EYE_R_OPEN', 0.1);
-        setTimeout(function() {
-          m.setParamFloat && m.setParamFloat('PARAM_EYE_L_OPEN', 1);
-          m.setParamFloat && m.setParamFloat('PARAM_EYE_R_OPEN', 1);
-        }, 150);
-        lastBlink = now;
-      }
-      m.setParamFloat && m.setParamFloat('PARAM_BREATH', 0.5 + Math.sin(Date.now()/2000)*0.15);
-      m.setParamFloat && m.setParamFloat('PARAM_EYE_BALL_X', Math.sin(Date.now()/4000)*3);
-      m.setParamFloat && m.setParamFloat('PARAM_EYE_BALL_Y', Math.cos(Date.now()/5000)*2);
-      m.setParamFloat && m.setParamFloat('PARAM_BODY_ANGLE_X', Math.sin(Date.now()/3000)*1.5);
-      m.setParamFloat && m.setParamFloat('PARAM_ANGLE_Z', Math.sin(Date.now()/4000)*2);
-    } catch(e) {}
-  }, 50);
+  var lastBlink=Date.now();
+  setInterval(function(){try{var m=window.__live2d_model;if(!m)return;var now=Date.now();if(now-lastBlink>4000+Math.random()*2000){m.setParamFloat&&m.setParamFloat('PARAM_EYE_L_OPEN',0.1);m.setParamFloat&&m.setParamFloat('PARAM_EYE_R_OPEN',0.1);setTimeout(function(){m.setParamFloat&&m.setParamFloat('PARAM_EYE_L_OPEN',1);m.setParamFloat&&m.setParamFloat('PARAM_EYE_R_OPEN',1)},150);lastBlink=now}m.setParamFloat&&m.setParamFloat('PARAM_BREATH',0.5+Math.sin(Date.now()/2000)*0.15);m.setParamFloat&&m.setParamFloat('PARAM_EYE_BALL_X',Math.sin(Date.now()/4000)*3);m.setParamFloat&&m.setParamFloat('PARAM_EYE_BALL_Y',Math.cos(Date.now()/5000)*2);m.setParamFloat&&m.setParamFloat('PARAM_BODY_ANGLE_X',Math.sin(Date.now()/3000)*1.5);m.setParamFloat&&m.setParamFloat('PARAM_ANGLE_Z',Math.sin(Date.now()/4000)*2)}catch(e){}},50);
 }
 
-/* === 身体交互 === */
 function setupBodyInteraction() {
-  var canvas = document.getElementById('live2d');
-  if (!canvas) return;
-  var clickCount = 0, clickTimer = null;
-  canvas.addEventListener('click', function() {
-    clickCount++;
-    if (clickTimer) clearTimeout(clickTimer);
-    clickTimer = setTimeout(function() { clickCount = 0; }, 4000);
-    if (clickCount >= 2) {
-      clickCount = 0;
-      if (window.AndroidFloat && window.AndroidFloat.openMainApp) window.AndroidFloat.openMainApp();
-      return;
-    }
-    window.dispatchEvent(new CustomEvent('live2d:tapbody'));
-  });
-  canvas.addEventListener('mouseover', function() { window.dispatchEvent(new CustomEvent('live2d:hoverbody')); });
+  var canvas=document.getElementById('live2d');if(!canvas)return;
+  var clickCount=0,clickTimer=null;
+  canvas.addEventListener('click',function(){clickCount++;if(clickTimer)clearTimeout(clickTimer);clickTimer=setTimeout(function(){clickCount=0},4000);if(clickCount>=2){clickCount=0;if(window.AndroidFloat&&window.AndroidFloat.openMainApp)window.AndroidFloat.openMainApp();return}window.dispatchEvent(new CustomEvent('live2d:tapbody'))});
+  canvas.addEventListener('mouseover',function(){window.dispatchEvent(new CustomEvent('live2d:hoverbody'))});
 }
 
-/* === 主初始化 === */
 (function() {
   loadWrapped('chunk/index.js')
-    .then(function() { return loadWrapped('chunk/index2.js'); })
-    .then(function() { return loadWrapped('waifu-tips.js'); })
-    .then(function() { return fetch('waifu-tips.json'); })
-    .then(function(r) { return r.json(); })
+    .then(function(){return loadWrapped('chunk/index2.js')})
+    .then(function(){return loadWrapped('waifu-tips.js')})
+    .then(function(){return fetch('waifu-tips.json')})
+    .then(function(r){return r.json()})
     .then(function(config) {
       if (window.initWidget) {
         window.initWidget({
           waifuPath: 'waifu-tips.json',
           cubism2Path: 'live2d.min.js',
           cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
-          tools: ['switch-model', 'switch-texture', 'photo', 'quit'],
+          tools: ['switch-model','switch-texture','photo','quit'],
           logLevel: 'warn',
           drag: false
         });
@@ -300,9 +252,9 @@ function setupBodyInteraction() {
       initTipsSystem(config);
       setTimeout(initAnimations, 2000);
       setTimeout(setupBodyInteraction, 2000);
-      setTimeout(function() { showTip('悬浮窗已启动~', 4000, 10); }, 1000);
+      setTimeout(function(){showTip('悬浮窗已启动~',4000,10)},1000);
     })
-    .catch(function(err) { console.error('[Float] Init failed:', err); });
+    .catch(function(err){console.error('[Float] Init failed:',err)});
 })();
 </script>
 </body>
