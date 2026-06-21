@@ -304,7 +304,20 @@ export default function SettingsPage({ onLogout }: Props) {
     } catch {}
   }, [ipSearch, ipFilter]);
 
-  useEffect(() => { if (page === "companion" && typeof speechSynthesis !== "undefined") { const loadVoices = () => { try { const v = speechSynthesis.getVoices(); if (v.length > 0) setTtsVoices(v); } catch {} }; loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch {} } }, [page]);
+  useEffect(() => {
+    if (page !== "companion") return;
+    if (typeof speechSynthesis === "undefined") return;
+    let mounted = true;
+    const loadVoices = () => {
+      try {
+        const v = speechSynthesis.getVoices();
+        if (v.length > 0 && mounted) setTtsVoices(v);
+      } catch {}
+    };
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { mounted = false; speechSynthesis.onvoiceschanged = null; };
+  }, [page]);
   useEffect(() => { if (page === "ip") { loadIpData(); const t = setInterval(loadIpData, 30000); return () => clearInterval(t); } }, [page, loadIpData]);
   const handleSaveSettings = useCallback((patch: Record<string, any>) => { updateSettings(patch); setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 2000); }, [updateSettings]);
 

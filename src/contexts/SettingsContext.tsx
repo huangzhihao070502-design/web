@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 
 const API = "";
 
@@ -88,9 +88,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Persist to localStorage whenever settings change
+  // Use ref to avoid infinite loop from object reference change
+  const settingsRef = useRef(JSON.stringify(settings));
   useEffect(() => {
     if (!loaded) return;
-    try { localStorage.setItem("webchat_settings", JSON.stringify(settings)); } catch {}
+    const json = JSON.stringify(settings);
+    if (json === settingsRef.current) return;
+    settingsRef.current = json;
+    try { localStorage.setItem("webchat_settings", json); } catch {}
   }, [loaded, settings]);
 
   // Apply theme to document and update resolvedTheme

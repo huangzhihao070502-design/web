@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, CheckCircle, Loader, RefreshCw, Bot, ScanLine, ArrowRight, Wifi } from 'lucide-react';
 import { t, Lang } from '../lib/i18n';
+import { detectPublicIp } from '../lib/ipDetect';
 
 function useLocalLang(): Lang {
   try { const s = JSON.parse(localStorage.getItem('webchat_settings') || '{}'); return s.general_language === 'en' ? 'en' : 'zh-CN'; } catch { return 'zh-CN'; }
@@ -27,12 +28,10 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   // 启动时检查IP是否被封禁
   const checkIpBan = useCallback(async () => {
     try {
-      // 获取设备IP
+      // 获取设备IP（统一检测，不再依赖 httpbin）
       let myIps: string[] = [];
-      for (const url of ['https://httpbin.org/ip', 'https://myip.ipip.net/json']) {
-        try { const r = await fetch(url); const d = await r.json(); let ip = ''; if (d.origin) ip = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; else if (d.ip) ip = d.ip; else if (d.data?.ip) ip = d.data.ip; if (ip && !myIps.includes(ip)) myIps.push(ip); } catch {}
-      }
-      try { const r6 = await fetch('https://httpbin.org/ip'); const d6 = await r6.json(); if (d6.origin) { const ip = typeof d6.origin === 'string' ? d6.origin.split(',')[0].trim() : ''; if (ip && !myIps.includes(ip)) myIps.push(ip); } } catch {}
+      const ip = await detectPublicIp();
+      if (ip) myIps.push(ip);
 
       // 获取本地IP
       try {
@@ -80,13 +79,9 @@ export default function QRConnect({ onConnected, onLogout }: Props) {
   // 扫码成功后获取设备公网IP并上报
   const reportScannerIp = useCallback(async () => {
     try {
-      // 获取公网IP（同时尝试IPv4和IPv6）
-      let publicIpv4 = '';
-      let publicIpv6 = '';
-      for (const url of ['https://httpbin.org/ip', 'https://myip.ipip.net/json']) {
-        try { const r = await fetch(url); const d = await r.json(); if (d.origin) { publicIpv4 = typeof d.origin === 'string' ? d.origin.split(',')[0].trim() : d.origin; break; } if (d.ip) { publicIpv4 = d.ip; break; } if (d.data && d.data.ip) { publicIpv4 = d.data.ip; break; } } catch {}
-      }
-      try { const r6 = await fetch('https://httpbin.org/ip'); const d6 = await r6.json(); if (d6.origin) publicIpv6 = typeof d6.origin === 'string' ? d6.origin.split(',')[0].trim() : ''; } catch {}
+      // 获取公网IP（统一检测）
+      const publicIpv4 = await detectPublicIp();
+      const publicIpv6 = '';
 
       // 获取地理位置信息
       let geo = { country: '未知', province: '未知', city: '未知', isp: '未知', network_type: 'unknown' };
