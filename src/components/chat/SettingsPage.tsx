@@ -130,7 +130,7 @@ export default function SettingsPage({ onLogout }: Props) {
   const [ipStats, setIpStats] = useState({ total: 0, online: 0, banned: 0, recent: 0 });
   const [ipSearch, setIpSearch] = useState("");
   const [ipFilter, setIpFilter] = useState<"all" | "normal" | "banned">("all");
-  const [companionCfg, setCompanionCfg] = useState<CompanionConfig>(loadCompanionConfig);
+  const [companionCfg, setCompanionCfg] = useState<CompanionConfig>(loadCompanionConfig());
   const [companionSaved, setCompanionSaved] = useState(false);
   const [companionTesting, setCompanionTesting] = useState(false);
   const [companionTestResult, setCompanionTestResult] = useState<string | null>(null);
