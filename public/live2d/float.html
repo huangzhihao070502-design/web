@@ -14,18 +14,21 @@ html, body {
   -webkit-user-select: none;
   user-select: none;
 }
-/* 所有 waifu 相关元素强制透明背景 */
+/* 所有 waifu 元素透明背景 */
 #waifu, #waifu-canvas, #waifu-tool, #waifu-toggle,
 #live2d, canvas, [id^="waifu"] {
   background: transparent !important;
   box-shadow: none !important;
 }
-#waifu {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  z-index: 1000;
-}
+/* 容器不拦截触摸 → 穿透到下层 */
+#waifu { pointer-events: none; position: fixed; bottom: 0; right: 0; z-index: 1000; }
+#waifu-tips { pointer-events: none; }
+/* 只有 canvas 和工具栏接收触摸 */
+#live2d { pointer-events: auto; cursor: grab; height: 150px; width: 150px; position: relative; }
+#live2d:active { cursor: grabbing; }
+#waifu-tool { pointer-events: auto; }
+#waifu-toggle { display: none !important; }
+
 #waifu-tips {
   animation: waifu-shake 50s ease-in-out 5s infinite;
   background-color: rgba(236, 217, 188, .5) !important;
@@ -47,13 +50,6 @@ html, body {
 }
 #waifu-tips.waifu-tips-active { opacity: 1; transition: opacity .2s; }
 #waifu-tips span { color: #0099cc; }
-#live2d {
-  cursor: grab;
-  height: 150px;
-  position: relative;
-  width: 150px;
-}
-#live2d:active { cursor: grabbing; }
 #waifu-tool {
   align-items: center;
   display: flex;
@@ -66,16 +62,8 @@ html, body {
   transition: opacity 1s;
 }
 #waifu:hover #waifu-tool { opacity: 1; }
-#waifu-tool svg {
-  cursor: pointer;
-  display: block;
-  fill: #7b8c9d;
-  height: 22px;
-  transition: fill .3s;
-}
+#waifu-tool svg { cursor: pointer; display: block; fill: #7b8c9d; height: 22px; transition: fill .3s; }
 #waifu-tool svg:hover { fill: #C89F7E; }
-/* 隐藏 toggle 按钮（悬浮窗不需要） */
-#waifu-toggle { display: none !important; }
 @keyframes waifu-shake {
   0%, 100% { transform: translate(0, 0) rotate(0); }
   2% { transform: translate(.5px, -1.5px) rotate(-.5deg); }
@@ -131,7 +119,7 @@ html, body {
 </style>
 
 <script>
-/* ★ 强制 WebGL alpha 通道 ★ */
+/* 强制 WebGL alpha 通道 */
 (function() {
   var orig = HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext = function(type, attrs) {
@@ -143,7 +131,6 @@ html, body {
     }
     return orig.call(this, type, attrs);
   };
-  /* 清除 localStorage 残留状态（防止 quit 后不显示） */
   try {
     localStorage.removeItem('waifu-disabled');
     localStorage.removeItem('waifu-display');
@@ -154,7 +141,6 @@ html, body {
 </script>
 </head>
 <body>
-<!-- 不放任何静态 DOM！initWidget() 会动态创建 #waifu -->
 
 <script src="live2d.min.js"></script>
 
@@ -230,7 +216,6 @@ function setupBodyInteraction() {
     .then(function(){return loadWrapped('chunk/index2.js')})
     .then(function(){return loadWrapped('waifu-tips.js')})
     .then(function(){
-      /* initWidget 会创建 #waifu DOM + 加载模型 + 注册工具栏 */
       if (window.initWidget) {
         window.initWidget({
           waifuPath: 'waifu-tips.json',
@@ -241,7 +226,6 @@ function setupBodyInteraction() {
           drag: false
         });
       }
-      /* 加载台词配置并初始化各子系统 */
       return fetch('waifu-tips.json');
     })
     .then(function(r){return r.json()})
