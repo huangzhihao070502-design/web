@@ -14,7 +14,9 @@ html, body {
   -webkit-user-select: none;
   user-select: none;
 }
-#waifu, #waifu-canvas, #waifu-tool, #live2d, canvas {
+/* 所有 waifu 相关元素强制透明背景 */
+#waifu, #waifu-canvas, #waifu-tool, #waifu-toggle,
+#live2d, canvas, [id^="waifu"] {
   background: transparent !important;
   box-shadow: none !important;
 }
@@ -26,7 +28,7 @@ html, body {
 }
 #waifu-tips {
   animation: waifu-shake 50s ease-in-out 5s infinite;
-  background-color: rgba(236, 217, 188, .5);
+  background-color: rgba(236, 217, 188, .5) !important;
   border: 1px solid rgba(224, 186, 140, .62);
   border-radius: 12px;
   box-shadow: 0 3px 15px 2px rgba(191, 158, 118, .2);
@@ -72,6 +74,8 @@ html, body {
   transition: fill .3s;
 }
 #waifu-tool svg:hover { fill: #C89F7E; }
+/* 隐藏 toggle 按钮（悬浮窗不需要） */
+#waifu-toggle { display: none !important; }
 @keyframes waifu-shake {
   0%, 100% { transform: translate(0, 0) rotate(0); }
   2% { transform: translate(.5px, -1.5px) rotate(-.5deg); }
@@ -127,9 +131,9 @@ html, body {
 </style>
 
 <script>
-/* ★ 关键：在 Live2D 脚本加载前，强制 WebGL context 开启 alpha 通道 ★ */
+/* ★ 强制 WebGL alpha 通道 ★ */
 (function() {
-  var origGetContext = HTMLCanvasElement.prototype.getContext;
+  var orig = HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext = function(type, attrs) {
     if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
       attrs = attrs || {};
@@ -137,31 +141,20 @@ html, body {
       attrs.premultipliedAlpha = false;
       attrs.antialias = true;
     }
-    return origGetContext.call(this, type, attrs);
+    return orig.call(this, type, attrs);
   };
-  /* 定时清除 canvas 背景 */
-  setInterval(function() {
-    var c = document.getElementById('live2d');
-    if (c) {
-      var gl = c.getContext('webgl') || c.getContext('webgl2') || c.getContext('experimental-webgl');
-      if (gl) {
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-      }
-    }
-  }, 500);
+  /* 清除 localStorage 残留状态（防止 quit 后不显示） */
+  try {
+    localStorage.removeItem('waifu-disabled');
+    localStorage.removeItem('waifu-display');
+    localStorage.removeItem('modelId');
+    localStorage.removeItem('modelTexturesId');
+  } catch(e) {}
 })();
 </script>
 </head>
 <body>
-
-<div id="waifu">
-  <div id="waifu-tips"></div>
-  <div id="waifu-canvas">
-    <canvas id="live2d" width="800" height="800"></canvas>
-  </div>
-  <div id="waifu-tool"></div>
-</div>
+<!-- 不放任何静态 DOM！initWidget() 会动态创建 #waifu -->
 
 <script src="live2d.min.js"></script>
 
@@ -236,9 +229,8 @@ function setupBodyInteraction() {
   loadWrapped('chunk/index.js')
     .then(function(){return loadWrapped('chunk/index2.js')})
     .then(function(){return loadWrapped('waifu-tips.js')})
-    .then(function(){return fetch('waifu-tips.json')})
-    .then(function(r){return r.json()})
-    .then(function(config) {
+    .then(function(){
+      /* initWidget 会创建 #waifu DOM + 加载模型 + 注册工具栏 */
       if (window.initWidget) {
         window.initWidget({
           waifuPath: 'waifu-tips.json',
@@ -249,6 +241,11 @@ function setupBodyInteraction() {
           drag: false
         });
       }
+      /* 加载台词配置并初始化各子系统 */
+      return fetch('waifu-tips.json');
+    })
+    .then(function(r){return r.json()})
+    .then(function(config) {
       initTipsSystem(config);
       setTimeout(initAnimations, 2000);
       setTimeout(setupBodyInteraction, 2000);
