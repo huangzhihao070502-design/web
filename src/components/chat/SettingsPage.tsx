@@ -245,15 +245,26 @@ export default function SettingsPage({ onLogout }: Props) {
       setCompanionTesting(false);
     };
     const handleTestTts = () => {
-      if (typeof SpeechSynthesisUtterance === "undefined" || typeof speechSynthesis === "undefined") {
-        setCompanionTestResult("TTS 不可用：当前浏览器不支持语音合成");
+      // Android 原生 TTS 桥接（优先）
+      if (typeof AndroidTts !== "undefined" && AndroidTts.isAvailable()) {
+        AndroidTts.setRate(companionCfg.tts_rate);
+        AndroidTts.setPitch(companionCfg.tts_pitch);
+        AndroidTts.speak("你好呀，我是你的 AI 伴侣~");
+        setCompanionTestResult("🔊 已通过系统 TTS 播放语音");
         return;
       }
-      try {
-      const u = new SpeechSynthesisUtterance("你好呀，我是你的 AI 伴侣~");
-      u.lang = companionCfg.voice_language; u.rate = companionCfg.tts_rate; u.pitch = companionCfg.tts_pitch; u.volume = companionCfg.tts_volume;
-      if (companionCfg.tts_voice) { const v = ttsVoices.find(v => v.name === companionCfg.tts_voice); if (v) u.voice = v; }
-      speechSynthesis.speak(u); } catch(e) { setCompanionTestResult("TTS 不可用: " + (e.message || e)); }
+      // Web Speech API 降级
+      if (typeof SpeechSynthesisUtterance !== "undefined" && typeof speechSynthesis !== "undefined") {
+        try {
+          const u = new SpeechSynthesisUtterance("你好呀，我是你的 AI 伴侣~");
+          u.lang = companionCfg.voice_language; u.rate = companionCfg.tts_rate; u.pitch = companionCfg.tts_pitch; u.volume = companionCfg.tts_volume;
+          if (companionCfg.tts_voice) { const v = ttsVoices.find(v => v.name === companionCfg.tts_voice); if (v) u.voice = v; }
+          speechSynthesis.speak(u);
+          setCompanionTestResult("🔊 已通过浏览器 TTS 播放语音");
+        } catch(e) { setCompanionTestResult("TTS 不可用: " + (e.message || e)); }
+        return;
+      }
+      setCompanionTestResult("TTS 不可用：当前设备不支持语音合成");
     };
     return (
       <div className="flex h-full flex-col overflow-auto bg-paper-white">

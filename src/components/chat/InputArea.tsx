@@ -40,13 +40,15 @@ export default function InputArea({ onSendText, onSendVoice, onSendImage, onSend
   const startRecording = useCallback(async () => {
     timer.current = setTimeout(() => setRecording(true), 200);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) { console.warn('[VOICE] getUserMedia not available'); return; }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported('audio/webm')) { console.warn('[VOICE] MediaRecorder not available'); stream.getTracks().forEach(t => t.stop()); return; }
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorder.current = mr; chunks.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
       mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); const blob = new Blob(chunks.current, { type: 'audio/webm' }); if (blob.size > 0) onSendVoice(blob); };
       mr.start();
-    } catch {}
+    } catch (e) { console.warn('[VOICE] start failed:', (e as any)?.message || e); }
   }, [onSendVoice]);
 
   const stopRecording = useCallback(() => {

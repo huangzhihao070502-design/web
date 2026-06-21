@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var overlayPermissionGranted = false
     private var serviceStarted = false
+    private var ttsBridge: TtsBridge? = null
 
     companion object {
         private const val TAG = "MainActivity"
@@ -44,12 +45,22 @@ class MainActivity : AppCompatActivity() {
             displayZoomControls = false
             allowFileAccess = true
             allowContentAccess = true
+            mediaPlaybackRequiresUserGesture = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            }
         }
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 splash?.visibility = android.view.View.GONE
                 webView.visibility = android.view.View.VISIBLE
             }
+        }
+
+        // TTS 桥接 — 解决 Android WebView 不支持 Web Speech API 的问题
+        ttsBridge = TtsBridge(this).also { bridge ->
+            bridge.init()
+            webView.addJavascriptInterface(bridge, TtsBridge.JS_NAME)
         }
 
         webView.webChromeClient = object : WebChromeClient() {
@@ -202,6 +213,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         // 通知 Service 隐藏悬浮窗（但不停止 Service，避免重建开销）
         sendFloatAction(FloatingWindowService.ACTION_HIDE)
+        ttsBridge?.shutdown()
+        ttsBridge = null
         super.onDestroy()
         serverManager?.stopServer()
         serverManager = null
