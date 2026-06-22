@@ -123,8 +123,14 @@ class LocalTtsEngine(private val context: Context) {
         }
     }
 
+    fun isModelReady(): Boolean =
+        modelDir.exists() && File(modelDir, "model.onnx").exists()
+
+    @JavascriptInterface
+    fun isModelDownloaded(): Boolean = isModelReady()
+
     private fun playPcm(pcm: ByteArray, sampleRate: Int) {
-        val at = AudioTrack(
+        val at = android.media.AudioTrack(
             AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build(),
             AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
