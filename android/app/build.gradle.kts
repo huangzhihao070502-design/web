@@ -34,7 +34,7 @@ android {
     }
 
     aaptOptions {
-        noCompress("js", "css", "html", "svg", "png", "json", "woff2", "ttf", "onnx", "bin")
+        noCompress("js", "css", "html", "svg", "png", "json", "woff2", "ttf", "onnx", "bin", "fst", "txt")
     }
 }
 
@@ -43,6 +43,6 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // Sherpa-ONNX — 本地 TTS 引擎（Kokoro-82M）
-    implementation("com.k2fsa.sherpa-onnx:sherpa-onnx-android:1.13.2")
+    // Sherpa-ONNX — 本地 TTS 引擎（Kokoro-82M），本地 AAR
+    implementation(fileTree("libs") { include("*.aar") })
 }

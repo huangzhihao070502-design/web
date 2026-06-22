@@ -4,61 +4,100 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import android.os.Build
 import android.util.Log
 import android.webkit.JavascriptInterface
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.Executors
+import com.k2fsa.sherpa.onnx.OfflineTts
+import com.k2fsa.sherpa.onnx.OfflineTtsConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig
 
 /**
  * 本地 TTS 引擎 —— 使用 Sherpa-ONNX + Kokoro-82M
- * 纯手机端 CPU 推理，无需网络和 GPU。
+ * 完全离线，纯手机 CPU 推理，无需网络。
  *
- * 模型文件位置：${filesDir}/kokoro/
- * 下载地址：https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+ * 模型从 APK assets/kokoro/ 解压到 ${filesDir}/kokoro/
  */
 class LocalTtsEngine(private val context: Context) {
 
     companion object {
         private const val TAG = "LocalTtsEngine"
         const val JS_NAME = "LocalTts"
+        const val ASSET_MODEL_DIR = "kokoro"
     }
 
+    private var tts: OfflineTts? = null
     private var initialized = false
-    private var currentVoice = 0
     private val executor = Executors.newSingleThreadExecutor()
 
-    val modelDir: File get() = File(context.filesDir, "kokoro")
+    val modelDir: File get() = File(context.filesDir, ASSET_MODEL_DIR)
 
-    fun isModelReady(): Boolean =
-        modelDir.exists() && File(modelDir, "model.onnx").exists()
+    /** 从 APK assets 复制模型到内部存储 */
+    private fun copyModelFromAssets(): Boolean {
+        try {
+            if (File(modelDir, "model.onnx").exists()) return true
+            modelDir.mkdirs()
+            // 遍历 assets/kokoro/ 中所有文件并复制
+            for (asset in context.assets.list(ASSET_MODEL_DIR) ?: emptyArray()) {
+                copyRecursive(ASSET_MODEL_DIR, asset, modelDir)
+            }
+            Log.d(TAG, "Model copied from assets to ${modelDir.path}")
+            return File(modelDir, "model.onnx").exists()
+        } catch (e: Exception) {
+            Log.e(TAG, "Copy model failed: ${e.message}")
+            return false
+        }
+    }
+
+    private fun copyRecursive(relPath: String, name: String, destDir: File) {
+        val child = File(destDir, name)
+        val assetPath = "$relPath/$name"
+        try {
+            val input = context.assets.open(assetPath)
+            child.parentFile?.mkdirs()
+            FileOutputStream(child).use { out -> input.copyTo(out) }
+            input.close()
+        } catch (_: Exception) {
+            // 可能是目录，尝试遍历
+            try {
+                for (sub in context.assets.list(assetPath) ?: emptyArray()) {
+                    copyRecursive(assetPath, sub, child)
+                }
+            } catch (_: Exception) {}
+        }
+    }
 
     @JavascriptInterface
     fun isAvailable(): Boolean = initialized
 
-    @JavascriptInterface
-    fun isModelDownloaded(): Boolean = isModelReady()
-
-    /** 初始化引擎，voiceId: 0-50+Kokoro预设音色 */
-    fun init(voiceId: Int = 0) {
+    /** 初始化引擎 */
+    fun init() {
         if (initialized) return
-        currentVoice = voiceId
-        if (!isModelReady()) {
-            Log.w(TAG, "Model not found at ${modelDir.path}")
+        if (!copyModelFromAssets()) {
+            Log.e(TAG, "Model not found in assets")
             return
         }
         executor.execute {
             try {
-                // 此处会在编译期引入 sherpa-onnx JNI 初始化
-                // TtsConfig(modelDir.path, currentVoice)
+                val md = modelDir.absolutePath
+                val config = OfflineTtsConfig(
+                    model = OfflineTtsModelConfig(
+                        kokoro = OfflineTtsKokoroModelConfig(
+                            model = "$md/model.onnx",
+                            voices = "$md/voices.bin",
+                            tokens = "$md/tokens.txt",
+                            dataDir = "$md/espeak-ng-data"
+                        ),
+                        numThreads = 4
+                    )
+                )
+                tts = OfflineTts(config)
                 initialized = true
-                Log.d(TAG, "LocalTTS ready, voice=$voiceId")
+                Log.d(TAG, "LocalTTS ready with Kokoro-82M")
             } catch (e: Exception) {
-                Log.e(TAG, "TTS init failed: ${e.message}")
+                Log.e(TAG, "Init failed: ${e.message}")
             }
         }
     }
@@ -68,19 +107,20 @@ class LocalTtsEngine(private val context: Context) {
         if (!initialized || text.isBlank()) return
         executor.execute {
             try {
-                // 1. 调用 sherpa-onnx 生成 PCM 音频
-                val pcm = generatePcm(text)
-                // 2. 用 AudioTrack 直接播放
-                if (pcm != null) playPcm(pcm, 24000)
+                val samples = tts?.generate(text, speakerId = 0, speed = 1.0f) ?: return@execute
+                if (samples.isEmpty()) return@execute
+                // float[] -> byte[] (PCM 16bit)
+                val pcm = ByteArray(samples.size * 2)
+                for (i in samples.indices) {
+                    val s = (samples[i].toInt().coerceIn(-32768, 32767))
+                    pcm[i * 2] = (s and 0xFF).toByte()
+                    pcm[i * 2 + 1] = ((s shr 8) and 0xFF).toByte()
+                }
+                playPcm(pcm, 24000)
             } catch (e: Exception) {
                 Log.e(TAG, "speak error: ${e.message}")
             }
         }
-    }
-
-    private fun generatePcm(text: String): ByteArray? {
-        // 编译期接入 sherpa-onnx JNI: Tts.generate(text)
-        return null
     }
 
     private fun playPcm(pcm: ByteArray, sampleRate: Int) {
@@ -95,38 +135,10 @@ class LocalTtsEngine(private val context: Context) {
         at.play()
     }
 
-    /** 从 GitHub 下载 Kokoro 模型（约 25MB） */
-    fun downloadModel(onProgress: (Int) -> Unit = {}) {
-        executor.execute {
-            try {
-                val url = URL("https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_1.tar.bz2")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 30000
-                conn.connect()
-                val total = conn.contentLength
-                val input = conn.inputStream
-                val tmpFile = File(context.cacheDir, "kokoro.tar.bz2")
-                FileOutputStream(tmpFile).use { out ->
-                    val buf = ByteArray(8192)
-                    var read: Int
-                    var downloaded = 0
-                    while (input.read(buf).also { read = it } != -1) {
-                        out.write(buf, 0, read)
-                        downloaded += read
-                        if (total > 0) onProgress(downloaded * 100 / total)
-                    }
-                }
-                input.close()
-                // 解压到 modelDir
-                modelDir.mkdirs()
-                Runtime.getRuntime().exec(arrayOf("tar", "-xjf", tmpFile.absolutePath, "-C", modelDir.absolutePath))
-                tmpFile.delete()
-                init(currentVoice)
-            } catch (e: Exception) {
-                Log.e(TAG, "download failed: ${e.message}")
-            }
-        }
+    fun shutdown() {
+        initialized = false
+        tts?.let { /* dispose handled by GC */ }
+        tts = null
+        executor.shutdown()
     }
-
-    fun shutdown() { initialized = false; executor.shutdown() }
 }

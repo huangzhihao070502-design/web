@@ -37,6 +37,19 @@ jobs:
         mkdir -p android/app/src/main/assets/www
         cp -r dist/* android/app/src/main/assets/www/
 
+    - name: Download sherpa-onnx AAR
+      run: |
+        mkdir -p android/app/libs
+        curl -L -o android/app/libs/sherpa-onnx.aar "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.3/sherpa-onnx-1.13.3.aar"
+
+    - name: Download Kokoro TTS model
+      run: |
+        curl -L -o /tmp/kokoro.tar.bz2 "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_1.tar.bz2"
+        mkdir -p android/app/src/main/assets/kokoro
+        tar -xjf /tmp/kokoro.tar.bz2 -C /tmp
+        cp -r /tmp/kokoro-multi-lang-v1_1/* android/app/src/main/assets/kokoro/
+        rm -rf /tmp/kokoro.tar.bz2 /tmp/kokoro-multi-lang-v1_1
+
     - name: Build APK
       run: |
         cd android
