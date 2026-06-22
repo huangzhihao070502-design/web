@@ -4,7 +4,7 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { animate } from 'animejs';
 import { t, Lang } from "../../lib/i18n";
 import { loadTtsConfig, saveTtsConfig, type TtsConfig } from "../../lib/ttsConfig";
-import { speak, EDGE_VOICES, COSYVOICE_VOICES, KOKORO_VOICES } from "../../lib/tts";
+import { speak, EDGE_VOICES, COSYVOICE_VOICES } from "../../lib/tts";
 
 interface Props { onLogout: () => void }
 
@@ -227,18 +227,13 @@ export default function SettingsPage({ onLogout }: Props) {
             <div className="space-y-4">
               <SelectInput label="Engine" value={ttsCfg.engine} onChange={v => setTtsCfg(p => ({ ...p, engine: v }))}
                 options={[
-                  { value: "localkokoro", label: "Kokoro Local" },
+
                   { value: "cosyvoice", label: "CosyVoice" },
                   { value: "edge", label: "Edge TTS" },
                   { value: "system", label: "System TTS" },
                   { value: "custom", label: "Custom API" },
                 ]} />
-              {ttsCfg.engine === 'localkokoro' && (
-                <SelectInput label="Voice" value={ttsCfg.voice} onChange={v => {
-                  const voice = KOKORO_VOICES.find(kv => kv.id === v);
-                  setTtsCfg(p => ({ ...p, voice: v, voice_name: voice ? voice.name : v }));
-                }} options={KOKORO_VOICES.map(kv => ({ value: kv.id, label: kv.name }))} />
-              )}
+
               {ttsCfg.engine === 'cosyvoice' && (
                 <SelectInput label="Voice" value={ttsCfg.voice} onChange={v => {
                   const voice = COSYVOICE_VOICES.find(cv => cv.id === v);

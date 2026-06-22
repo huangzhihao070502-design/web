@@ -15,6 +15,4 @@ node_modules/
 dist/
 *.apk
 android/app/build/
-android/app/libs/
-android/app/src/main/assets/kokoro/
 .git.bak/

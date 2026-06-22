@@ -20,7 +20,6 @@ class MainActivity : AppCompatActivity() {
     private var overlayPermissionGranted = false
     private var serviceStarted = false
     private var ttsBridge: TtsBridge? = null
-    private var localTts: LocalTtsEngine? = null
 
     companion object {
         private const val TAG = "MainActivity"
@@ -63,13 +62,7 @@ class MainActivity : AppCompatActivity() {
             bridge.init()
             webView.addJavascriptInterface(bridge, TtsBridge.JS_NAME)
         }
-        // 本地 TTS 引擎 — Kokoro-82M 离线推理
-        localTts = LocalTtsEngine(this).also { tts ->
-            if (tts.isModelReady()) tts.init()
-            webView.addJavascriptInterface(tts, LocalTtsEngine.JS_NAME)
-        }
-
-        webView.webChromeClient = object : WebChromeClient() {
+webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView?, filePath: ValueCallback<Array<Uri>>?, fileChooserParams: FileChooserParams?
             ): Boolean {
@@ -221,8 +214,6 @@ class MainActivity : AppCompatActivity() {
         sendFloatAction(FloatingWindowService.ACTION_HIDE)
         ttsBridge?.shutdown()
         ttsBridge = null
-        localTts?.shutdown()
-        localTts = null
         super.onDestroy()
         serverManager?.stopServer()
         serverManager = null
