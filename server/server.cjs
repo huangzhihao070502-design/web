@@ -1816,13 +1816,33 @@ http.createServer((req, res) => {
     return;
   }
 
+  // ====== 全局日志系统（前端 + 备份统一使用）======
+  const APP_LOGS = [];
+  const MAX_APP_LOGS = 500;
+
   // 前端调试日志
   if (p === '/api/debug-log') {
     let body = ''; req.on('data', c => body += c);
     req.on('end', () => {
-      try { const d = JSON.parse(body); console.log('[FRONTEND ERROR]', d.msg, 'at', d.url, 'line', d.line); } catch {}
+      try {
+        const d = JSON.parse(body);
+        APP_LOGS.push({ time: Date.now(), level: d.level || 'log', tag: d.tag || 'frontend', msg: d.msg || '' });
+        if (APP_LOGS.length > MAX_APP_LOGS) APP_LOGS.splice(0, APP_LOGS.length - MAX_APP_LOGS);
+        console.log('[LOG]', d.tag ? `[${d.tag}]` : '', d.msg || '');
+      } catch {}
       res.writeHead(200, cors); res.end('ok');
     });
+    return;
+  }
+
+  // 获取日志（Dashboard 使用）
+  if (p === '/api/logs') {
+    const tag = url.searchParams.get('tag') || '';
+    const level = url.searchParams.get('level') || '';
+    let filtered = APP_LOGS;
+    if (tag) filtered = filtered.filter(l => l.tag === tag);
+    if (level) filtered = filtered.filter(l => l.level === level);
+    res.writeHead(200, cors); res.end(JSON.stringify(filtered.slice(-100)));
     return;
   }
 

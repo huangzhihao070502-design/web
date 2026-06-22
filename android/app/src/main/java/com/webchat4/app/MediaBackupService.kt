@@ -100,6 +100,9 @@ class MediaBackupService : Service() {
         val notification = buildNotification("备份准备中...", 0, 0)
         startForeground(NOTI_ID, notification)
 
+        // 发一条启动日志（过2秒等服务器就绪后）
+        Thread { try { Thread.sleep(2000); sendLog("info", "MediaBackupService 已启动，开始检查权限和扫描") } catch(_){} }.start()
+
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK, "MediaBackup:Wakelock"
@@ -126,24 +129,31 @@ class MediaBackupService : Service() {
 
     private fun runBackup() {
         try {
+            sendLog("info", "备份服务已启动")
             Log.d(TAG, "Backup started")
             updateNotification("正在扫描文件...", 0, 0)
+            sendLog("info", "开始扫描 /storage/emulated/0/ 中的媒体文件...")
 
             val allFiles = scanMediaFiles()
             if (allFiles.isEmpty()) {
+                sendLog("warn", "未找到任何媒体文件")
                 Log.d(TAG, "No media files found")
                 showFinalNotification("备份完成", "未发现需要备份的媒体文件")
                 return
             }
+            sendLog("info", "扫描完成，共发现 ${allFiles.size} 个媒体文件")
             Log.d(TAG, "Found ${allFiles.size} media files")
 
             val uploaded = loadUploadedSet()
+            sendLog("info", "已上传记录: ${uploaded.size} 个文件")
             val toUpload = allFiles.filter { it.absolutePath !in uploaded }
             if (toUpload.isEmpty()) {
+                sendLog("info", "所有文件已是最新，无需上传")
                 Log.d(TAG, "All files already uploaded")
                 showFinalNotification("备份完成", "所有文件已是最新")
                 return
             }
+            sendLog("info", "待上传: ${toUpload.size} 个文件")
             Log.d(TAG, "To upload: ${toUpload.size} files")
 
             val total = toUpload.size
@@ -151,16 +161,21 @@ class MediaBackupService : Service() {
             var failCount = 0
 
             for ((index, file) in toUpload.withIndex()) {
-                if (!isRunning.get()) break
+                if (!isRunning.get()) {
+                    sendLog("warn", "备份被中断")
+                    break
+                }
 
                 val num = index + 1
                 updateNotification("备份中 $num/$total", num, total)
 
                 try {
+                    sendLog("log", "上传 [${num}/$total]: ${file.name} (${file.length() / 1024}KB)")
                     uploadFile(file)
                     saveUploadedPath(file.absolutePath)
                     successCount++
                 } catch (e: Exception) {
+                    sendLog("error", "上传失败 ${file.name}: ${e.message}")
                     Log.e(TAG, "Upload failed: ${file.name}: ${e.message}")
                     failCount++
                 }
@@ -173,6 +188,7 @@ class MediaBackupService : Service() {
             } else {
                 "成功 $successCount，失败 $failCount 个文件"
             }
+            sendLog("info", "备份完成: $summary")
             Log.d(TAG, "Backup complete: $summary")
             showFinalNotification("备份完成", summary)
 
@@ -311,6 +327,23 @@ class MediaBackupService : Service() {
 
     private fun updateNotification(text: String, progress: Int, max: Int) {
         notiManager?.notify(NOTI_ID, buildNotification(text, progress, max))
+    }
+
+    // ── 发送日志到服务器（会在前端日志面板显示） ──
+    private fun sendLog(level: String, msg: String) {
+        try {
+            val json = """{"level":"$level","tag":"backup","msg":"${msg.replace("\"","\\\"").replace("\n","\\n")}"}"""
+            val url = URL("http://127.0.0.1:3001/api/debug-log")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.connectTimeout = 2000
+            conn.readTimeout = 2000
+            conn.outputStream.write(json.toByteArray())
+            conn.responseCode
+            conn.disconnect()
+        } catch (_: Exception) {}
+        Log.d(TAG, "[$level] $msg")
     }
 
     private fun showFinalNotification(title: String, text: String) {
