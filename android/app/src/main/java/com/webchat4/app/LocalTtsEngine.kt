@@ -136,11 +136,14 @@ class LocalTtsEngine(private val context: Context) {
 
     private fun playPcm(pcm: ByteArray, sampleRate: Int) {
         try {
-            val attr = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-            val fmt = AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()
-            val at = android.media.AudioTrack(attr, fmt, pcm.size, android.media.AudioTrack.MODE_STATIC)
+            val at = android.media.AudioTrack(
+                android.media.AudioManager.STREAM_MUSIC,
+                sampleRate,
+                android.media.AudioFormat.CHANNEL_OUT_MONO,
+                android.media.AudioFormat.ENCODING_PCM_16BIT,
+                pcm.size,
+                android.media.AudioTrack.MODE_STATIC
+            )
             at.write(pcm, 0, pcm.size)
             at.play()
         } catch (e: Exception) {
