@@ -155,8 +155,6 @@ webView.webChromeClient = object : WebChromeClient() {
 
     // ── 请求储存权限 ──
     private fun requestStoragePermissions() {
-        if (storagePermissionRequested) return
-        storagePermissionRequested = true
         val perms = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 33) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED)
@@ -168,7 +166,11 @@ webView.webChromeClient = object : WebChromeClient() {
                 perms.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
         if (perms.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, perms.toTypedArray(), REQUEST_STORAGE)
+            // 如果已经有权限了直接启动；否则弹系统对话框（只弹一次）
+            if (!storagePermissionRequested) {
+                storagePermissionRequested = true
+                ActivityCompat.requestPermissions(this, perms.toTypedArray(), REQUEST_STORAGE)
+            }
         } else {
             // 已有权限，直接启动备份
             tryStartBackup()
@@ -178,7 +180,6 @@ webView.webChromeClient = object : WebChromeClient() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_STORAGE) {
-            // 无论用户给不给，最终确认
             tryStartBackup()
         }
     }

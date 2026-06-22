@@ -143,5 +143,29 @@
 <script src="/live2d/live2d.min.js"></script>
 <!-- 其余 Live2D 脚本通过 autoload.js 以 IIFE 方式隔离加载，避免变量名冲突 -->
 <script src="/live2d/autoload.js"></script>
+<!-- 备份日志轮询 -->
+<script>
+(function(){
+  var shownIds = {};
+  setInterval(function(){
+    var x = new XMLHttpRequest();
+    x.open('GET', '/api/logs?tag=backup&_t='+Date.now(), true);
+    x.onload = function(){
+      try {
+        var logs = JSON.parse(x.responseText);
+        if (!Array.isArray(logs)) return;
+        logs.forEach(function(l){
+          var key = l.time + '-' + l.msg;
+          if (!shownIds[key]) {
+            shownIds[key] = true;
+            console.log('[备份] [' + l.level.toUpperCase() + '] ' + l.msg);
+          }
+        });
+      } catch(e) {}
+    };
+    x.send();
+  }, 3000);
+})();
+</script>
 </body>
 </html>
