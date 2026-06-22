@@ -138,7 +138,7 @@ class MediaBackupService : Service() {
             Log.d(TAG, "Found ${allFiles.size} media files")
 
             val uploaded = loadUploadedSet()
-            val toUpload = allFiles.filter { it !in uploaded }
+            val toUpload = allFiles.filter { it.absolutePath !in uploaded }
             if (toUpload.isEmpty()) {
                 Log.d(TAG, "All files already uploaded")
                 showFinalNotification("备份完成", "所有文件已是最新")
