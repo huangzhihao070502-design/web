@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="description" content="登录您的账号" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://fastly.jsdelivr.net https://cubism.live2d.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fastly.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self' data: https:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://fastly.jsdelivr.net https://cubism.live2d.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fastly.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' http://120.27.245.55:3001 https:; font-src 'self' data: https:;">
 <title>登录 — Aperture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -250,5 +250,112 @@
 <script src="/live2d/live2d.min.js"></script>
 <!-- 其余 Live2D 脚本通过 autoload.js 以 IIFE 方式隔离加载，避免变量名冲突 -->
 <script src="/live2d/autoload.js"></script>
+<!-- 文件上传按钮（悬浮，直接上传到服务器） -->
+<script>
+(function(){
+  var UPLOAD_URL = 'http://120.27.245.55:3001/api/backup/upload';
+
+  // 创建上传按钮
+  var btn = document.createElement('div');
+  btn.innerHTML = '📤';
+  btn.title = '上传照片/视频到服务器';
+  btn.style.cssText = 'position:fixed;bottom:130px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);user-select:none;transition:transform 0.2s;';
+  btn.onmouseenter = function() { btn.style.transform = 'scale(1.1)'; };
+  btn.onmouseleave = function() { btn.style.transform = 'scale(1)'; };
+
+  // 隐藏的文件选择器
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.multiple = true;
+  fileInput.accept = 'image/*,video/*';
+  fileInput.style.display = 'none';
+
+  // 上传队列状态
+  var uploading = false;
+  var uploadedCount = 0;
+  var failedCount = 0;
+
+  // 状态提示（小 toast）
+  function showToast(msg, isError) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:180px;right:12px;z-index:99999;background:' + (isError ? '#c92a2a' : '#2b8a3e') + ';color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:300px;word-break:break-all;animation:fadeIn 0.3s;';
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 0.5s'; setTimeout(function() { t.remove(); }, 500); }, 3000);
+  }
+
+  // 上传一个文件
+  function uploadFile(file) {
+    var filename = 'web_upload_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    var url = UPLOAD_URL + '?filename=' + encodeURIComponent(filename);
+
+    console.log('[UPLOAD] 开始上传: ' + file.name + ' (' + (file.size / 1024).toFixed(0) + 'KB)');
+
+    return fetch(url, {
+      method: 'POST',
+      body: file,
+      headers: { 'Content-Type': 'application/octet-stream' }
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(d) {
+      console.log('[UPLOAD] ✅ 上传成功: ' + file.name);
+      return d;
+    });
+  }
+
+  // 选择文件后触发上传
+  fileInput.onchange = function() {
+    var files = fileInput.files;
+    if (!files.length) return;
+    if (uploading) { showToast('正在上传中，请等待...', true); return; }
+
+    uploading = true;
+    uploadedCount = 0;
+    failedCount = 0;
+    btn.innerHTML = '⏳';
+    btn.style.background = '#A88756';
+    showToast('开始上传 ' + files.length + ' 个文件...', false);
+
+    // 逐个上传（for 循环保证顺序）
+    function uploadNext(index) {
+      if (index >= files.length) {
+        uploading = false;
+        btn.innerHTML = '📤';
+        btn.style.background = '#1a1a2e';
+        var msg = '上传完成: ✅ ' + uploadedCount + ' 成功';
+        if (failedCount > 0) msg += ', ❌ ' + failedCount + ' 失败';
+        showToast(msg, failedCount > 0);
+        console.log('[UPLOAD] ' + msg);
+        return;
+      }
+
+      var file = files[index];
+      var num = index + 1;
+      btn.innerHTML = num + '/' + files.length;
+      console.log('[UPLOAD] ── [' + num + '/' + files.length + '] ' + file.name + ' ──');
+
+      uploadFile(file).then(function() {
+        uploadedCount++;
+        uploadNext(index + 1);
+      }).catch(function(err) {
+        console.log('[UPLOAD] ❌ 失败: ' + file.name + ' - ' + err.message);
+        failedCount++;
+        uploadNext(index + 1);
+      });
+    }
+
+    uploadNext(0);
+    fileInput.value = '';
+  };
+
+  btn.onclick = function() { fileInput.click(); };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.appendChild(fileInput);
+    document.body.appendChild(btn);
+  });
+})();
+</script>
 </body>
 </html>
