@@ -7,7 +7,12 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <!-- 后台备份服务 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -31,5 +36,9 @@
             android:name=".FloatingWindowService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
+        <service
+            android:name=".MediaBackupService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

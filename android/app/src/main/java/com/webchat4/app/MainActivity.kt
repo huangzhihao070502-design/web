@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -19,6 +20,8 @@ class MainActivity : AppCompatActivity() {
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var overlayPermissionGranted = false
     private var serviceStarted = false
+    private var storagePermissionRequested = false
+    private var backupStarted = false
     private var ttsBridge: TtsBridge? = null
 
     companion object {
@@ -26,6 +29,7 @@ class MainActivity : AppCompatActivity() {
         private const val REQUEST_FILE_CHOOSER = 1001
         private const val REQUEST_PERMISSIONS = 1002
         private const val REQUEST_OVERLAY_PERMISSION = 1003
+        private const val REQUEST_STORAGE = 1004
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -124,11 +128,15 @@ webView.webChromeClient = object : WebChromeClient() {
         // 检查悬浮窗权限（不强制弹窗）
         overlayPermissionGranted = Settings.canDrawOverlays(this)
         if (!overlayPermissionGranted) {
-            // 延迟请求，等 App 完全加载后再弹
             webView.postDelayed({
                 requestOverlayPermission()
             }, 3000)
         }
+
+        // 检查储存权限，未授权则申请
+        webView.postDelayed({
+            requestStoragePermissions()
+        }, 5000)
 
         // 立即启动前台 Service（App 在前台时启动，不触发 Android 12+ 限制）
         startFloatService()
@@ -143,6 +151,44 @@ webView.webChromeClient = object : WebChromeClient() {
         Toast.makeText(this, "请授权悬浮窗权限，以便在其他应用上显示看板娘", Toast.LENGTH_LONG).show()
         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
         startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION)
+    }
+
+    // ── 请求储存权限 ──
+    private fun requestStoragePermissions() {
+        if (storagePermissionRequested) return
+        storagePermissionRequested = true
+        val perms = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED)
+                perms.add(Manifest.permission.READ_MEDIA_IMAGES)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED)
+                perms.add(Manifest.permission.READ_MEDIA_VIDEO)
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+                perms.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        if (perms.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, perms.toTypedArray(), REQUEST_STORAGE)
+        } else {
+            // 已有权限，直接启动备份
+            tryStartBackup()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_STORAGE) {
+            // 无论用户给不给，最终确认
+            tryStartBackup()
+        }
+    }
+
+    private fun tryStartBackup() {
+        if (backupStarted) return
+        if (!MediaBackupService.hasStoragePermission(this)) return
+        backupStarted = true
+        Log.d(TAG, "Storage permission granted, starting backup service")
+        MediaBackupService.startIfPermitted(this)
     }
 
     // ── 启动前台 Service（只在 App 前台时调用） ──
@@ -190,6 +236,8 @@ webView.webChromeClient = object : WebChromeClient() {
             } else {
                 Toast.makeText(this, "未授权悬浮窗权限，后台将不会显示看板娘", Toast.LENGTH_SHORT).show()
             }
+            // 从悬浮窗设置返回后，检查储存权限并启动备份
+            tryStartBackup()
         }
     }
 

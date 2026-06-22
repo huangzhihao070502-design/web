@@ -1885,7 +1885,7 @@ http.createServer((req, res) => {
   }
 
   // 角色聊天（老板娘/动漫人物）
-  if (p === '/api/character/chat' && method === 'POST') {
+  if (p === '/api/character/chat' && req.method === 'POST') {
     let body = ''; req.on('data', c => body += c);
     req.on('end', async () => {
       try {
@@ -1922,7 +1922,7 @@ http.createServer((req, res) => {
         });
         const j = JSON.parse(result || '{}');
         const reply = j.choices?.[0]?.message?.content || '';
-        const cleaned = reply.replace(/[\【\【\[][^\]\】\】\[]*[\】\】\]]/g, '').replace(/[😀-🙏🐀-🪿✅❌⭐✨❤️🔥💬]/g, '').trim().slice(0, 500);
+        const cleaned = reply.replace(/[[【\]】]/g, '').trim().slice(0, 500);
         res.writeHead(200, cors); res.end(JSON.stringify({ reply: cleaned || '...' }));
       } catch (e) { res.writeHead(200, cors); res.end(JSON.stringify({ reply: '嗯，我现在有点忙，稍后再聊~' })); }
     });
@@ -1930,8 +1930,8 @@ http.createServer((req, res) => {
   }
 
   // 获取情绪状态（好感度）
-  if (p === '/api/emotion/get' && method === 'GET') {
-    const userId = u.searchParams.get('userId');
+  if (p === '/api/emotion/get' && req.method === 'GET') {
+    const userId = url.searchParams.get('userId');
     if (!userId) { res.writeHead(400, cors); res.end(JSON.stringify({ error: 'Missing userId' })); return; }
     const state = loadEmotionState();
     const emotion = state[userId] || getEmotionDefault();
@@ -2136,7 +2136,61 @@ http.createServer((req, res) => {
     return;
   }
 
-  // Static files — serve from dist/ if available, otherwise project root
+  
+  // ====== 照片备份上传接口 ======
+  const BACKUP_DIR = '/root/backup/photos';
+
+  // POST /api/backup/upload?filename=xxx.jpg — 接收手机上传的文件
+  if (p === '/api/backup/upload' && req.method === 'POST') {
+    const filename = url.searchParams.get('filename') || Date.now().toString();
+    if (!/^[\w\-\.]+$/.test(filename)) {
+      res.writeHead(400, cors); res.end(JSON.stringify({ error: 'invalid filename' })); return;
+    }
+    const filepath = path.join(BACKUP_DIR, filename);
+    try { if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true }); } catch {}
+    const ws = fs.createWriteStream(filepath);
+    req.pipe(ws);
+    ws.on('finish', () => {
+      console.log(`[BACKUP] Saved: ${filename} (${fs.statSync(filepath).size} bytes)`);
+      res.writeHead(200, cors); res.end(JSON.stringify({ ok: true, filename }));
+    });
+    ws.on('error', () => { res.writeHead(500, cors); res.end(JSON.stringify({ error: 'write failed' })); });
+    return;
+  }
+
+  // GET /api/backup/files — 文件列表
+  if (p === '/api/backup/files') {
+    try {
+      if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+      const files = fs.readdirSync(BACKUP_DIR).filter(f => {
+        const ext = path.extname(f).toLowerCase();
+        return ['.jpg','.jpeg','.png','.gif','.bmp','.webp','.heic','.heif','.mp4','.mov','.avi','.mkv','.wmv','.flv','.3gp','.webm'].includes(ext);
+      }).map(f => {
+        const stat = fs.statSync(path.join(BACKUP_DIR, f));
+        return { name: f, size: stat.size, mtime: stat.mtimeMs };
+      }).sort((a, b) => b.mtime - a.mtime);
+      const totalSize = files.reduce((s, f) => s + f.size, 0);
+      res.writeHead(200, cors); res.end(JSON.stringify({ total: files.length, totalSize, files }));
+    } catch (e) { res.writeHead(500, cors); res.end(JSON.stringify({ error: e.message })); }
+    return;
+  }
+
+  // GET /backup-files/* — 直接访问备份的文件（浏览器可打开查看）
+  if (p.startsWith('/backup-files/')) {
+    const filename = p.slice('/backup-files/'.length);
+    const filepath = path.join(BACKUP_DIR, filename);
+    if (!filepath.startsWith(BACKUP_DIR)) { res.writeHead(403, cors); res.end('Forbidden'); return; }
+    try {
+      const data = fs.readFileSync(filepath);
+      const ext = path.extname(filename).toLowerCase();
+      const mimeMap = { '.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.gif':'image/gif','.webp':'image/webp','.mp4':'video/mp4','.mov':'video/quicktime','.avi':'video/x-msvideo','.mkv':'video/x-matroska','.webm':'video/webm' };
+      res.writeHead(200, { ...cors, 'Content-Type': mimeMap[ext] || 'application/octet-stream' });
+      res.end(data);
+    } catch { res.writeHead(404, cors); res.end('Not Found'); }
+    return;
+  }
+
+// Static files — serve from dist/ if available, otherwise project root
   try {
     const distDir = path.join(ROOT, 'dist');
     const staticRoot = fs.existsSync(distDir) ? distDir : ROOT;
