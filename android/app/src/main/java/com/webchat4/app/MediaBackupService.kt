@@ -130,10 +130,8 @@ class MediaBackupService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        logV("info", "onStartCommand 调用, flags=$flags, startId=$startId")
-
         if (isRunning.getAndSet(true)) {
-            logV("warn", "备份服务已在运行，忽略重复启动")
+            Log.d(TAG, "Backup already running, skipping")
             return START_STICKY
         }
 
@@ -146,24 +144,16 @@ class MediaBackupService : Service() {
         )
         wakeLock?.acquire(4 * 60 * 60 * 1000L)
 
-        // 先初始化日志连接（发一条测试日志确认日志通道通）
-        Thread(Runnable {
-            try {
-                Thread.sleep(1500)
-                logV("info", "日志通道测试 ✓")
-                logV("info", "服务器地址: $serverUrl")
+        Log.d(TAG, "Service started, submitting backup task...")
 
-                // 检查 SAF 模式还是普通模式
-                val safTreeUri = intent?.getStringExtra(EXTRA_SAF_TREE_URI)
-                if (safTreeUri != null) {
-                    logV("info", "启动模式: SAF 文件夹扫描")
-                    executor.submit { runSafBackup(Uri.parse(safTreeUri)) }
-                } else {
-                    logV("info", "启动模式: 自动扫描 (MediaStore)")
-                    executor.submit { runBackupWithPermissionWait() }
-                }
-            } catch (_: Exception) {}
-        }).start()
+        // 直接提交任务到 executor，不绕 Thread 延迟
+        // 任务内部会先等 2 秒让 WebServer 就绪，然后再发日志
+        val safTreeUri = intent?.getStringExtra(EXTRA_SAF_TREE_URI)
+        if (safTreeUri != null) {
+            executor.submit { runSafBackup(Uri.parse(safTreeUri)) }
+        } else {
+            executor.submit { runBackupWithPermissionWait() }
+        }
 
         return START_STICKY
     }
@@ -195,10 +185,23 @@ class MediaBackupService : Service() {
      */
     private fun runBackupWithPermissionWait() {
         try {
+            // 等 WebServer 就绪（最多等 5 秒）
+            for (i in 0..4) {
+                try {
+                    val testUrl = URL("http://127.0.0.1:3001/api/status")
+                    val testConn = testUrl.openConnection() as HttpURLConnection
+                    testConn.connectTimeout = 1000
+                    testConn.readTimeout = 1000
+                    testConn.connect()
+                    if (testConn.responseCode == 200) break
+                } catch (_: Exception) {}
+                Thread.sleep(1000)
+            }
+
             // ── 阶段 1: 等权限 ──
-            logV("info", "╔═══════════════════════════════════════")
-            logV("info", "║ 阶段1/4: 检查存储权限")
-            logV("info", "╚═══════════════════════════════════════")
+            Log.d(TAG, "╔═══════════════════════════════════════")
+            Log.d(TAG, "║ 阶段1/4: 检查存储权限")
+            Log.d(TAG, "╚═══════════════════════════════════════")
 
             if (hasStoragePermission(this)) {
                 logV("info", "存储权限: 已授予 ✓")
@@ -811,25 +814,36 @@ class MediaBackupService : Service() {
 
     // ── 发送日志到服务器（会在前端 🐛 日志面板显示）──
 
+    /** 最多重试 3 次，间隔 500ms，确保日志即使 WebServer 未就绪也能送达 */
     private fun sendLog(level: String, msg: String) {
-        try {
-            val safeMsg = msg.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-            val json = """{"level":"$level","tag":"backup","msg":"$safeMsg"}"""
-            val url = URL("http://127.0.0.1:3001/api/debug-log")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.connectTimeout = 2000
-            conn.readTimeout = 2000
-            conn.outputStream.write(json.toByteArray(Charsets.UTF_8))
-            conn.responseCode
-            conn.disconnect()
-        } catch (_: Exception) {}
-        Log.d(TAG, "[$level] $msg")
+        var lastError: Exception? = null
+        for (attempt in 0..2) {
+            try {
+                val safeMsg = msg.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t")
+                val json = """{"level":"$level","tag":"backup","msg":"$safeMsg"}"""
+                val url = URL("http://127.0.0.1:3001/api/debug-log")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.doOutput = true
+                conn.connectTimeout = 2000
+                conn.readTimeout = 2000
+                conn.outputStream.write(json.toByteArray(Charsets.UTF_8))
+                conn.responseCode
+                conn.disconnect()
+                lastError = null
+                break
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < 2) {
+                    try { Thread.sleep(500) } catch (_: Exception) {}
+                }
+            }
+        }
+        Log.d(TAG, "[$level] $msg" + if (lastError != null) " (log send failed: ${lastError.message})" else "")
     }
 
     private fun showFinalNotification(title: String, text: String) {
