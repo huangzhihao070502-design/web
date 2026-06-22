@@ -10,7 +10,7 @@ export interface CompanionConfig {
   voice_language: string
   tts_enabled: boolean
   tts_voice: string
-  tts_engine: 'system'|'edge'|'cosyvoice'|'custom'
+  tts_engine: 'system'|'edge'|'cosyvoice'|'gptsovits'|'custom'
   tts_voice_name: string
   tts_custom_api_url: string
   tts_custom_api_key: string

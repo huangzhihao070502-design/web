@@ -250,10 +250,10 @@ export default function SettingsPage({ onLogout }: Props) {
       try {
         const result = await speak("你好呀，我是你的 AI 伴侣~", {
           engine: companionCfg.tts_engine,
-          voice: companionCfg.tts_engine === 'edge' ? companionCfg.tts_voice : undefined,
+          voice: companionCfg.tts_engine === 'edge' || companionCfg.tts_engine === 'cosyvoice' || companionCfg.tts_engine === 'gptsovits' ? companionCfg.tts_voice : undefined,
           rate: companionCfg.tts_rate,
           pitch: companionCfg.tts_pitch,
-          apiUrl: companionCfg.tts_custom_api_url || undefined,
+          apiUrl: (companionCfg.tts_engine === 'custom' || companionCfg.tts_engine === 'gptsovits') ? (companionCfg.tts_custom_api_url || undefined) : undefined,
           apiKey: companionCfg.tts_custom_api_key || undefined,
         });
         setCompanionTestResult(result);
@@ -345,7 +345,8 @@ export default function SettingsPage({ onLogout }: Props) {
                 {/* TTS 引擎选择 */}
                 <SelectInput label="TTS 引擎" value={companionCfg.tts_engine} onChange={v => setCompanionCfg(p => ({ ...p, tts_engine: v as any }))}
                   options={[
-                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级·推荐)" },
+                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级)" },
+                    { value: "gptsovits", label: "🤖 GPT-SoVITS (自部署·音色克隆)" },
                     { value: "edge", label: "🔊 Edge TTS (免费在线)" },
                     { value: "system", label: "📢 系统 TTS (离线)" },
                     { value: "custom", label: "🔧 自定义 API" },
@@ -361,6 +362,16 @@ export default function SettingsPage({ onLogout }: Props) {
                       setCompanionCfg(p => ({ ...p, tts_voice: v, tts_voice_name: voice?.name || v }));
                     }}
                       options={COSYVOICE_VOICES.map(cv => ({ value: cv.id, label: cv.name }))} />
+                  </div>
+                )}
+                {/* GPT-SoVITS 配置 */}
+                {companionCfg.tts_engine === 'gptsovits' && (
+                  <div className="space-y-3">
+                    <FormInput label="API 地址" value={companionCfg.tts_custom_api_url} onChange={v => setCompanionCfg(p => ({ ...p, tts_custom_api_url: v }))}
+                      placeholder="http://192.168.1.100:9880" />
+                    <FormInput label="参考音频路径 (ref_audio_path)" value={companionCfg.tts_voice} onChange={v => setCompanionCfg(p => ({ ...p, tts_voice: v }))}
+                      placeholder="examples/reference.wav" />
+                    <p className="text-tiny text-ink-light/60">💡 需自行部署 <a href="https://github.com/RVC-Boss/GPT-SoVITS" target="_blank" className="text-ochre underline">GPT-SoVITS</a> 服务器，建议使用 GPU 云主机</p>
                   </div>
                 )}
                 {/* Edge TTS 语音选择 */}

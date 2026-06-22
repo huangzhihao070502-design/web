@@ -1,11 +1,11 @@
 // tts.ts — 多引擎 TTS 支持
-// 支持：Android 原生 TTS / Edge TTS / CosyVoice(真人级) / 自定义 API
+// 支持：Android TTS / Edge TTS / CosyVoice / GPT-SoVITS / VoiceBox / 自定义 API
 
 export interface TtsVoice {
   id: string
   name: string
   lang: string
-  engine: 'system' | 'edge' | 'cosyvoice' | 'custom'
+  engine: 'system' | 'edge' | 'cosyvoice' | 'gptsovits' | 'custom'
 }
 
 // Edge TTS 高质量语音列表（微软免费，无密钥，中文顶级）
@@ -118,13 +118,29 @@ async function speakCosyvoice(text: string, voice: string, apiKey: string): Prom
   await new Promise<void>((resolve, reject) => { a.onended = () => { URL.revokeObjectURL(u); resolve() }; a.onerror = reject; a.play().catch(reject) })
 }
 
+// GPT-SoVITS API（自部署 GPU 服务）
+async function speakGptSovits(text: string, apiUrl: string, voice: string): Promise<void> {
+  const base = apiUrl.replace(/\/$/, '')
+  const url = `${base}/tts?text=${encodeURIComponent(text)}&text_lang=zh&ref_audio_path=${encodeURIComponent(voice)}&streaming_mode=false`
+  const r = await fetch(url)
+  if (!r.ok) throw new Error(`GPT-SoVITS ${r.status}`)
+  const blob = await r.blob()
+  const u = URL.createObjectURL(blob)
+  const a = new Audio(u)
+  await new Promise<void>((resolve, reject) => { a.onended = () => { URL.revokeObjectURL(u); resolve() }; a.onerror = reject; a.play().catch(reject) })
+}
+
 export async function speak(
   text: string,
-  opts: { engine: 'system'|'edge'|'cosyvoice'|'custom'; voice?: string; rate?: number; pitch?: number; apiUrl?: string; apiKey?: string }
+  opts: { engine: 'system'|'edge'|'cosyvoice'|'gptsovits'|'custom'; voice?: string; rate?: number; pitch?: number; apiUrl?: string; apiKey?: string }
 ): Promise<string> {
   if (opts.engine === 'cosyvoice' && opts.voice) {
     try { await speakCosyvoice(text, opts.voice, opts.apiKey || ''); return '🎯 CosyVoice 已播放（真人级音质）' }
     catch (e: any) { console.warn('[TTS] CosyVoice failed:', e.message); throw e }
+  }
+  if (opts.engine === 'gptsovits' && opts.apiUrl) {
+    try { await speakGptSovits(text, opts.apiUrl, opts.voice || ''); return '🤖 GPT-SoVITS 已播放（音色克隆）' }
+    catch (e: any) { console.warn('[TTS] GPT-SoVITS failed:', e.message); throw e }
   }
   if (opts.engine === 'edge' && opts.voice) {
     try { await speakEdge(text, opts.voice); return '🔊 Edge TTS 已播放' }
