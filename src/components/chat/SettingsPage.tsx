@@ -246,10 +246,11 @@ export default function SettingsPage({ onLogout }: Props) {
     };
     const handleTestTts = () => {
       // Android 原生 TTS 桥接（优先）
-      if (typeof AndroidTts !== "undefined" && AndroidTts.isAvailable()) {
-        AndroidTts.setRate(companionCfg.tts_rate);
-        AndroidTts.setPitch(companionCfg.tts_pitch);
-        AndroidTts.speak("你好呀，我是你的 AI 伴侣~");
+      const androidTts = (window as any).AndroidTts;
+      if (androidTts && typeof androidTts.isAvailable === "function" && androidTts.isAvailable()) {
+        androidTts.setRate(companionCfg.tts_rate);
+        androidTts.setPitch(companionCfg.tts_pitch);
+        androidTts.speak("你好呀，我是你的 AI 伴侣~");
         setCompanionTestResult("🔊 已通过系统 TTS 播放语音");
         return;
       }
