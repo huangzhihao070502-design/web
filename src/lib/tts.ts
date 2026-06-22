@@ -144,9 +144,10 @@ async function speakGptSovits(text: string, apiUrl: string, voice: string): Prom
   await new Promise<void>((resolve, reject) => { a.onended = () => { URL.revokeObjectURL(u); resolve() }; a.onerror = reject; a.play().catch(reject) })
 }
 
-function speakLocalKokoro(text: string): boolean {
+function speakLocalKokoro(text: string, voiceIndex?: number): boolean {
   const ltts = (window as any).LocalTts
   if (ltts?.isAvailable?.()) {
+    if (typeof voiceIndex === 'number') ltts.setVoice(voiceIndex)
     ltts.speak(text)
     return true
   }
@@ -170,7 +171,8 @@ export async function speak(
     catch (e: any) { console.warn('[TTS] Edge failed:', e.message); if (trySystemTts(text, opts.rate, opts.pitch)) return '🔊 已降级到系统 TTS'; throw e }
   }
   if (opts.engine === 'localkokoro') {
-    if (speakLocalKokoro(text)) return '📱 本地 Kokoro 已播放（离线）'
+    const voiceIdx = opts.voice ? KOKORO_VOICES.findIndex(v => v.id === opts.voice) : 0
+    if (speakLocalKokoro(text, voiceIdx >= 0 ? voiceIdx : 0)) return '📱 本地 Kokoro 已播放（离线）'
     if (trySystemTts(text, opts.rate, opts.pitch)) return '🔊 已降级到系统 TTS'
     throw new Error('本地 TTS 不可用，请下载语音模型')
   }

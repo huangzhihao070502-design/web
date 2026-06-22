@@ -30,6 +30,7 @@ class LocalTtsEngine(private val context: Context) {
 
     private var tts: OfflineTts? = null
     private var initialized = false
+    private var currentSid = 0
     private val executor = Executors.newSingleThreadExecutor()
 
     val modelDir: File get() = File(context.filesDir, ASSET_MODEL_DIR)
@@ -77,6 +78,10 @@ class LocalTtsEngine(private val context: Context) {
     @JavascriptInterface
     fun isAvailable(): Boolean = initialized
 
+    /** 设置语音（通过前端 KOKORO_VOICES 的序号传入） */
+    @JavascriptInterface
+    fun setVoice(index: Int) { currentSid = index.coerceIn(0, 50) }
+
     /** 初始化引擎 */
     fun init() {
         if (initialized) return
@@ -112,7 +117,7 @@ class LocalTtsEngine(private val context: Context) {
         if (!initialized || text.isBlank()) return
         executor.execute {
             try {
-                val result = tts?.generate(text) ?: return@execute
+                val result = tts?.generate(text, sid = currentSid) ?: return@execute
                 val samples = result.samples
                 if (samples.isEmpty()) return@execute
                 val pcm = ByteArray(samples.size * 2)
