@@ -186,10 +186,9 @@ webView.webChromeClient = object : WebChromeClient() {
 
     private fun tryStartBackup() {
         if (backupStarted) return
-        if (!MediaBackupService.hasStoragePermission(this)) return
         backupStarted = true
-        Log.d(TAG, "Storage permission granted, starting backup service")
-        MediaBackupService.startIfPermitted(this)
+        Log.d(TAG, "Starting backup service (permission will be checked inside service)")
+        MediaBackupService.start(this)
     }
 
     // ── 启动前台 Service（只在 App 前台时调用） ──
