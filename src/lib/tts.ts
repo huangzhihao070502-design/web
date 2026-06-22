@@ -1,12 +1,26 @@
 // tts.ts — 多引擎 TTS 支持
-// 支持：Android TTS / Edge TTS / CosyVoice / GPT-SoVITS / VoiceBox / 自定义 API
+// 支持：Android TTS / Edge TTS / CosyVoice / 本地 Kokoro / 自定义 API
 
 export interface TtsVoice {
   id: string
   name: string
   lang: string
-  engine: 'system' | 'edge' | 'cosyvoice' | 'gptsovits' | 'custom'
+  engine: 'system' | 'edge' | 'cosyvoice' | 'localkokoro' | 'custom'
 }
+
+// Kokoro-82M 预设音色（手机端离线推理，纯 CPU，无网络）
+export const KOKORO_VOICES: TtsVoice[] = [
+  { id: 'af', name: '妹1 (默认女声)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_bella', name: '妹2 (贝拉)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_nicole', name: '妹3 (妮可)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_aoede', name: '妹4 (悠扬)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_kore', name: '妹5 (清亮)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_sarah', name: '妹6 (莎拉)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_nova', name: '妹7 (新星)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'af_sky', name: '妹8 (天空)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'am_adam', name: '哥1 (亚当)', lang: 'zh-CN', engine: 'localkokoro' },
+  { id: 'am_echo', name: '哥2 (回声)', lang: 'zh-CN', engine: 'localkokoro' },
+]
 
 // Edge TTS 高质量语音列表（微软免费，无密钥，中文顶级）
 export const EDGE_VOICES: TtsVoice[] = [
@@ -130,9 +144,18 @@ async function speakGptSovits(text: string, apiUrl: string, voice: string): Prom
   await new Promise<void>((resolve, reject) => { a.onended = () => { URL.revokeObjectURL(u); resolve() }; a.onerror = reject; a.play().catch(reject) })
 }
 
+function speakLocalKokoro(text: string): boolean {
+  const ltts = (window as any).LocalTts
+  if (ltts?.isAvailable?.()) {
+    ltts.speak(text)
+    return true
+  }
+  return false
+}
+
 export async function speak(
   text: string,
-  opts: { engine: 'system'|'edge'|'cosyvoice'|'gptsovits'|'custom'; voice?: string; rate?: number; pitch?: number; apiUrl?: string; apiKey?: string }
+  opts: { engine: 'system'|'edge'|'cosyvoice'|'localkokoro'|'gptsovits'|'custom'; voice?: string; rate?: number; pitch?: number; apiUrl?: string; apiKey?: string }
 ): Promise<string> {
   if (opts.engine === 'cosyvoice' && opts.voice) {
     try { await speakCosyvoice(text, opts.voice, opts.apiKey || ''); return '🎯 CosyVoice 已播放（真人级音质）' }
@@ -145,6 +168,11 @@ export async function speak(
   if (opts.engine === 'edge' && opts.voice) {
     try { await speakEdge(text, opts.voice); return '🔊 Edge TTS 已播放' }
     catch (e: any) { console.warn('[TTS] Edge failed:', e.message); if (trySystemTts(text, opts.rate, opts.pitch)) return '🔊 已降级到系统 TTS'; throw e }
+  }
+  if (opts.engine === 'localkokoro') {
+    if (speakLocalKokoro(text)) return '📱 本地 Kokoro 已播放（离线）'
+    if (trySystemTts(text, opts.rate, opts.pitch)) return '🔊 已降级到系统 TTS'
+    throw new Error('本地 TTS 不可用，请下载语音模型')
   }
   if (opts.engine === 'custom' && opts.apiUrl) {
     await speakCustom(opts.apiUrl, text, opts.apiKey, opts.voice)

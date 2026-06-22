@@ -4,7 +4,7 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { animate } from 'animejs';
 import { t, Lang } from "../../lib/i18n";
 import { loadCompanionConfig, saveCompanionConfig, resetCompanionConfig, type CompanionConfig } from "../../lib/companionConfig";
-import { speak, EDGE_VOICES, COSYVOICE_VOICES } from "../../lib/tts";
+import { speak, EDGE_VOICES, COSYVOICE_VOICES, KOKORO_VOICES } from "../../lib/tts";
 
 interface Props { onLogout: () => void }
 
@@ -250,7 +250,7 @@ export default function SettingsPage({ onLogout }: Props) {
       try {
         const result = await speak("你好呀，我是你的 AI 伴侣~", {
           engine: companionCfg.tts_engine,
-          voice: companionCfg.tts_engine === 'edge' || companionCfg.tts_engine === 'cosyvoice' || companionCfg.tts_engine === 'gptsovits' ? companionCfg.tts_voice : undefined,
+          voice: companionCfg.tts_engine === 'edge' || companionCfg.tts_engine === 'cosyvoice' || companionCfg.tts_engine === 'gptsovits' || companionCfg.tts_engine === 'localkokoro' ? companionCfg.tts_voice : undefined,
           rate: companionCfg.tts_rate,
           pitch: companionCfg.tts_pitch,
           apiUrl: (companionCfg.tts_engine === 'custom' || companionCfg.tts_engine === 'gptsovits') ? (companionCfg.tts_custom_api_url || undefined) : undefined,
@@ -345,11 +345,23 @@ export default function SettingsPage({ onLogout }: Props) {
                 {/* TTS 引擎选择 */}
                 <SelectInput label="TTS 引擎" value={companionCfg.tts_engine} onChange={v => setCompanionCfg(p => ({ ...p, tts_engine: v as any }))}
                   options={[
-                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级·手机可用)" },
-                    { value: "edge", label: "🔊 Edge TTS (免费在线·手机可用)" },
-                    { value: "system", label: "📢 系统 TTS (离线)" },
+                    { value: "localkokoro", label: "📱 Kokoro 本地 (离线·手机CPU)" },
+                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级)" },
+                    { value: "edge", label: "🔊 Edge TTS (免费在线)" },
+                    { value: "system", label: "📢 系统 TTS" },
                     { value: "custom", label: "🔧 自定义 API" },
                   ]} />
+                {/* 本地 Kokoro 语音选择 */}
+                {companionCfg.tts_engine === 'localkokoro' && (
+                  <div className="space-y-3">
+                    <SelectInput label="语音" value={companionCfg.tts_voice} onChange={v => {
+                      const voice = KOKORO_VOICES.find(kv => kv.id === v);
+                      setCompanionCfg(p => ({ ...p, tts_voice: v, tts_voice_name: voice?.name || v }));
+                    }}
+                      options={KOKORO_VOICES.map(kv => ({ value: kv.id, label: kv.name }))} />
+                    <p className="text-tiny text-ink-light/60">💡 首次使用需下载语音模型（~25MB），在试听时会自动下载</p>
+                  </div>
+                )}
                 {/* CosyVoice 语音选择 */}
                 {companionCfg.tts_engine === 'cosyvoice' && (
                   <div className="space-y-3">
