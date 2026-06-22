@@ -5,11 +5,15 @@ export interface CompanionConfig {
   ai_api_key: string
   ai_model: string
   ai_system_prompt: string
-  persona_id: string            // 关联的角色卡 ID，为空则不使用
+  persona_id: string
   voice_enabled: boolean
   voice_language: string
   tts_enabled: boolean
   tts_voice: string
+  tts_engine: 'system'|'edge'|'custom'
+  tts_voice_name: string
+  tts_custom_api_url: string
+  tts_custom_api_key: string
   tts_rate: number
   tts_pitch: number
   tts_volume: number
@@ -29,6 +33,11 @@ const DEFAULT_CONFIG: CompanionConfig = {
   ai_model: 'deepseek-chat',
   ai_system_prompt: '你是用户的 AI 伴侣，性格温柔可爱，回复简短自然，像朋友一样聊天。用中文回复。',
   persona_id: '',
+  tts_engine: 'edge',
+  tts_voice: 'zh-CN-XiaoxiaoNeural',
+  tts_voice_name: '晓晓 (亲切女声)',
+  tts_custom_api_url: '',
+  tts_custom_api_key: '',
   voice_enabled: true,
   voice_language: 'zh-CN',
   tts_enabled: true,
