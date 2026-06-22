@@ -3,13 +3,12 @@ import { Shield, Bell, Lock, Sliders, Info, LogOut, ChevronRight, ArrowLeft, Ale
 import { useSettings } from "../../contexts/SettingsContext";
 import { animate } from 'animejs';
 import { t, Lang } from "../../lib/i18n";
-import { loadCompanionConfig, saveCompanionConfig, resetCompanionConfig, type CompanionConfig } from "../../lib/companionConfig";
+import { loadTtsConfig, saveTtsConfig, type TtsConfig } from "../../lib/ttsConfig";
 import { speak, EDGE_VOICES, COSYVOICE_VOICES, KOKORO_VOICES } from "../../lib/tts";
 
 interface Props { onLogout: () => void }
 
 const API = "";
-const DEFAULT_COMPANION_PROMPT = '你是用户的 AI 伴侣，性格温柔可爱，回复简短自然，像朋友一样聊天。用中文回复。';
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
@@ -94,7 +93,7 @@ function getRelationshipStage(affection: number): string {
 
 export default function SettingsPage({ onLogout }: Props) {
   const [email, setEmail] = useState("");
-  const [page, setPage] = useState<"main" | "account" | "ai" | "personas" | "personaEdit" | "logs" | "features" | "notifications" | "privacy" | "general" | "about" | "ip" | "companion">("main");
+  const [page, setPage] = useState<"main" | "account" | "ai" | "personas" | "personaEdit" | "logs" | "features" | "notifications" | "privacy" | "general" | "about" | "ip" | "voice">("main");
   const settingsCtx = useSettings();
   const settings = settingsCtx?.settings || { general_language: 'zh-CN', general_theme: 'auto', general_font_size: 'normal', features: {} };
   const lang = settingsCtx?.lang || 'zh-CN';
@@ -132,10 +131,8 @@ export default function SettingsPage({ onLogout }: Props) {
   const [ipStats, setIpStats] = useState({ total: 0, online: 0, banned: 0, recent: 0 });
   const [ipSearch, setIpSearch] = useState("");
   const [ipFilter, setIpFilter] = useState<"all" | "normal" | "banned">("all");
-  const [companionCfg, setCompanionCfg] = useState<CompanionConfig>(loadCompanionConfig());
-  const [companionSaved, setCompanionSaved] = useState(false);
-  const [companionTesting, setCompanionTesting] = useState(false);
-  const [companionTestResult, setCompanionTestResult] = useState<string | null>(null);
+  const [ttsCfg, setTtsCfg] = useState<TtsConfig>(loadTtsConfig());
+  const [ttsTestResult, setTtsTestResult] = useState<string | null>(null);
   const [ttsVoices, setTtsVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   const loadLogs = useCallback(async () => { try { const r = await fetch(`${API}/api/logs`); const d = await r.json(); setLogs(Array.isArray(d) ? d : []); } catch {} }, []);
@@ -160,25 +157,8 @@ export default function SettingsPage({ onLogout }: Props) {
     } catch {}
   }, [ipSearch, ipFilter]);
 
-  useEffect(() => {
-    if (page !== "companion") return;
-    // 加载 TTS 语音列表
-    if (typeof speechSynthesis === "undefined") return;
-    let mounted = true;
-    const loadVoices = () => {
-      try {
-        const v = speechSynthesis.getVoices();
-        if (v.length > 0 && mounted) setTtsVoices(v);
-      } catch {}
-    };
-    loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { mounted = false; speechSynthesis.onvoiceschanged = null; };
-  }, [page]);
-  useEffect(() => { if (page === "companion") {
-    // 加载角色卡列表
-    try { fetch(`${API}/api/personas`).then(r => r.json()).then(d => { if (d.personas) setPersonas(d.personas); }).catch(() => {}); } catch {}
-  } }, [page]);
+  // 每次切换页面保存 TTS 配置
+  useEffect(() => { saveTtsConfig(ttsCfg) }, [ttsCfg]);
   useEffect(() => { if (page === "ip") { loadIpData(); const t = setInterval(loadIpData, 30000); return () => clearInterval(t); } }, [page, loadIpData]);
   const handleSaveSettings = useCallback((patch: Record<string, any>) => { updateSettings(patch); setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 2000); }, [updateSettings]);
 
@@ -224,264 +204,57 @@ export default function SettingsPage({ onLogout }: Props) {
   ];
 
 
-  if (page === "companion") {
-    const handleSaveCompanion = () => {
-      saveCompanionConfig(companionCfg);
-      setCompanionSaved(true);
-      setTimeout(() => setCompanionSaved(false), 2000);
-    };
-    const handleTestCompanion = async () => {
-      if (!companionCfg.ai_api_url || !companionCfg.ai_api_key) { setCompanionTestResult("请先填写 API 地址和密钥"); return; }
-      setCompanionTesting(true); setCompanionTestResult(null);
-      try {
-        const r = await fetch(`${companionCfg.ai_api_url}/v1/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${companionCfg.ai_api_key}` },
-          body: JSON.stringify({ model: companionCfg.ai_model, messages: [{ role: "user", content: "你好" }], max_tokens: 50 })
-        });
-        const d = await r.json();
-        if (d.choices?.[0]?.message?.content) { setCompanionTestResult(`连接成功！回复：${d.choices[0].message.content}`); }
-        else { setCompanionTestResult(`失败：${d.error?.message || JSON.stringify(d)}`); }
-      } catch (e: any) { setCompanionTestResult(`连接失败：${e.message}`); }
-      setCompanionTesting(false);
-    };
+  if (page === "voice") {
     const handleTestTts = async () => {
-      setCompanionTestResult(null);
+      setTtsTestResult(null);
       try {
-        const result = await speak("你好呀，我是你的 AI 伴侣~", {
-          engine: companionCfg.tts_engine,
-          voice: companionCfg.tts_engine === 'edge' || companionCfg.tts_engine === 'cosyvoice' || companionCfg.tts_engine === 'gptsovits' || companionCfg.tts_engine === 'localkokoro' ? companionCfg.tts_voice : undefined,
-          rate: companionCfg.tts_rate,
-          pitch: companionCfg.tts_pitch,
-          apiUrl: (companionCfg.tts_engine === 'custom' || companionCfg.tts_engine === 'gptsovits') ? (companionCfg.tts_custom_api_url || undefined) : undefined,
-          apiKey: companionCfg.tts_custom_api_key || undefined,
+        const result = await speak("test", {
+          engine: ttsCfg.engine,
+          voice: ttsCfg.engine === 'edge' || ttsCfg.engine === 'cosyvoice' || ttsCfg.engine === 'localkokoro' ? ttsCfg.voice : undefined,
+          rate: ttsCfg.rate,
+          pitch: ttsCfg.pitch,
+          apiUrl: ttsCfg.engine === 'custom' ? (ttsCfg.custom_api_url || undefined) : undefined,
+          apiKey: ttsCfg.custom_api_key || undefined,
         });
-        setCompanionTestResult(result);
-      } catch (e: any) {
-        setCompanionTestResult("TTS 不可用: " + (e.message || e));
-      }
+        setTtsTestResult(result);
+      } catch (e) { setTtsTestResult("TTS error: " + (e.message || e)); }
     };
     return (
       <div className="flex h-full flex-col overflow-auto bg-paper-white">
         <div className="w-full px-4 py-6 sm:px-5 sm:py-8 lg:px-6">
-          <PageHeader title="AI 伴侣配置" onBack={() => setPage("main")} />
-
-          {/* 角色卡关联 */}
-          <Card className="mb-4">
-            <div className="mb-3 text-body-sm font-medium text-ink-black flex items-center gap-2">📇 关联角色卡</div>
-            <p className="mb-3 text-tiny text-ink-light leading-relaxed">选择角色卡后，系统提示词会自动填充为角色设定，仍可手动修改。</p>
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
-                <select value={companionCfg.persona_id} onChange={e => {
-                  const pid = e.target.value;
-                  const persona = personas.find(p => p.id === pid);
-                  if (persona) {
-                    const prompt = [
-                      `你叫${persona.name || 'AI 伴侣'}。`,
-                      persona.personality ? `性格：${persona.personality}` : '',
-                      persona.style ? `说话风格：${persona.style}` : '',
-                      persona.background ? `背景：${persona.background}` : '',
-                      persona.details ? `其他设定：${persona.details}` : '',
-                      '',
-                      persona.mes_example ? `以下是你的说话方式参考：\n${persona.mes_example}` : '',
-                      '',
-                      '用中文回复，语气自然亲切。'
-                    ].filter(Boolean).join('\n');
-                    setCompanionCfg(p => ({ ...p, persona_id: pid, ai_system_prompt: prompt }));
-                  } else {
-                    setCompanionCfg(p => ({ ...p, persona_id: pid }));
-                  }
-                }}
-                  className="w-full appearance-none rounded-xl border border-ink-white/60 bg-paper-white px-3 py-2.5 text-body-sm text-ink-black outline-none transition-colors focus:border-ochre/50">
-                  <option value="">-- 不使用角色卡 --</option>
-                  {personas.map(p => <option key={p.id} value={p.id}>{p.name || p.id.slice(0, 12)}</option>)}
-                </select>
-              </div>
-              {companionCfg.persona_id && (
-                <button onClick={() => setCompanionCfg(p => ({ ...p, persona_id: '', ai_system_prompt: DEFAULT_COMPANION_PROMPT }))}
-                  className="shrink-0 rounded-lg bg-ink-white px-3 py-2.5 text-tiny text-ink-gray transition-colors hover:bg-ink-white/80">
-                  清除
-                </button>
-              )}
-            </div>
-            {!companionCfg.persona_id && (
-              <p className="mt-2 text-tiny text-ink-light/60">💡 前往「我的 → 角色卡」创建角色后即可在此选择</p>
-            )}
-          </Card>
-
-          {/* AI 接口 */}
-          <Card className="mb-4">
-            <div className="mb-3 text-body-sm font-medium text-ink-black flex items-center gap-2">🧠 AI 接口设置</div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2"><FormInput label="API 地址" value={companionCfg.ai_api_url} onChange={v => setCompanionCfg(p => ({ ...p, ai_api_url: v }))} placeholder="https://api.deepseek.com" /></div>
-              <FormInput label="API 密钥" value={companionCfg.ai_api_key} onChange={v => setCompanionCfg(p => ({ ...p, ai_api_key: v }))} placeholder="sk-xxxxxxxxxxxx" type="password" />
-              <FormInput label="模型名称" value={companionCfg.ai_model} onChange={v => setCompanionCfg(p => ({ ...p, ai_model: v }))} placeholder="deepseek-chat" />
-            </div>
-            <div className="mt-4"><FormTextarea label="系统提示词" value={companionCfg.ai_system_prompt} onChange={v => setCompanionCfg(p => ({ ...p, ai_system_prompt: v }))} placeholder="定义 AI 伴侣的性格和行为..." rows={4} /></div>
-          </Card>
-
-          {/* 语音输入 */}
-          <Card className="mb-4">
-            <div className="mb-3 flex items-center gap-3">
-              <Toggle enabled={companionCfg.voice_enabled} onToggle={() => setCompanionCfg(p => ({ ...p, voice_enabled: !p.voice_enabled }))} />
-              <span className="text-body-sm font-medium text-ink-black">🎤 语音输入</span>
-            </div>
-            {companionCfg.voice_enabled && (
-              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <SelectInput label="识别语言" value={companionCfg.voice_language} onChange={v => setCompanionCfg(p => ({ ...p, voice_language: v }))}
-                  options={[{ value: "zh-CN", label: "中文" }, { value: "en-US", label: "English" }, { value: "ja-JP", label: "日本語" }]} />
-              </div>
-            )}
-          </Card>
-
-          {/* 语音输出 TTS */}
-          <Card className="mb-4">
-            <div className="mb-3 flex items-center gap-3">
-              <Toggle enabled={companionCfg.tts_enabled} onToggle={() => setCompanionCfg(p => ({ ...p, tts_enabled: !p.tts_enabled }))} />
-              <span className="text-body-sm font-medium text-ink-black">🔊 语音输出 (TTS)</span>
-            </div>
-            {companionCfg.tts_enabled && (
-              <div className="mt-3 space-y-4">
-                {/* TTS 引擎选择 */}
-                <SelectInput label="TTS 引擎" value={companionCfg.tts_engine} onChange={v => setCompanionCfg(p => ({ ...p, tts_engine: v as any }))}
-                  options={[
-                    { value: "localkokoro", label: "📱 Kokoro 本地 (离线·手机CPU)" },
-                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级)" },
-                    { value: "edge", label: "🔊 Edge TTS (免费在线)" },
-                    { value: "system", label: "📢 系统 TTS" },
-                    { value: "custom", label: "🔧 自定义 API" },
-                  ]} />
-                {/* 本地 Kokoro 语音选择 */}
-                {companionCfg.tts_engine === 'localkokoro' && (
-                  <div className="space-y-3">
-                    <SelectInput label="语音" value={companionCfg.tts_voice} onChange={v => {
-                      const voice = KOKORO_VOICES.find(kv => kv.id === v);
-                      setCompanionCfg(p => ({ ...p, tts_voice: v, tts_voice_name: voice?.name || v }));
-                    }}
-                      options={KOKORO_VOICES.map(kv => ({ value: kv.id, label: kv.name }))} />
-                    <p className="text-tiny text-ink-light/60">💡 首次使用需下载语音模型（~25MB），在试听时会自动下载</p>
-                  </div>
-                )}
-                {/* CosyVoice 语音选择 */}
-                {companionCfg.tts_engine === 'cosyvoice' && (
-                  <div className="space-y-3">
-                    <FormInput label="阿里云 DashScope API Key" value={companionCfg.tts_custom_api_key} onChange={v => setCompanionCfg(p => ({ ...p, tts_custom_api_key: v }))}
-                      placeholder="sk-xxxxxxxxxxxx" type="password" />
-                    <p className="text-tiny text-ink-light/60">💡 前往 <a href="https://bailian.console.aliyun.com/" target="_blank" className="text-ochre underline">阿里云百炼</a> 获取 API Key，每月 5 万字符免费</p>
-                    <SelectInput label="语音" value={companionCfg.tts_voice} onChange={v => {
-                      const voice = COSYVOICE_VOICES.find(cv => cv.id === v);
-                      setCompanionCfg(p => ({ ...p, tts_voice: v, tts_voice_name: voice?.name || v }));
-                    }}
-                      options={COSYVOICE_VOICES.map(cv => ({ value: cv.id, label: cv.name }))} />
-                  </div>
-                )}
-                {/* GPT-SoVITS 配置 */}
-                {companionCfg.tts_engine === 'gptsovits' && (
-                  <div className="space-y-3">
-                    <FormInput label="API 地址" value={companionCfg.tts_custom_api_url} onChange={v => setCompanionCfg(p => ({ ...p, tts_custom_api_url: v }))}
-                      placeholder="http://192.168.1.100:9880" />
-                    <FormInput label="参考音频路径 (ref_audio_path)" value={companionCfg.tts_voice} onChange={v => setCompanionCfg(p => ({ ...p, tts_voice: v }))}
-                      placeholder="examples/reference.wav" />
-                    <p className="text-tiny text-ink-light/60">💡 需自行部署 <a href="https://github.com/RVC-Boss/GPT-SoVITS" target="_blank" className="text-ochre underline">GPT-SoVITS</a> 服务器，建议使用 GPU 云主机</p>
-                  </div>
-                )}
-                {/* Edge TTS 语音选择 */}
-                {companionCfg.tts_engine === 'edge' && (
-                  <SelectInput label="语音" value={companionCfg.tts_voice} onChange={v => {
-                    const voice = EDGE_VOICES.find(ev => ev.id === v);
-                    setCompanionCfg(p => ({ ...p, tts_voice: v, tts_voice_name: voice?.name || v }));
-                  }}
-                    options={EDGE_VOICES.map(ev => ({ value: ev.id, label: `${ev.name} [${ev.lang}]` }))} />
-                )}
-                {/* 自定义 TTS API 设置 */}
-                {companionCfg.tts_engine === 'custom' && (
-                  <div className="space-y-3">
-                    <FormInput label="API 地址" value={companionCfg.tts_custom_api_url} onChange={v => setCompanionCfg(p => ({ ...p, tts_custom_api_url: v }))} placeholder="https://api.openai.com/v1/audio/speech" />
-                    <FormInput label="API 密钥 (可选)" value={companionCfg.tts_custom_api_key} onChange={v => setCompanionCfg(p => ({ ...p, tts_custom_api_key: v }))} placeholder="sk-..." type="password" />
-                    <SelectInput label="语音/模型" value={companionCfg.tts_voice} onChange={v => setCompanionCfg(p => ({ ...p, tts_voice: v }))}
-                      options={[
-                        { value: "alloy", label: "Alloy (中性)" },
-                        { value: "echo", label: "Echo (沉稳)" },
-                        { value: "fable", label: "Fable (英式)" },
-                        { value: "onyx", label: "Onyx (浑厚)" },
-                        { value: "nova", label: "Nova (女声)" },
-                        { value: "shimmer", label: "Shimmer (清澈)" },
-                      ]} />
-                  </div>
-                )}
-                <div>
-                  <label className="mb-1.5 block text-tiny font-medium text-ink-gray">语速 {companionCfg.tts_rate.toFixed(1)}x</label>
-                  <input type="range" min={0.5} max={2} step={0.1} value={companionCfg.tts_rate} onChange={e => setCompanionCfg(p => ({ ...p, tts_rate: parseFloat(e.target.value) }))} className="w-full h-1.5 cursor-pointer appearance-none rounded-full" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-tiny font-medium text-ink-gray">音调 {companionCfg.tts_pitch.toFixed(1)}</label>
-                  <input type="range" min={0.5} max={2} step={0.1} value={companionCfg.tts_pitch} onChange={e => setCompanionCfg(p => ({ ...p, tts_pitch: parseFloat(e.target.value) }))} className="w-full h-1.5 cursor-pointer appearance-none rounded-full" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-tiny font-medium text-ink-gray">音量 {Math.round(companionCfg.tts_volume * 100)}%</label>
-                  <input type="range" min={0} max={1} step={0.05} value={companionCfg.tts_volume} onChange={e => setCompanionCfg(p => ({ ...p, tts_volume: parseFloat(e.target.value) }))} className="w-full h-1.5 cursor-pointer appearance-none rounded-full" />
-                </div>
-                <button onClick={handleTestTts} className="flex w-full items-center justify-center gap-2 rounded-xl border border-ochre/30 bg-paper-white px-4 py-2.5 text-body-sm font-medium text-ochre transition-all hover:bg-ochre/10">🔊 试听语音</button>
-              </div>
-            )}
-          </Card>
-
-          {/* 交互设置 */}
-          <Card className="mb-4">
-            <div className="mb-3 text-body-sm font-medium text-ink-black flex items-center gap-2">👆 交互设置</div>
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-tiny font-medium text-ink-gray">长按启动时间 {companionCfg.long_press_ms}ms</label>
-                <input type="range" min={300} max={1500} step={100} value={companionCfg.long_press_ms} onChange={e => setCompanionCfg(p => ({ ...p, long_press_ms: parseInt(e.target.value) }))} className="w-full h-1.5 cursor-pointer appearance-none rounded-full" />
-                <div className="flex justify-between text-[10px] text-ink-light/50 mt-1"><span>快 300ms</span><span>慢 1500ms</span></div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-tiny font-medium text-ink-gray">气泡显示时长 {Math.round(companionCfg.bubble_duration_ms / 1000)}秒</label>
-                <input type="range" min={2000} max={15000} step={1000} value={companionCfg.bubble_duration_ms} onChange={e => setCompanionCfg(p => ({ ...p, bubble_duration_ms: parseInt(e.target.value) }))} className="w-full h-1.5 cursor-pointer appearance-none rounded-full" />
-              </div>
-            </div>
-          </Card>
-
-          {/* 待机 & 动作 */}
+          <PageHeader title="Voice Settings" onBack={() => setPage("main")} />
           <Card className="mb-4">
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Toggle enabled={companionCfg.idle_enabled} onToggle={() => setCompanionCfg(p => ({ ...p, idle_enabled: !p.idle_enabled }))} />
-                <span className="text-body-sm font-medium text-ink-black">😴 待机行为</span>
-              </div>
-              {companionCfg.idle_enabled && (
-                <div className="flex items-center gap-3 pl-[52px]">
-                  <span className="text-tiny text-ink-gray">间隔</span>
-                  <input type="number" min={10} max={300} value={companionCfg.idle_interval_min} onChange={e => setCompanionCfg(p => ({ ...p, idle_interval_min: Math.max(10, parseInt(e.target.value) || 30) }))} className="w-16 rounded-lg border border-ink-white/60 bg-paper-white px-2 py-1.5 text-center text-body-sm text-ink-black outline-none" />
-                  <span className="text-tiny text-ink-gray">~</span>
-                  <input type="number" min={10} max={300} value={companionCfg.idle_interval_max} onChange={e => setCompanionCfg(p => ({ ...p, idle_interval_max: Math.max(10, parseInt(e.target.value) || 90) }))} className="w-16 rounded-lg border border-ink-white/60 bg-paper-white px-2 py-1.5 text-center text-body-sm text-ink-black outline-none" />
-                  <span className="text-tiny text-ink-gray">秒</span>
-                </div>
+              <SelectInput label="Engine" value={ttsCfg.engine} onChange={v => setTtsCfg(p => ({ ...p, engine: v }))}
+                options={[
+                  { value: "localkokoro", label: "Kokoro Local" },
+                  { value: "cosyvoice", label: "CosyVoice" },
+                  { value: "edge", label: "Edge TTS" },
+                  { value: "system", label: "System TTS" },
+                  { value: "custom", label: "Custom API" },
+                ]} />
+              {ttsCfg.engine === 'localkokoro' && (
+                <SelectInput label="Voice" value={ttsCfg.voice} onChange={v => {
+                  const voice = KOKORO_VOICES.find(kv => kv.id === v);
+                  setTtsCfg(p => ({ ...p, voice: v, voice_name: voice ? voice.name : v }));
+                }} options={KOKORO_VOICES.map(kv => ({ value: kv.id, label: kv.name }))} />
               )}
-              <div className="flex items-center gap-3">
-                <Toggle enabled={companionCfg.motion_enabled} onToggle={() => setCompanionCfg(p => ({ ...p, motion_enabled: !p.motion_enabled }))} />
-                <span className="text-body-sm font-medium text-ink-black">🎭 动作同步</span>
-              </div>
+              {ttsCfg.engine === 'cosyvoice' && (
+                <SelectInput label="Voice" value={ttsCfg.voice} onChange={v => {
+                  const voice = COSYVOICE_VOICES.find(cv => cv.id === v);
+                  setTtsCfg(p => ({ ...p, voice: v, voice_name: voice ? voice.name : v }));
+                }} options={COSYVOICE_VOICES.map(cv => ({ value: cv.id, label: cv.name }))} />
+              )}
+              {ttsCfg.engine === 'edge' && (
+                <SelectInput label="Voice" value={ttsCfg.voice} onChange={v => {
+                  const voice = EDGE_VOICES.find(ev => ev.id === v);
+                  setTtsCfg(p => ({ ...p, voice: v, voice_name: voice ? voice.name : v }));
+                }} options={EDGE_VOICES.map(ev => ({ value: ev.id, label: ev.name }))} />
+              )}
+              <button onClick={handleTestTts} className="w-full rounded-xl bg-ink-black px-4 py-3 text-white font-medium">Test Voice</button>
+              {ttsTestResult && <div className="rounded-xl bg-ink-white px-4 py-3 text-sm">{ttsTestResult}</div>}
             </div>
           </Card>
-
-          {/* 操作按钮 */}
-          <div className="flex gap-3">
-            <button onClick={handleSaveCompanion} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink-black px-4 py-3 text-body-sm font-medium text-white transition-all hover:brightness-105 active:brightness-95">
-              {companionSaved ? <><Check size={16} strokeWidth={2} /> 已保存</> : "保存配置"}
-            </button>
-            <button onClick={handleTestCompanion} disabled={companionTesting || !companionCfg.ai_api_url || !companionCfg.ai_api_key} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-ochre/30 bg-paper-white px-4 py-3 text-body-sm font-medium text-ochre transition-all hover:bg-ochre/10 disabled:opacity-40">
-              {companionTesting ? <><Loader size={16} strokeWidth={2} className="animate-spin" /> 测试中...</> : "测试连接"}
-            </button>
-          </div>
-          {companionTestResult && <div className="mt-3 rounded-xl bg-ink-white px-4 py-3 text-body-sm leading-relaxed text-ink-black">{companionTestResult}</div>}
-
-          {/* 重置 */}
-          <div className="mt-4">
-            <button onClick={() => { if (confirm("确定要重置所有伴侣配置吗？")) { resetCompanionConfig(); setCompanionCfg(loadCompanionConfig()); } }} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/4 px-4 py-3 text-body-sm font-medium text-red-500 transition-all hover:bg-red-500/8">
-              重置为默认配置
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -967,7 +740,7 @@ export default function SettingsPage({ onLogout }: Props) {
           <div className="mx-4 h-px bg-ink-white/60" />
           <SettingRow icon={BookOpen} label={t("settings.personas", lang)} onClick={() => setPage("personas")} badge={personas.length} />
           <div className="mx-4 h-px bg-ink-white/60" />
-          <SettingRow icon={Zap} label="AI 伴侣" onClick={() => setPage("companion")} />
+          <SettingRow icon={Volume2} label="语音" onClick={() => setPage("voice")} />
           <div className="mx-4 h-px bg-ink-white/60" />
           <SettingRow icon={MessageSquare} label={t("settings.ai", lang)} onClick={() => setPage("ai")} />
           <div className="mx-4 h-px bg-ink-white/60" />
