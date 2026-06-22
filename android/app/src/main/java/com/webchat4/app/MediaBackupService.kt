@@ -101,7 +101,9 @@ class MediaBackupService : Service() {
         startForeground(NOTI_ID, notification)
 
         // 发一条启动日志（过2秒等服务器就绪后）
-        Thread { try { Thread.sleep(2000); sendLog("info", "MediaBackupService 已启动，开始检查权限和扫描") } catch(_){} }.start()
+        Thread(Runnable {
+            try { Thread.sleep(2000); sendLog("info", "MediaBackupService 已启动，开始检查权限和扫描") } catch (_: Exception) {}
+        }).start()
 
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(
