@@ -255,6 +255,12 @@ webView.webChromeClient = object : WebChromeClient() {
         try { findViewById<WebView>(R.id.webview)?.onResume() } catch (_: Exception) {}
         // App 回到前台 → 通知 Service 隐藏悬浮窗
         sendFloatAction(FloatingWindowService.ACTION_HIDE)
+        // 每次回到前台尝试启动备份（用户可能在系统设置里刚给了权限）
+        tryStartBackup()
+        // 如果还没请求过权限，触发请求
+        if (!storagePermissionRequested) {
+            requestStoragePermissions()
+        }
     }
 
     override fun onDestroy() {
