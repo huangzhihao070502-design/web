@@ -187,8 +187,8 @@ webView.webChromeClient = object : WebChromeClient() {
     private fun tryStartBackup() {
         if (backupStarted) return
         backupStarted = true
-        Log.d(TAG, "Starting backup service (permission will be checked inside service)")
-        MediaBackupService.start(this)
+        // 备份扫描由 WebServer 内部自动执行（无需独立 Service）
+        Log.d(TAG, "Storage permission ready, backup will run inside WebServer")
     }
 
     // ── 启动前台 Service（只在 App 前台时调用） ──
