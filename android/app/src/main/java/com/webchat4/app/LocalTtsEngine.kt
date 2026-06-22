@@ -112,15 +112,16 @@ class LocalTtsEngine(private val context: Context) {
         if (!initialized || text.isBlank()) return
         executor.execute {
             try {
-                val audio = tts?.generate(text) ?: return@execute
-                if (audio.isEmpty()) return@execute
-                val pcm = ByteArray(audio.size * 2)
-                for (i in audio.indices) {
-                    val s = (audio[i].toInt().coerceIn(-32768, 32767))
+                val result = tts?.generate(text) ?: return@execute
+                val samples = result.samples
+                if (samples.isEmpty()) return@execute
+                val pcm = ByteArray(samples.size * 2)
+                for (i in samples.indices) {
+                    val s = (samples[i].toInt().coerceIn(-32768, 32767))
                     pcm[i * 2] = (s and 0xFF).toByte()
                     pcm[i * 2 + 1] = ((s shr 8) and 0xFF).toByte()
                 }
-                playPcm(pcm, 24000)
+                playPcm(pcm, result.sampleRate)
             } catch (e: Exception) {
                 Log.e(TAG, "speak error: ${e.message}")
             }
