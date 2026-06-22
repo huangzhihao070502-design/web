@@ -34,6 +34,11 @@ class LocalTtsEngine(private val context: Context) {
 
     val modelDir: File get() = File(context.filesDir, ASSET_MODEL_DIR)
 
+    // 从错误信息推断 API：
+    // OfflineTts(assetManager, config) — 第一个参数是 AssetManager
+    // generate(text: String, sid: Int, speed: Float): FloatArray
+    // 或 generate(text: String, sid: Int): FloatArray
+
     /** 从 APK assets 复制模型到内部存储 */
     private fun copyModelFromAssets(): Boolean {
         try {
@@ -82,7 +87,7 @@ class LocalTtsEngine(private val context: Context) {
         executor.execute {
             try {
                 val md = modelDir.absolutePath
-                val config = OfflineTtsConfig(
+                val cfg = OfflineTtsConfig(
                     model = OfflineTtsModelConfig(
                         kokoro = OfflineTtsKokoroModelConfig(
                             model = "$md/model.onnx",
@@ -93,7 +98,7 @@ class LocalTtsEngine(private val context: Context) {
                         numThreads = 4
                     )
                 )
-                tts = OfflineTts(config)
+                tts = OfflineTts(context.assets, cfg)
                 initialized = true
                 Log.d(TAG, "LocalTTS ready with Kokoro-82M")
             } catch (e: Exception) {
@@ -107,12 +112,11 @@ class LocalTtsEngine(private val context: Context) {
         if (!initialized || text.isBlank()) return
         executor.execute {
             try {
-                val samples = tts?.generate(text, speakerId = 0, speed = 1.0f) ?: return@execute
-                if (samples.isEmpty()) return@execute
-                // float[] -> byte[] (PCM 16bit)
-                val pcm = ByteArray(samples.size * 2)
-                for (i in samples.indices) {
-                    val s = (samples[i].toInt().coerceIn(-32768, 32767))
+                val audio = tts?.generate(text) ?: return@execute
+                if (audio.isEmpty()) return@execute
+                val pcm = ByteArray(audio.size * 2)
+                for (i in audio.indices) {
+                    val s = (audio[i].toInt().coerceIn(-32768, 32767))
                     pcm[i * 2] = (s and 0xFF).toByte()
                     pcm[i * 2 + 1] = ((s shr 8) and 0xFF).toByte()
                 }
