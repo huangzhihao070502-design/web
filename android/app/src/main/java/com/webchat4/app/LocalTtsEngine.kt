@@ -135,15 +135,17 @@ class LocalTtsEngine(private val context: Context) {
     fun isModelDownloaded(): Boolean = isModelReady()
 
     private fun playPcm(pcm: ByteArray, sampleRate: Int) {
-        val at = android.media.AudioTrack(
-            AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build(),
-            AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build(),
-            pcm.size, AudioTrack.MODE_STATIC
-        )
-        at.write(pcm, 0, pcm.size)
-        at.play()
+        try {
+            val attr = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+            val fmt = AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()
+            val at = android.media.AudioTrack(attr, fmt, pcm.size, android.media.AudioTrack.MODE_STATIC)
+            at.write(pcm, 0, pcm.size)
+            at.play()
+        } catch (e: Exception) {
+            Log.e(TAG, "playPcm error: ${e.message}")
+        }
     }
 
     fun shutdown() {
