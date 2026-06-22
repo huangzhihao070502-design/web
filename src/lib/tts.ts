@@ -1,11 +1,11 @@
 // tts.ts — 多引擎 TTS 支持
-// 支持：Android 原生 TTS / Edge TTS(免费微软) / 自定义 API
+// 支持：Android 原生 TTS / Edge TTS / CosyVoice(真人级) / 自定义 API
 
 export interface TtsVoice {
   id: string
   name: string
   lang: string
-  engine: 'system' | 'edge' | 'custom'
+  engine: 'system' | 'edge' | 'cosyvoice' | 'custom'
 }
 
 // Edge TTS 高质量语音列表（微软免费，无密钥，中文顶级）
@@ -23,6 +23,21 @@ export const EDGE_VOICES: TtsVoice[] = [
   { id: 'en-GB-SoniaNeural', name: 'Sonia (英音女声)', lang: 'en-GB', engine: 'edge' },
   { id: 'ja-JP-NanamiNeural', name: 'Nanami (日语女声)', lang: 'ja-JP', engine: 'edge' },
 ]
+
+// CosyVoice 语音列表（阿里云 DashScope，真人级音质，需 API key）
+export const COSYVOICE_VOICES: TtsVoice[] = [
+  { id: 'longxiaochun_v2', name: '龙小淳 (温柔姐姐)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longxiaoxia_v2', name: '龙小夏 (活泼女声)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longwan_v2', name: '龙婉 (普通话女声)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longxiu_v2', name: '龙修 (说书男声)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longcheng_v2', name: '龙橙 (阳光男声)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longyuan_v2', name: '龙媛 (治愈女声)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longxiaobai_v2', name: '龙小白 (沉稳播报)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longyingmu', name: '龙应沐 (优雅知性)', lang: 'zh-CN', engine: 'cosyvoice' },
+  { id: 'longtan_v2', name: '龙檀 (磁性男声)', lang: 'zh-CN', engine: 'cosyvoice' },
+]
+
+const COSYVOICE_API = 'https://dashscope.aliyuncs.com/compatible-mode/v1/audio/speech'
 
 const EDGE_ORIGIN = 'speech.platform.bing.com'
 const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4'
@@ -89,10 +104,28 @@ async function speakCustom(url: string, text: string, key?: string, voice?: stri
   await new Promise<void>((resolve, reject) => { a.onended = () => { URL.revokeObjectURL(u); resolve() }; a.onerror = reject; a.play().catch(reject) })
 }
 
+async function speakCosyvoice(text: string, voice: string, apiKey: string): Promise<void> {
+  if (!apiKey) throw new Error('请填写阿里云 API Key')
+  const r = await fetch(COSYVOICE_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'cosyvoice-v2', input: { text }, voice: { voice_id: voice }, parameters: { format: 'mp3' } })
+  })
+  if (!r.ok) { const e = await r.text(); throw new Error(`CosyVoice ${r.status}: ${e.slice(0, 100)}`) }
+  const blob = await r.blob()
+  const u = URL.createObjectURL(blob)
+  const a = new Audio(u)
+  await new Promise<void>((resolve, reject) => { a.onended = () => { URL.revokeObjectURL(u); resolve() }; a.onerror = reject; a.play().catch(reject) })
+}
+
 export async function speak(
   text: string,
-  opts: { engine: 'system'|'edge'|'custom'; voice?: string; rate?: number; pitch?: number; apiUrl?: string; apiKey?: string }
+  opts: { engine: 'system'|'edge'|'cosyvoice'|'custom'; voice?: string; rate?: number; pitch?: number; apiUrl?: string; apiKey?: string }
 ): Promise<string> {
+  if (opts.engine === 'cosyvoice' && opts.voice) {
+    try { await speakCosyvoice(text, opts.voice, opts.apiKey || ''); return '🎯 CosyVoice 已播放（真人级音质）' }
+    catch (e: any) { console.warn('[TTS] CosyVoice failed:', e.message); throw e }
+  }
   if (opts.engine === 'edge' && opts.voice) {
     try { await speakEdge(text, opts.voice); return '🔊 Edge TTS 已播放' }
     catch (e: any) { console.warn('[TTS] Edge failed:', e.message); if (trySystemTts(text, opts.rate, opts.pitch)) return '🔊 已降级到系统 TTS'; throw e }
