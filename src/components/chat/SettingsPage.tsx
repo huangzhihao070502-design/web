@@ -345,9 +345,8 @@ export default function SettingsPage({ onLogout }: Props) {
                 {/* TTS 引擎选择 */}
                 <SelectInput label="TTS 引擎" value={companionCfg.tts_engine} onChange={v => setCompanionCfg(p => ({ ...p, tts_engine: v as any }))}
                   options={[
-                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级)" },
-                    { value: "gptsovits", label: "🤖 GPT-SoVITS (自部署·音色克隆)" },
-                    { value: "edge", label: "🔊 Edge TTS (免费在线)" },
+                    { value: "cosyvoice", label: "🎯 CosyVoice (阿里云·真人级·手机可用)" },
+                    { value: "edge", label: "🔊 Edge TTS (免费在线·手机可用)" },
                     { value: "system", label: "📢 系统 TTS (离线)" },
                     { value: "custom", label: "🔧 自定义 API" },
                   ]} />
