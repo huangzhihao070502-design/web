@@ -16,3 +16,6 @@ dist/
 *.apk
 android/app/build/
 .git.bak/
+
+android/app/src/main/assets/kokoro/
+android/app/libs/*.aar

@@ -1429,8 +1429,16 @@ async function _autoReplyInner(toUser, userMsg) {
     });
     console.log(`[AI] API response received: ${result.length} bytes`);
     const j = JSON.parse(result);
+    // 记录 API 错误（密钥无效、模型不存在等）
+    if (j.error) {
+      console.log(`[AI] API ERROR: ${j.error.message || JSON.stringify(j.error)}`);
+      return;
+    }
     let reply = j.choices?.[0]?.message?.content || '';
-    if (!reply) return;
+    if (!reply) {
+      console.log(`[AI] API returned empty reply. Full response: ${JSON.stringify(j).slice(0,200)}`);
+      return;
+    }
     // ====== TASK 4: 质量审核 ======
     if (emotionAnalysis && replyStrategy) {
       try {

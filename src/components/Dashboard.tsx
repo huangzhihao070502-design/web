@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, type ReactNode } from 'react';
-import { MessageCircle, Bell, User, Settings, Search, Plus, ArrowLeft, ChevronRight, LogOut, Clock, Heart, BookOpen, Users, Check, X, Edit3, Trash2, Download, Trash, Database, Brain } from 'lucide-react';
+import { MessageCircle, Bell, User, Settings, Search, Plus, ArrowLeft, ChevronRight, LogOut, Clock, Heart, BookOpen, Users, Check, X, Edit3, Trash2, Download, Trash } from 'lucide-react';
 import Lenis from 'lenis';
 import ChatPage from './chat/ChatPage';
 import SettingsPage from './chat/SettingsPage';
@@ -8,7 +8,6 @@ import { t } from '../lib/i18n';
 import Live2DWidget from './Live2DWidget';
 import { loadChatHistory, clearChatHistory, exportChatHistory, getTotalMessages } from '../lib/chatHistory';
 import CharacterChat from './character/CharacterChat';
-import MemoryManagePage from './MemoryManagePage';
 
 const MistScene = lazy(() => import('./ink/MistScene'));
 class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolean}> {
@@ -19,7 +18,7 @@ class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolea
 
 const API = '';
 type Tab = 'home' | 'message' | 'profile' | 'settings';
-type ProfilePage = 'main' | 'personas' | 'affection' | 'chatHistory' | 'character' | 'memory';
+type ProfilePage = 'main' | 'personas' | 'affection' | 'chatHistory' | 'character';
 interface Props { onLogout: () => void }
 const navItems = [
   { key: 'home' as Tab, icon: MessageCircle, labelKey: 'nav.home' },
@@ -147,7 +146,6 @@ function ProfilePanel({ email, userCount, totalMessages, daysOnline, onLogout, o
         <MenuSection items={[
           { icon: BookOpen, label: '角色卡', subtitle: t('profile.personas_desc', lang), onClick: () => onOpenPage('personas') },
           { icon: Heart, label: '好感度', subtitle: t('profile.affection_desc', lang), onClick: () => onOpenPage('affection') },
-          { icon: Brain, label: '记忆库', subtitle: 'AI 长期记忆管理', onClick: () => onOpenPage('memory') },
           { icon: Clock, label: '聊天记录', subtitle: t('profile.history_desc', lang), onClick: () => onOpenPage('chatHistory') },
           { icon: Heart, label: '老板娘', subtitle: 'AI 驱动 · 角色对话', onClick: () => onOpenPage('character') },
         ]} />
@@ -264,6 +262,18 @@ function PersonaManagementPage({ onBack }: { onBack: () => void }) {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3"><BackBtn onClick={onBack} /><h1 className="text-lg font-semibold text-ink-black">角色卡 <span className="text-sm font-normal text-ink-gray">({personas.length})</span></h1></div>
           <button onClick={startCreate} className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-black text-white shadow-sm transition-all hover:brightness-105">+</button>
+          <button onClick={() => document.getElementById('importPersonaInput')?.click()} className="flex h-9 items-center gap-1.5 rounded-xl bg-ink-white/50 px-3 text-xs font-medium text-ink-gray hover:text-ink-black transition-colors ml-1">导入</button>
+          <input id="importPersonaInput" type="file" accept=".json" className="hidden" onChange={async (e) => {
+            const file = e.target.files?.[0]; if (!file) return;
+            try {
+              const text = await file.text(); const json = JSON.parse(text);
+              const r = await fetch(`${API}/api/personas/import`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json) });
+              const d = await r.json();
+              if (d.success) { alert(`✅ 已导入角色卡：${d.name}`); loadPersonas(); }
+              else alert(`❌ 导入失败：${d.error || '未知错误'}`);
+            } catch (err) { alert(`❌ 文件格式错误：${err}`); }
+            e.target.value = '';
+          }} />
         </div>
         {personas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -635,7 +645,6 @@ export default function Dashboard({ onLogout }: Props) {
     if (profilePage === 'affection') return <AffectionControlPage onBack={() => setProfilePage('main')} users={Array.from(activeChatUsers)} />;
     if (profilePage === 'chatHistory') return <ChatHistoryPage onBack={() => setProfilePage('main')} />;
     if (profilePage === 'character') return <CharacterChat onBack={() => setProfilePage('main')} />;
-    if (profilePage === 'memory') return <MemoryManagePage onBack={() => setProfilePage('main')} currentUser={selectedUser} />;
     return <ProfilePanel email={email} userCount={activeChatUsers.size} totalMessages={totalMessages} daysOnline={daysOnline}
       onLogout={onLogout} onOpenPage={handleOpenProfilePage} onSwitchTab={() => { setTab('home'); setProfilePage('main'); }} />;
   })();

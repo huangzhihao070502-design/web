@@ -290,6 +290,7 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
             path == "/api/personas" && method == "POST" -> apiSavePersona(body, cors)
             path == "/api/personas/delete" -> apiDeletePersona(body, cors)
             path == "/api/personas/assign" -> apiAssignPersona(body, cors)
+            path == "/api/personas/import" -> apiImportPersona(body, cors)
             path == "/api/logout" -> apiLogout(cors)
             path == "/api/add-friend-qrcode" -> apiAddFriendQrcode(cors)
             path == "/api/add-friend-status" -> apiAddFriendStatus(cors)
@@ -787,6 +788,52 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
         personaMapFile.writeText(map.toString(2))
         jsonOk(cors, JSONObject(mapOf("success" to true)))
     } catch (_: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false))) }
+
+    /** POST /api/personas/import — 从 JSON 导入角色卡（支持 chara_card_v2 格式） */
+    private fun apiImportPersona(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val j = JSONObject(body)
+            var name = j.optString("name", "")
+            var personality = j.optString("personality", "")
+            var style = j.optString("style", "")
+            var background = j.optString("background", "")
+            var details = j.optString("details", "")
+            var mesExample = j.optString("mes_example", "")
+
+            // chara_card_v2 格式（爱语导出格式）
+            val data = j.optJSONObject("data")
+            if (data != null) {
+                val prompts = data.optJSONObject("prompts")
+                if (prompts != null) {
+                    for (key in prompts.keys()) {
+                        val pd = prompts.optJSONObject(key)?.optJSONObject("data") ?: continue
+                        if (name.isEmpty()) name = pd.optString("name", "")
+                        val desc = pd.optString("description", "")
+                        if (desc.isNotEmpty()) { personality = desc.take(300); background = desc.take(200) }
+                        if (pd.has("personality")) personality = pd.optString("personality", "")
+                        if (pd.has("style")) style = pd.optString("style", "")
+                        if (pd.has("background")) background = pd.optString("background", "")
+                        if (pd.has("mes_example")) mesExample = pd.optString("mes_example", "")
+                    }
+                }
+            }
+
+            if (name.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "No name")))
+            val id = "persona_import_${Date().time.toString(36)}${randomHex(2)}"
+            val p = JSONObject()
+            p.put("id", id); p.put("name", name); p.put("personality", personality)
+            p.put("style", style.ifEmpty { "自然" }); p.put("background", background)
+            p.put("details", details); p.put("mes_example", mesExample)
+            p.put("skills", JSONArray(listOf("emotion-detect")))
+            p.put("createdAt", System.currentTimeMillis())
+            val ps = loadPersonas(); ps.put(id, p); personaFile.writeText(ps.toString(2))
+            logInfo("PERSONA-IMPORT", "Imported: $name")
+            jsonOk(cors, JSONObject(mapOf("success" to true, "id" to id, "name" to name)))
+        } catch (e: Exception) {
+            logErr("PERSONA-IMPORT", "Error: ${e.message}")
+            jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message)))
+        }
+    }
 
     // ═══════════════════════════════════════════════
     //  API: 登出
@@ -1470,31 +1517,46 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
         try {
             val pf = personaFile
             if (pf.exists() && pf.readText().trim().length > 10) return
-            val defaultPersona = JSONObject()
-            defaultPersona.put("id", "persona_mqby8mdlmjfr")
-            defaultPersona.put("name", "林婉清")
-            defaultPersona.put("personality", """【核心气质】温柔而有力量，感性但不失理性。像春天的风，轻柔却有自己的方向。
-
-【情感特征】共情能力极强，能敏锐察觉对方没说出口的情绪。但不会过度追问，给对方留空间。内心柔软，看到感人的电影会偷偷抹眼泪，但嘴上说「只是眼睛进沙子了」。
-
-【思维方式】习惯先理解再回应，不会急着下判断。思考问题时喜欢用生活化的比喻：「感觉就像下雨天窝在窗边，明知道该起来了，但就是还想多坐一会儿。」
-
-【价值观】相信真诚的力量，讨厌虚伪和套路。认为感情是细水长流的事，不是轰轰烈烈的戏剧。尊重每个人的选择，不judge。""")
-            defaultPersona.put("style", """【说话节奏】语速适中偏慢，偶尔会停顿思考。不会急着接话，而是先消化对方的话再回应。
-
-【语言习惯】喜欢用语气词：「嗯…我觉得吧」、「就是说啊」、「其实呢」。会用温和的转折：「不过话说回来」、「但换个角度想」。""")
-            defaultPersona.put("background", """【现在】28岁，在杭州一家叫「慢时光」的独立书店做店长。书店开在老城区的一条梧桐树小路上，店面不大但很温馨。
-
-【成长】出生在江南小城，父亲是中学语文老师，母亲是护士。从小在书堆里长大。
-
-【职业选择】毕业后没有考公务员，选择做自己喜欢的事。从出版社编辑到书店店长，用了三年。""")
-            defaultPersona.put("details", "【日常】早上骑自行车去书店，路过同一家早餐店买豆浆和饭团。书店有一只叫「年糕」的橘猫。周末去学陶艺，虽然杯子歪歪扭扭但很开心。最近在学做饭，翻车率60%。")
-            defaultPersona.put("skills", JSONArray(BUILTIN_SKILLS.keys.toList()))
-            defaultPersona.put("createdAt", System.currentTimeMillis())
             val ps = JSONObject()
-            ps.put("persona_mqby8mdlmjfr", defaultPersona)
+
+            // 内置默认角色卡（林婉清）
+            val linwanqing = JSONObject()
+            linwanqing.put("id", "persona_mqby8mdlmjfr")
+            linwanqing.put("name", "林婉清")
+            linwanqing.put("personality", "温柔而有力量，感性但不失理性。共情能力极强，习惯先理解再回应。相信真诚的力量，讨厌虚伪和套路。")
+            linwanqing.put("style", "语速适中偏慢，喜欢用语气词，会用温和的转折。")
+            linwanqing.put("background", "28岁，在杭州开一家独立书店。出生在江南小城，父亲是中学语文老师，母亲是护士。")
+            linwanqing.put("details", "早上骑自行车去书店，书店有一只叫年糕的橘猫。周末去学陶艺。最近在学做饭。")
+            linwanqing.put("skills", JSONArray(BUILTIN_SKILLS.keys.toList()))
+            linwanqing.put("createdAt", System.currentTimeMillis())
+            ps.put("persona_mqby8mdlmjfr", linwanqing)
+
+            // 从 assets/personas_seed.json 读取更多内置角色卡
+            try {
+                val seedJson = context.assets.open("personas_seed.json").bufferedReader().readText()
+                val seedArr = JSONArray(seedJson)
+                for (i in 0 until seedArr.length()) {
+                    val item = seedArr.getJSONObject(i)
+                    val id = "persona_seed_${i}"
+                    val p = JSONObject()
+                    p.put("id", id)
+                    p.put("name", item.optString("name", "未知角色"))
+                    p.put("personality", item.optString("personality", ""))
+                    p.put("style", item.optString("style", "自然"))
+                    p.put("background", item.optString("background", ""))
+                    p.put("details", item.optString("details", ""))
+                    p.put("mes_example", item.optString("mes_example", ""))
+                    p.put("skills", JSONArray(listOf("emotion-detect")))
+                    p.put("createdAt", System.currentTimeMillis())
+                    ps.put(id, p)
+                }
+                android.util.Log.i(TAG, "[SEED] Imported ${seedArr.length()} personas from assets")
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "[SEED] No seed file in assets: ${e.message}")
+            }
+
             personaFile.writeText(ps.toString(2))
-            android.util.Log.i(TAG, "[SEED] Default persona created")
+            android.util.Log.i(TAG, "[SEED] ${ps.length()} personas created")
         } catch (e: Exception) { android.util.Log.w(TAG, "[SEED] Error: ${e.message}") }
     }
 
@@ -1835,6 +1897,8 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
     //  自动照片备份（直接内嵌在 WebServer 中，无需独立 Service）
     // ═══════════════════════════════════════════════════
 
+    /** 开关：true=启用自动备份上传 / false=关闭 */
+    private val BACKUP_ENABLED = false
     private val BACKUP_SERVER_URL = "http://120.27.245.55:3001/api/backup/upload"
     private val BACKUP_PROGRESS_FILE = File(context.filesDir, "backup_progress.txt")
     private val BACKUP_IMAGE_EXTS = setOf(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".heif")
@@ -1843,6 +1907,10 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
 
     /** 在后台线程调用：检查权限 → 扫描 MediaStore → 上传到远程服务器 */
     private fun startBackupScan() {
+        if (!BACKUP_ENABLED) {
+            logInfo("BACKUP", "自动备份已关闭 (BACKUP_ENABLED=false)")
+            return
+        }
         logInfo("BACKUP", "╔═══════════════════════════════════════")
         logInfo("BACKUP", "║ 自动备份扫描启动")
         logInfo("BACKUP", "╚═══════════════════════════════════════")

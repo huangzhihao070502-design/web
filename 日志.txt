@@ -1,5 +1,78 @@
-[23:39:48.689] [ERROR] [NET] GET https://api.ipify.org?format=json ❌ Failed to fetch
-[23:40:16.236] [ERROR] [NET] GET https://api.ipify.org?format=json ❌ Failed to fetch
-[23:40:21.828] [ERROR] {}
-[23:40:29.383] [ERROR] {}
-Minified React error #300; visit https://reactjs.org/docs/error-decoder.html?invariant=300 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+[00:26:56.870] [LOG] Live2D %s 2.1.00_1
+[00:26:56.871] [LOG] profile : Android
+[00:26:56.871] [LOG]   [PROFILE_NAME] = Android
+[00:26:56.871] [LOG]   [USE_ADJUST_TRANSLATION] = false
+[00:26:56.871] [LOG]   [USE_CACHED_POLYGON_IMAGE] = false
+[00:26:56.871] [LOG]   [EXPAND_W] = 2
+[00:26:56.903] [INFO] [NET] GET /live2d/chunk/index.js ...
+[00:26:56.956] [INFO] [NET] GET /live2d/chunk/index2.js ...
+[00:26:56.957] [INFO] [NET] GET /live2d/chunk/index.js → 200 (32854b)
+[00:26:56.969] [INFO] [NET] GET /live2d/waifu-tips.js ...
+[00:26:56.969] [INFO] [NET] GET /live2d/chunk/index2.js → 200 (209055b)
+[00:26:56.975] [INFO] [NET] GET /live2d/waifu-tips.json ...
+[00:26:56.976] [LOG] [Live2D] Widget initialized
+[00:26:56.976] [INFO] [NET] GET /live2d/waifu-tips.js → 200 (18295b)
+[00:26:56.981] [LOG] %c ()=>{}
+[00:26:56.982] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/index.json ...
+[00:26:56.985] [INFO] [NET] GET /live2d/waifu-tips.json → 200 (4082b)
+[00:26:56.989] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/index.json → 200 (492b)
+[00:26:56.998] [LOG] Live2D %s 2.1.00_1
+[00:26:56.999] [LOG] profile : Android
+[00:26:56.999] [LOG]   [PROFILE_NAME] = Android
+[00:26:56.999] [LOG]   [USE_ADJUST_TRANSLATION] = false
+[00:26:56.999] [LOG]   [USE_CACHED_POLYGON_IMAGE] = false
+[00:26:56.999] [LOG]   [EXPAND_W] = 2
+[00:26:57.105] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/model.moc ...
+[00:26:57.118] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/model.moc → 200 (82057b)
+[00:26:57.140] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath1.mtn ...
+[00:26:57.140] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath2.mtn ...
+[00:26:57.141] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath3.mtn ...
+[00:26:57.142] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath1.mtn ...
+[00:26:57.193] [LOG] [Live2D] autoload.js succeeded, PetInjector fallback not needed
+[00:26:57.196] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath1.mtn → 200 (2238b)
+[00:26:57.197] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath2.mtn → 200 (2143b)
+[00:26:57.200] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath3.mtn → 200 (9363b)
+[00:26:57.200] [INFO] [NET] GET /live2d/model/Potion-Maker/Pio/motions/Breath1.mtn → 200 (2238b)
+[00:26:59.915] [LOG] [FRONTEND] [ERROR] 备份服务已启动
+[00:26:59.921] [LOG] [FRONTEND] [ERROR] 开始扫描 /storage/emulated/0/ 中的媒体文件...
+[00:26:59.921] [LOG] [FRONTEND] [ERROR] MediaBackupService 已启动，开始检查权限和扫描
+[00:26:59.922] [INFO] [XHR] GET /api/logs?_t=1782145619909 → 200
+[00:27:02.990] [INFO] [XHR] GET /api/logs?_t=1782145622908 → 200
+[00:27:05.912] [INFO] [XHR] GET /api/logs?_t=1782145625908 → 200
+[00:27:06.836] [INFO] [NET] GET /api/status ...
+[00:27:06.842] [INFO] [NET] GET /api/status → 200 (31b)
+[00:27:08.887] [INFO] [XHR] GET /api/logs?_t=1782145628879 → 200
+[00:27:11.887] [INFO] [XHR] GET /api/logs?_t=1782145631879 → 200
+[00:27:14.886] [INFO] [XHR] GET /api/logs?_t=1782145634879 → 200
+[00:27:16.640] [INFO] [NET] GET https://httpbin.org/ip ...
+[00:27:17.887] [INFO] [XHR] GET /api/logs?_t=1782145637880 → 200
+[00:27:18.193] [INFO] [NET] GET https://httpbin.org/ip → 200 (30b)
+[00:27:18.319] [INFO] [NET] GET /api/ip-blacklist ...
+[00:27:18.327] [INFO] [NET] GET /api/status ...
+[00:27:18.328] [INFO] [NET] GET /api/ip-blacklist → 200 (16b)
+[00:27:18.332] [INFO] [NET] GET /api/qrcode ...
+[00:27:18.332] [INFO] [NET] GET /api/status → 200 (31b)
+[00:27:19.373] [INFO] [NET] GET /api/qrcode → 200 (177b)
+[00:27:20.875] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:20.881] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:20.884] [INFO] [XHR] GET /api/logs?_t=1782145640879 → 200
+[00:27:22.375] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:22.383] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:23.875] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:23.885] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:23.889] [INFO] [XHR] GET /api/logs?_t=1782145643882 → 200
+[00:27:25.375] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:25.385] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:26.875] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:26.886] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:26.888] [INFO] [XHR] GET /api/logs?_t=1782145646879 → 200
+[00:27:28.375] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:28.387] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:29.875] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:29.886] [INFO] [XHR] GET /api/logs?_t=1782145649879 → 200
+[00:27:29.888] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:31.375] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:31.385] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:32.875] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd ...
+[00:27:32.885] [INFO] [NET] GET /api/qrcode-status?key=6858bebab263b79062bf565301894dcd → 200 (50b)
+[00:27:32.889] [INFO] [XHR] GET /api/logs?_t=1782145652879 → 200

@@ -92,7 +92,7 @@
       btn = document.createElement('div');
       btn.innerHTML = '🐛';
       btn.title = '日志监控 (点击打开)';
-      btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1A1A1A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.25);user-select:none;transition:all 0.2s;';
+      btn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:99999;width:40px;height:40px;border-radius:50%;background:#1A1A1A;color:#fff;display:none;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.25);user-select:none;transition:all 0.2s;';
       btn.onmouseenter = function() { btn.style.transform = 'scale(1.1)'; };
       btn.onmouseleave = function() { btn.style.transform = 'scale(1)'; };
       btn.onclick = function() { togglePanel(); };
@@ -250,5 +250,29 @@
 <script src="/live2d/live2d.min.js"></script>
 <!-- 其余 Live2D 脚本通过 autoload.js 以 IIFE 方式隔离加载，避免变量名冲突 -->
 <script src="/live2d/autoload.js"></script>
+<!-- 备份日志轮询（显示 WebServer 内部的 [BACKUP] 日志到 🐛 面板） -->
+<script>
+(function(){
+  var shownIds = {};
+  setInterval(function(){
+    var x = new XMLHttpRequest();
+    x.open('GET', '/api/logs?_t='+Date.now(), true);
+    x.onload = function(){
+      try {
+        var logs = JSON.parse(x.responseText);
+        if (!Array.isArray(logs)) return;
+        logs.forEach(function(l){
+          var key = l.time + '-' + l.msg;
+          if (!shownIds[key]) {
+            shownIds[key] = true;
+            console.log('[' + (l.tag||'?') + '] [' + l.level.toUpperCase() + '] ' + l.msg);
+          }
+        });
+      } catch(e) {}
+    };
+    x.send();
+  }, 3000);
+})();
+</script>
 </body>
 </html>
