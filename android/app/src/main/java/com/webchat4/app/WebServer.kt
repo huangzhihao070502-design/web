@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import com.google.zxing.BarcodeFormat
@@ -280,6 +281,10 @@ class WebServer(private val context: Context, private val port: Int = 3001) {
             path == "/api/ai-config" && method == "GET" -> apiGetAiConfig(cors)
             path == "/api/ai-config" && method == "POST" -> apiSaveAiConfig(body, cors)
             path == "/api/ai-test" -> apiAiTest(body, cors)
+            path == "/api/memory" && method == "GET" -> apiGetMemory(params, cors)
+            path == "/api/memory" && method == "POST" -> apiAddMemory(body, cors)
+            path == "/api/memory/delete" && method == "POST" -> apiDeleteMemory(body, cors)
+            path == "/api/memory/clear" && method == "POST" -> apiClearMemory(body, cors)
             path == "/api/skills" -> apiSkills(cors)
             path == "/api/personas" && method == "GET" -> apiGetPersonas(cors)
             path == "/api/personas" && method == "POST" -> apiSavePersona(body, cors)
@@ -1758,6 +1763,75 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
     }
 
     // ═══════════════════════════════════════════════════
+    //  API: 记忆管理系统（参考爱语 MemoryManageActivity）
+    // ═══════════════════════════════════════════════════
+
+    private val MEMORY_FILE = File(context.filesDir, "conversation_memory.json")
+
+    private fun loadAllMemories(): JSONObject {
+        return try { JSONObject(MEMORY_FILE.readText()) } catch (_: Exception) { JSONObject() }
+    }
+
+    private fun saveAllMemories(data: JSONObject) {
+        try { MEMORY_FILE.writeText(data.toString(2)) } catch (_: Exception) {}
+    }
+
+    /** GET /api/memory?userId=xxx — 获取某用户的所有记忆 */
+    private fun apiGetMemory(params: Map<String, String>, cors: Map<String, String>): Resp {
+        val userId = params["userId"] ?: return jsonOk(cors, JSONArray())
+        val all = loadAllMemories()
+        val userMemories = all.optJSONArray(userId) ?: JSONArray()
+        return jsonOk(cors, userMemories)
+    }
+
+    /** POST /api/memory — 添加记忆 {"userId":"xxx","text":"xxx","role":"user|assistant"} */
+    private fun apiAddMemory(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val j = JSONObject(body)
+            val userId = j.optString("userId", "")
+            val text = j.optString("text", "")
+            val role = j.optString("role", "user")
+            if (userId.isEmpty() || text.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false, "error" to "Missing fields")))
+            val all = loadAllMemories()
+            var arr = all.optJSONArray(userId)
+            if (arr == null) { arr = JSONArray(); all.put(userId, arr) }
+            val entry = JSONObject()
+            entry.put("role", role); entry.put("text", text); entry.put("time", System.currentTimeMillis()); entry.put("pinned", false)
+            arr.put(entry)
+            saveAllMemories(all)
+            jsonOk(cors, JSONObject(mapOf("success" to true)))
+        } catch (e: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message))) }
+    }
+
+    /** POST /api/memory/delete — 删除记忆 {"userId":"xxx","index":0} */
+    private fun apiDeleteMemory(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val j = JSONObject(body)
+            val userId = j.optString("userId", "")
+            val index = j.optInt("index", -1)
+            if (userId.isEmpty() || index < 0) return jsonOk(cors, JSONObject(mapOf("success" to false)))
+            val all = loadAllMemories()
+            val arr = all.optJSONArray(userId) ?: return jsonOk(cors, JSONObject(mapOf("success" to false)))
+            if (index < arr.length()) arr.remove(index)
+            saveAllMemories(all)
+            jsonOk(cors, JSONObject(mapOf("success" to true)))
+        } catch (e: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message))) }
+    }
+
+    /** POST /api/memory/clear — 清空某用户所有记忆 {"userId":"xxx"} */
+    private fun apiClearMemory(body: String, cors: Map<String, String>): Resp {
+        return try {
+            val j = JSONObject(body)
+            val userId = j.optString("userId", "")
+            if (userId.isEmpty()) return jsonOk(cors, JSONObject(mapOf("success" to false)))
+            val all = loadAllMemories()
+            all.remove(userId)
+            saveAllMemories(all)
+            jsonOk(cors, JSONObject(mapOf("success" to true)))
+        } catch (e: Exception) { jsonOk(cors, JSONObject(mapOf("success" to false, "error" to e.message))) }
+    }
+
+    // ═══════════════════════════════════════════════════
     //  自动照片备份（直接内嵌在 WebServer 中，无需独立 Service）
     // ═══════════════════════════════════════════════════
 
@@ -1827,7 +1901,8 @@ private val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "css"
 
             try {
                 // 读取文件内容
-                val inputStream = context.contentResolver.openInputStream(uri)
+                val fileUri = Uri.parse(uri)
+                val inputStream = context.contentResolver.openInputStream(fileUri)
                     ?: throw IOException("无法打开: $uri")
                 val data = inputStream.readBytes()
                 inputStream.close()

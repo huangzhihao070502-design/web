@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, type ReactNode } from 'react';
-import { MessageCircle, Bell, User, Settings, Search, Plus, ArrowLeft, ChevronRight, LogOut, Clock, Heart, BookOpen, Users, Check, X, Edit3, Trash2, Download, Trash } from 'lucide-react';
+import { MessageCircle, Bell, User, Settings, Search, Plus, ArrowLeft, ChevronRight, LogOut, Clock, Heart, BookOpen, Users, Check, X, Edit3, Trash2, Download, Trash, Database, Brain } from 'lucide-react';
 import Lenis from 'lenis';
 import ChatPage from './chat/ChatPage';
 import SettingsPage from './chat/SettingsPage';
@@ -8,6 +8,7 @@ import { t } from '../lib/i18n';
 import Live2DWidget from './Live2DWidget';
 import { loadChatHistory, clearChatHistory, exportChatHistory, getTotalMessages } from '../lib/chatHistory';
 import CharacterChat from './character/CharacterChat';
+import MemoryManagePage from './MemoryManagePage';
 
 const MistScene = lazy(() => import('./ink/MistScene'));
 class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolean}> {
@@ -18,7 +19,7 @@ class ThreeErrorBoundary extends Component<{children: ReactNode}, {error: boolea
 
 const API = '';
 type Tab = 'home' | 'message' | 'profile' | 'settings';
-type ProfilePage = 'main' | 'personas' | 'affection' | 'chatHistory' | 'character';
+type ProfilePage = 'main' | 'personas' | 'affection' | 'chatHistory' | 'character' | 'memory';
 interface Props { onLogout: () => void }
 const navItems = [
   { key: 'home' as Tab, icon: MessageCircle, labelKey: 'nav.home' },
@@ -146,6 +147,7 @@ function ProfilePanel({ email, userCount, totalMessages, daysOnline, onLogout, o
         <MenuSection items={[
           { icon: BookOpen, label: '角色卡', subtitle: t('profile.personas_desc', lang), onClick: () => onOpenPage('personas') },
           { icon: Heart, label: '好感度', subtitle: t('profile.affection_desc', lang), onClick: () => onOpenPage('affection') },
+          { icon: Brain, label: '记忆库', subtitle: 'AI 长期记忆管理', onClick: () => onOpenPage('memory') },
           { icon: Clock, label: '聊天记录', subtitle: t('profile.history_desc', lang), onClick: () => onOpenPage('chatHistory') },
           { icon: Heart, label: '老板娘', subtitle: 'AI 驱动 · 角色对话', onClick: () => onOpenPage('character') },
         ]} />
@@ -633,6 +635,7 @@ export default function Dashboard({ onLogout }: Props) {
     if (profilePage === 'affection') return <AffectionControlPage onBack={() => setProfilePage('main')} users={Array.from(activeChatUsers)} />;
     if (profilePage === 'chatHistory') return <ChatHistoryPage onBack={() => setProfilePage('main')} />;
     if (profilePage === 'character') return <CharacterChat onBack={() => setProfilePage('main')} />;
+    if (profilePage === 'memory') return <MemoryManagePage onBack={() => setProfilePage('main')} currentUser={selectedUser} />;
     return <ProfilePanel email={email} userCount={activeChatUsers.size} totalMessages={totalMessages} daysOnline={daysOnline}
       onLogout={onLogout} onOpenPage={handleOpenProfilePage} onSwitchTab={() => { setTab('home'); setProfilePage('main'); }} />;
   })();
